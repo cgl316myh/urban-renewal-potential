@@ -1,0 +1,10 @@
+<!--
+  可选：复制为同目录 Directory.Build.props 后按本机路径修改。
+  DevExpress 13.1 与 ArcEngine 10.2 的默认 HintPath 已写在各 csproj 中。
+-->
+<Project>
+  <PropertyGroup>
+    <DevExpressDir>C:\Program Files (x86)\DevExpress 13.1\Components\Bin\Framework</DevExpressDir>
+    <ArcGisDotNetDir>C:\Program Files (x86)\ArcGIS\DeveloperKit10.2\DotNet</ArcGisDotNetDir>
+  </PropertyGroup>
+</Project>

@@ -1,0 +1,10 @@
+[Dd]ebug/
+[Rr]elease/
+bin/
+obj/
+*.user
+*.suo
+*.cache
+*.pdb
+.vs/
+Packages/

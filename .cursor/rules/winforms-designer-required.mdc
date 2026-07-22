@@ -1,0 +1,25 @@
+---
+description: WinForms 窗体必须可在 VS 设计器中查看与编辑
+alwaysApply: true
+---
+
+# 窗体设计器可见性（强制）
+
+本项目为 **C# WinForms + DevExpress 13.1 + VS2012**。后期所有窗体都必须能在**设计阶段**打开并看到界面，禁止仅运行时拼装 UI。
+
+## 必须遵守
+
+- 每个窗体使用标准分部类：`XxxForm.cs` + `XxxForm.Designer.cs` + `XxxForm.resx`
+- 界面控件、布局、Ribbon 页签/按钮等放在 `InitializeComponent()`（Designer.cs）中，可用 VS「视图设计器」打开
+- 主逻辑、事件处理、插件加载等放在 `XxxForm.cs`
+- 构造函数只调用 `InitializeComponent()`；运行时逻辑加设计时判断，例如：
+  - `LicenseManager.UsageMode != LicenseUsageMode.Designtime`
+  - 或 `if (!DesignMode)`（注意构造函数内 DesignMode 可能不可靠，优先 LicenseManager）
+- 设计时**禁止**扫描插件目录、初始化 ArcEngine、弹对话框、访问数据库/GDB
+- DevExpress 窗体继承 `XtraForm` / `RibbonForm` 等，仍须走 Designer 分部类模式
+- 在 `.csproj` 中为 Designer.cs 设置 `DependentUpon`，为 `.resx` 设置 `EmbeddedResource` + `DependentUpon`
+
+## 禁止
+
+- 在构造函数或普通方法里 `new Panel/Button/...` 后 `Controls.Add` 作为主界面搭建方式（设计器看不到）
+- 只有代码文件、没有 Designer.cs 的业务窗体

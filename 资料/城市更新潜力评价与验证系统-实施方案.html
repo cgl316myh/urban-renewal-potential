@@ -1,0 +1,1291 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>城市更新潜力评价与验证系统 — 实施方案（C# + ArcEngine 10.2）</title>
+  <style>
+    :root {
+      --primary: #1a5276;
+      --primary-light: #2e86c1;
+      --accent: #e67e22;
+      --bg: #f4f6f9;
+      --card: #ffffff;
+      --border: #d5dbdb;
+      --text: #2c3e50;
+      --muted: #7f8c8d;
+      --success: #27ae60;
+      --warning: #f39c12;
+      --danger: #c0392b;
+    }
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body {
+      font-family: "Microsoft YaHei", "PingFang SC", "Segoe UI", sans-serif;
+      background: var(--bg);
+      color: var(--text);
+      line-height: 1.7;
+      font-size: 15px;
+    }
+    .header {
+      background: linear-gradient(135deg, var(--primary) 0%, var(--primary-light) 100%);
+      color: #fff;
+      padding: 48px 40px 36px;
+      text-align: center;
+    }
+    .header h1 { font-size: 28px; font-weight: 700; margin-bottom: 10px; }
+    .header .subtitle { font-size: 16px; opacity: 0.9; }
+    .header .tags { margin-top: 18px; display: flex; justify-content: center; gap: 10px; flex-wrap: wrap; }
+    .header .tag {
+      background: rgba(255,255,255,0.18);
+      border: 1px solid rgba(255,255,255,0.35);
+      padding: 4px 14px;
+      border-radius: 20px;
+      font-size: 13px;
+    }
+    .container { max-width: 1100px; margin: 0 auto; padding: 32px 24px 60px; }
+    .toc {
+      background: var(--card);
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      padding: 24px 28px;
+      margin-bottom: 32px;
+    }
+    .toc h2 { font-size: 17px; color: var(--primary); margin-bottom: 14px; }
+    .toc ol { padding-left: 22px; }
+    .toc li { margin: 6px 0; }
+    .toc a { color: var(--primary-light); text-decoration: none; }
+    .toc a:hover { text-decoration: underline; }
+    section {
+      background: var(--card);
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      padding: 28px 32px;
+      margin-bottom: 28px;
+    }
+    section > h2 {
+      font-size: 20px;
+      color: var(--primary);
+      border-left: 4px solid var(--accent);
+      padding-left: 12px;
+      margin-bottom: 20px;
+    }
+    h3 { font-size: 16px; color: var(--primary-light); margin: 22px 0 12px; }
+    h4 { font-size: 14px; color: var(--text); margin: 16px 0 8px; font-weight: 600; }
+    p { margin-bottom: 12px; }
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      margin: 14px 0 18px;
+      font-size: 14px;
+    }
+    th {
+      background: var(--primary);
+      color: #fff;
+      padding: 10px 14px;
+      text-align: left;
+      font-weight: 600;
+    }
+    td { padding: 9px 14px; border-bottom: 1px solid var(--border); vertical-align: top; }
+    tr:nth-child(even) td { background: #f8f9fa; }
+    .badge {
+      display: inline-block;
+      padding: 2px 8px;
+      border-radius: 4px;
+      font-size: 12px;
+      font-weight: 600;
+    }
+    .badge-blue { background: #d6eaf8; color: #1a5276; }
+    .badge-green { background: #d5f5e3; color: #1e8449; }
+    .badge-orange { background: #fdebd0; color: #b7950b; }
+    .badge-red { background: #fadbd8; color: #922b21; }
+    .flow-box {
+      background: #f8f9fa;
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      padding: 24px 20px;
+      margin: 16px 0;
+      overflow-x: auto;
+    }
+    .flow-chart { display: flex; flex-direction: column; align-items: center; gap: 0; min-width: 680px; }
+    .flow-stage {
+      width: 100%;
+      border: 2px solid var(--border);
+      border-radius: 10px;
+      padding: 16px 18px;
+      background: #fff;
+    }
+    .flow-stage-title {
+      font-weight: 700;
+      font-size: 15px;
+      margin-bottom: 12px;
+      padding-bottom: 8px;
+      border-bottom: 2px solid;
+    }
+    .flow-stage.input .flow-stage-title { color: #1a5276; border-color: #2e86c1; }
+    .flow-stage.pre .flow-stage-title { color: #b7950b; border-color: #f39c12; }
+    .flow-stage.eval .flow-stage-title { color: #1e8449; border-color: #27ae60; }
+    .flow-stage.verify .flow-stage-title { color: #922b21; border-color: #c0392b; }
+    .flow-stage.feasib .flow-stage-title { color: #1a5276; border-color: #2e86c1; }
+    .flow-stage.overlay .flow-stage-title { color: #1e8449; border-color: #27ae60; }
+    .flow-stage.valid .flow-stage-title { color: #b7950b; border-color: #e67e22; }
+    .flow-nodes { display: flex; flex-wrap: wrap; gap: 10px; justify-content: center; }
+    .flow-node {
+      background: #fff;
+      border: 1.5px solid #bdc3c7;
+      border-radius: 6px;
+      padding: 8px 14px;
+      font-size: 13px;
+      text-align: center;
+      line-height: 1.45;
+      min-width: 110px;
+      box-shadow: 0 1px 3px rgba(0,0,0,0.06);
+    }
+    .flow-node strong { display: block; font-size: 12px; color: var(--primary); margin-bottom: 2px; }
+    .flow-node.highlight { background: #eaf2f8; border-color: #2e86c1; font-weight: 600; }
+    .flow-node.output { background: #fadbd8; border-color: #c0392b; font-weight: 600; }
+    .flow-node.decision { background: #fef9e7; border-color: #f39c12; border-radius: 20px; }
+    .flow-arrow-down {
+      text-align: center;
+      color: var(--primary-light);
+      font-size: 22px;
+      line-height: 1;
+      padding: 6px 0;
+      user-select: none;
+    }
+    .flow-arrow-down span { display: block; font-size: 11px; color: var(--muted); margin-top: 2px; }
+    .flow-row { display: flex; align-items: center; justify-content: center; gap: 8px; flex-wrap: wrap; margin: 8px 0; }
+    .flow-arrow-right { color: var(--primary-light); font-size: 18px; flex-shrink: 0; }
+    .flow-group {
+      border: 1.5px dashed #bdc3c7;
+      border-radius: 8px;
+      padding: 12px;
+      flex: 1;
+      min-width: 200px;
+      background: rgba(255,255,255,0.7);
+    }
+    .flow-group-title { font-size: 13px; font-weight: 700; margin-bottom: 10px; text-align: center; }
+    .flow-group.traffic { border-color: #2e86c1; background: #d6eaf8; }
+    .flow-group.traffic .flow-group-title { color: #1a5276; }
+    .flow-group.env { border-color: #27ae60; background: #d5f5e3; }
+    .flow-group.env .flow-group-title { color: #1e8449; }
+    .flow-group.facility { border-color: #e67e22; background: #fdebd0; }
+    .flow-group.facility .flow-group-title { color: #b7950b; }
+    .flow-group.policy { border-color: #8e44ad; background: #e8daef; }
+    .flow-group.policy .flow-group-title { color: #6c3483; }
+    .flow-groups-row { display: flex; gap: 12px; flex-wrap: wrap; width: 100%; justify-content: center; }
+    .flow-merge-row { display: flex; align-items: center; justify-content: center; gap: 10px; flex-wrap: wrap; width: 100%; margin-top: 12px; }
+    .flow-connector { width: 100%; text-align: center; color: var(--muted); font-size: 12px; padding: 4px 0; }
+    .flow-branch { display: flex; gap: 20px; justify-content: center; flex-wrap: wrap; width: 100%; margin-top: 8px; }
+    .flow-branch-item { display: flex; flex-direction: column; align-items: center; gap: 6px; }
+    .flow-branch-label { font-size: 12px; color: var(--muted); font-weight: 600; }
+    .flow-three-col { display: flex; gap: 16px; width: 100%; flex-wrap: wrap; }
+    .flow-three-col > .flow-stage { flex: 1; min-width: 280px; }
+    .flow-track { margin-bottom: 12px; }
+    .flow-track-label { font-size: 12px; font-weight: 600; color: var(--muted); margin-bottom: 6px; }
+    .flow-inline { display: flex; align-items: center; gap: 6px; flex-wrap: wrap; }
+    .module-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+      gap: 16px;
+      margin: 16px 0;
+    }
+    .module-card {
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      padding: 18px;
+      background: #fafbfc;
+    }
+    .module-card h4 { color: var(--primary); margin-top: 0; }
+    .module-card ul { padding-left: 18px; font-size: 13px; color: var(--muted); }
+    .module-card li { margin: 4px 0; }
+    .formula {
+      background: #eaf2f8;
+      border-left: 3px solid var(--primary-light);
+      padding: 10px 16px;
+      margin: 10px 0;
+      font-family: "Cambria Math", "Times New Roman", serif;
+      font-size: 14px;
+      border-radius: 0 6px 6px 0;
+    }
+    .note {
+      background: #fef9e7;
+      border: 1px solid #f9e79f;
+      border-radius: 6px;
+      padding: 12px 16px;
+      font-size: 13px;
+      margin: 14px 0;
+    }
+    .note strong { color: var(--warning); }
+    .warn {
+      background: #fdedec;
+      border: 1px solid #f5b7b1;
+      border-radius: 6px;
+      padding: 12px 16px;
+      font-size: 13px;
+      margin: 14px 0;
+    }
+    .score-table td:last-child { text-align: center; font-weight: 600; color: var(--primary); }
+    .phase-timeline { display: flex; gap: 0; margin: 20px 0; flex-wrap: wrap; }
+    .phase {
+      flex: 1;
+      min-width: 180px;
+      text-align: center;
+      padding: 16px 10px;
+      position: relative;
+    }
+    .phase-num {
+      width: 36px; height: 36px;
+      background: var(--primary);
+      color: #fff;
+      border-radius: 50%;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      font-weight: 700;
+      margin-bottom: 8px;
+    }
+    .phase h4 { margin: 0 0 6px; font-size: 14px; }
+    .phase p { font-size: 12px; color: var(--muted); margin: 0; }
+    .footer {
+      text-align: center;
+      color: var(--muted);
+      font-size: 13px;
+      padding: 20px;
+    }
+    code {
+      background: #ecf0f1;
+      padding: 1px 6px;
+      border-radius: 3px;
+      font-size: 13px;
+      font-family: Consolas, monospace;
+    }
+  </style>
+</head>
+<body>
+
+<div class="header">
+  <h1>城市更新潜力评价与验证系统</h1>
+  <p class="subtitle">基于 C# + ArcGIS Engine 10.2 + DevExpress 13.1（Ribbon + 插件式）的实施方案</p>
+  <div class="tags">
+    <span class="tag">WinForms + DevExpress 13.1</span>
+    <span class="tag">Ribbon 主界面</span>
+    <span class="tag">插件式模块</span>
+    <span class="tag">ArcEngine 10.2</span>
+    <span class="tag">Spatial Analyst</span>
+    <span class="tag">Network Analyst</span>
+    <span class="tag">苏州示例数据</span>
+  </div>
+</div>
+
+<div class="container">
+
+  <!-- 目录 -->
+  <nav class="toc">
+    <h2>目 录</h2>
+    <ol>
+      <li><a href="#s1">一、项目概述与建设目标</a></li>
+      <li><a href="#s2">二、软件与运行环境</a></li>
+      <li><a href="#s3">三、数据体系与输入要求</a></li>
+      <li><a href="#s4">四、功能模块划分</a></li>
+      <li><a href="#s5">五、核心分析算法详解</a></li>
+      <li><a href="#s6">六、技术流程图（总流程）</a></li>
+      <li><a href="#s7">七、技术流程图（动力性分析子系统）</a></li>
+      <li><a href="#s8">八、技术流程图（可行度分析与验证输出）</a></li>
+      <li><a href="#s9">九、系统架构与类库设计</a></li>
+      <li><a href="#s10">十、开发阶段与交付物</a></li>
+    </ol>
+  </nav>
+
+  <!-- 一、项目概述 -->
+  <section id="s1">
+    <h2>一、项目概述与建设目标</h2>
+    <p>本系统面向城市更新规划决策，以<strong>建成区</strong>为分析范围，综合交通、环境、设施、政策、宗地形态、地形及人口等多源空间数据，通过<strong>栅格叠置 + 宗地关联</strong>的方式，生成全域更新潜力评价成果，并支持人工校核验证后输出专题图与报表。</p>
+    <p>系统核心逻辑分为三大阶段：</p>
+    <div class="phase-timeline">
+      <div class="phase">
+        <div class="phase-num">1</div>
+        <h4>预处理阶段</h4>
+        <p>坐标统一 · 范围裁剪 · 数据质检</p>
+      </div>
+      <div class="phase">
+        <div class="phase-num">2</div>
+        <h4>更新评价阶段</h4>
+        <p>因子量化 · 栅格叠置 · 宗地赋值</p>
+      </div>
+      <div class="phase">
+        <div class="phase-num">3</div>
+        <h4>验证与输出阶段</h4>
+        <p>人工校核 · 权重调整 · 成果出图</p>
+      </div>
+    </div>
+    <p><strong>预期成果：</strong></p>
+    <ul style="padding-left:22px;">
+      <li>成果图1：全域更新潜力评价图（栅格/面状分级设色）</li>
+      <li>成果图2：宗地更新潜力分析图（潜力值关联至宗地面要素）</li>
+      <li>可选：分阶段叠合图、片区指引标签图</li>
+    </ul>
+  </section>
+
+  <!-- 二、软件环境 -->
+  <section id="s2">
+    <h2>二、软件与运行环境</h2>
+
+    <h3>2.1 开发与运行平台</h3>
+    <table>
+      <tr><th>环境要素</th><th>配置要求</th><th>说明</th></tr>
+      <tr>
+        <td>操作系统</td>
+        <td>Windows 7 SP1 / Windows 10（64位推荐）</td>
+        <td>ArcEngine 10.2 官方支持 Win7/8/Server 2008 R2</td>
+      </tr>
+      <tr>
+        <td>GIS 平台</td>
+        <td><strong>ArcGIS Engine 10.2</strong> Runtime</td>
+        <td>安装 Developer Kit + Runtime，绑定 ESRI Controls</td>
+      </tr>
+      <tr>
+        <td>开发框架</td>
+        <td><strong>.NET Framework 4.5</strong></td>
+        <td>VS2012；10.2 对应 .NET 4.5</td>
+      </tr>
+      <tr>
+        <td>IDE</td>
+        <td>Visual Studio 2012</td>
+        <td>引用 ESRI.ArcGIS.* 与 DevExpress.Xtra* 程序集</td>
+      </tr>
+      <tr>
+        <td>C# 语法版本</td>
+        <td><strong>C# 5.0</strong></td>
+        <td>语言特性上限锁定为 C# 5.0（VS2012 默认）；禁止使用 6.0 及以上语法（如字符串插值、$、nameof、空条件运算符 ?. 等）</td>
+      </tr>
+      <tr>
+        <td>UI 框架</td>
+        <td>WinForms + ESRI Controls + <strong>DevExpress 13.1 Ribbon</strong></td>
+        <td>主界面固定为 Ribbon 模式；地图区用 ESRI Controls；业务面板/表格用 DevExpress 控件</td>
+      </tr>
+      <tr>
+        <td>第三方皮肤库</td>
+        <td><strong>DevExpress WinForms 13.1</strong>（本机已装版本）</td>
+        <td>RibbonControl 主壳、Dock、Grid、TreeList、LookAndFeel 皮肤；与 .NET 4.5 / VS2012 配套</td>
+      </tr>
+      <tr>
+        <td>模块加载方式</td>
+        <td><strong>插件式（Plugin）</strong></td>
+        <td>各功能模块编译为独立 DLL，启动时由宿主扫描加载并动态挂接 Ribbon 页签</td>
+      </tr>
+      <tr>
+        <td>空间分析扩展</td>
+        <td><strong>Spatial Analyst</strong> + <strong>Network Analyst</strong></td>
+        <td>栅格运算、缓冲区、重分类、路网可达性分析</td>
+      </tr>
+      <tr>
+        <td>数据格式</td>
+        <td>File Geodatabase (.gdb)</td>
+        <td>统一存放矢量要素类与栅格数据集</td>
+      </tr>
+      <tr>
+        <td>坐标系</td>
+        <td><strong>CGCS2000 3度带</strong>（如 Zone 40/41，苏州区域）</td>
+        <td>所有分析必须在投影坐标系下进行，禁止地理坐标系做距离缓冲</td>
+      </tr>
+    </table>
+
+    <h3>2.2 ArcEngine 10.2 关键程序集引用</h3>
+    <table>
+      <tr><th>程序集</th><th>用途</th></tr>
+      <tr><td><code>ESRI.ArcGIS.AxControls</code></td><td>地图控件（MapControl / TOC / Toolbar）</td></tr>
+      <tr><td><code>ESRI.ArcGIS.Carto</code></td><td>图层管理、渲染、制图输出</td></tr>
+      <tr><td><code>ESRI.ArcGIS.Geodatabase</code></td><td>GDB 读写、要素操作</td></tr>
+      <tr><td><code>ESRI.ArcGIS.Geometry</code></td><td>空间参考、几何运算、ITopologicalOperator 缓冲</td></tr>
+      <tr><td><code>ESRI.ArcGIS.GeoAnalyst</code></td><td>栅格叠置、MapAlgebra</td></tr>
+      <tr><td><code>ESRI.ArcGIS.SpatialAnalyst</code></td><td>缓冲区栅格、重分类、坡度/欧氏距离</td></tr>
+      <tr><td><code>ESRI.ArcGIS.NetworkAnalyst</code></td><td>路网可达性 OD 成本分析</td></tr>
+      <tr><td><code>ESRI.ArcGIS.GeoDatabaseRaster</code></td><td>栅格数据集读写</td></tr>
+      <tr><td><code>ESRI.ArcGIS.DataManagementTools</code></td><td>GP 工具封装（Clip、Project、AddField 等）</td></tr>
+      <tr><td><code>ESRI.ArcGIS.ConversionTools</code></td><td>要素转栅格、栅格转面</td></tr>
+      <tr><td><code>ESRI.ArcGIS.GeoProcessor</code></td><td>Geoprocessor 批处理调用</td></tr>
+    </table>
+
+    <div class="note">
+      <strong>许可注意：</strong>ArcEngine 10.2 需在目标机器安装对应 Runtime 并配置 Spatial Analyst / Network Analyst 扩展许可。开发机上通过 ArcGIS Desktop 10.2 的 License Manager 授权。DevExpress 需单独购买/授权 WinForms 组件许可，部署时随程序分发对应 DLL 或安装 Runtime。
+    </div>
+
+    <div class="warn">
+      <strong>版本差异：</strong>资料中设计说明书基于 ArcEngine 10.8，本方案已针对 <strong>10.2 API</strong> 做适配。10.2 中 MapAlgebra 使用 <code>ESRI.ArcGIS.GeoAnalyst.RasterMapAlgebraOp</code>，部分 10.8 新接口不可用，需通过 Geoprocessor 或 IAoRaster 接口实现等效功能。
+    </div>
+
+    <h3>2.3 DevExpress 13.1 皮肤与 Ribbon 主界面</h3>
+    <p>界面层采用本机已安装的 <strong>DevExpress WinForms 13.1</strong>。系统主界面统一为 <strong>Ribbon 模式</strong>（非传统菜单+工具栏），由 <code>RibbonControl</code> 承载功能入口；GIS 地图仍由 ArcEngine 控件承载，二者在同一主窗体内嵌套协作。各业务功能以<strong>插件式</strong>加载，动态向 Ribbon 注册页签与按钮。</p>
+    <table>
+      <tr><th>程序集 / 控件</th><th>用途</th></tr>
+      <tr><td><code>DevExpress.XtraBars</code> / <strong>RibbonControl</strong></td><td>主界面 Ribbon：页签（Page）、分组（Group）、按钮（BarButtonItem）</td></tr>
+      <tr><td><code>DevExpress.XtraBars.Ribbon</code> / RibbonStatusBar</td><td>底部状态栏、进度与消息反馈</td></tr>
+      <tr><td><code>DevExpress.XtraBars.Docking</code> / DockManager</td><td>左右侧停靠面板（图层、参数、日志）可拖拽停靠/浮动</td></tr>
+      <tr><td><code>DevExpress.XtraNavBar</code> / <code>XtraTreeList</code></td><td>功能导航、图层树/目录树增强展示</td></tr>
+      <tr><td><code>DevExpress.XtraGrid</code> / GridControl</td><td>属性表、评价结果表、Excel 报表预览与导出</td></tr>
+      <tr><td><code>DevExpress.XtraEditors</code> / <code>XtraTab</code></td><td>参数输入、权重配置、缓冲距离规则表、选项卡面板</td></tr>
+      <tr><td><code>DevExpress.XtraLayout</code> / LayoutControl</td><td>参数页自适应布局</td></tr>
+      <tr><td><code>DevExpress.LookAndFeel</code> / SkinManager</td><td>全局皮肤（13.1 常用 Office 2010/2013、DevExpress Style 等）</td></tr>
+      <tr><td><code>DevExpress.XtraSplashScreen</code> / WaitForm</td><td>启动闪屏、GP 长时间分析等待窗</td></tr>
+      <tr><td><code>DevExpress.XtraCharts</code>（可选）</td><td>潜力等级面积占比、验证对标统计图</td></tr>
+    </table>
+
+    <h4>2.3.1 Ribbon 主界面约定</h4>
+    <ul style="padding-left:22px; font-size:14px;">
+      <li>主窗体继承 <code>DevExpress.XtraBars.Ribbon.RibbonForm</code>（或 <code>XtraForm</code> + 内嵌 <code>RibbonControl</code>），强制 Ribbon 布局</li>
+      <li>Ribbon 页签与业务模块一一对应，例如：数据管理｜动力性分析｜可行度分析｜叠置评价｜宗地关联｜验证校核｜成果输出｜系统配置</li>
+      <li>页签内容由插件在 <code>Initialize</code> 时动态创建 <code>RibbonPage</code> / <code>RibbonPageGroup</code> / <code>BarButtonItem</code>，宿主不硬编码各模块按钮</li>
+      <li>地图缩放、漫游、选择等 GIS 通用命令可放在固定的「地图」页签，由宿主内置；业务分析命令一律来自插件</li>
+      <li>原 AxToolbarControl 不再作为主入口，等价命令封装为 Ribbon 按钮触发 ESRI <code>ICommand</code></li>
+    </ul>
+
+    <h4>2.3.2 皮肤集成要点（DevExpress 13.1）</h4>
+    <ul style="padding-left:22px; font-size:14px;">
+      <li>程序入口（<code>Program.cs</code>）注册皮肤：<code>DevExpress.UserSkins.BonusSkins.Register()</code>，并设置 <code>UserLookAndFeel.Default.SetSkinStyle("Office 2013")</code>（或本机 13.1 可用皮肤名）</li>
+      <li>业务对话框统一使用 DevExpress 窗体基类，保证与 Ribbon 主壳皮肤一致</li>
+      <li>ArcEngine 的 <code>AxMapControl</code> / <code>AxTOCControl</code> / <code>AxPageLayoutControl</code> 放入 <code>DockPanel</code> 或中间工作区，<strong>不替换</strong> ESRI 地图控件</li>
+      <li>M8 配置插件提供「界面主题」切换，并持久化到本地配置文件</li>
+      <li><strong>锁定版本 DevExpress 13.1</strong>，与本机开发环境一致；解决方案统一引用 13.1 程序集，避免混用更高版本 DLL</li>
+    </ul>
+
+    <h4>2.3.3 插件式模块加载</h4>
+    <p>M1～M8 各功能模块以独立程序集（插件 DLL）形式开发，宿主启动后扫描插件目录动态加载，实现「主壳稳定、模块可插拔」。</p>
+    <table>
+      <tr><th>要素</th><th>约定</th></tr>
+      <tr><td>插件目录</td><td>程序根目录下 <code>Plugins\</code>（或配置文件指定路径）</td></tr>
+      <tr><td>发现机制</td><td>宿主扫描 <code>*.dll</code>，反射查找实现 <code>IModulePlugin</code> 的类型并实例化</td></tr>
+      <tr><td>加载时机</td><td>主窗体 Ribbon 初始化完成后、显示前批量加载；失败插件记入日志并跳过，不影响其他模块</td></tr>
+      <tr><td>Ribbon 挂接</td><td>插件通过宿主传入的 <code>IRibbonHost</code> 注册自己的 Ribbon 页签/分组/命令</td></tr>
+      <tr><td>上下文注入</td><td>宿主向插件注入 <code>IAppContext</code>（MapControl、DockManager、GDB 路径、日志、进度回调等）</td></tr>
+      <tr><td>生命周期</td><td><code>Initialize</code> → <code>RegisterRibbon</code> → 运行期命令响应 → 关闭时 <code>Shutdown</code></td></tr>
+      <tr><td>配置清单（可选）</td><td><code>plugins.config</code> 控制启用/禁用、加载顺序、依赖关系</td></tr>
+    </table>
+    <div class="note">
+      <strong>协作边界：</strong>DevExpress 13.1 负责 Ribbon 壳、皮肤与业务交互；ArcEngine 负责地图与空间分析；各业务能力以插件 DLL 挂到 Ribbon。禁止用 DevExpress 控件替代 MapControl 的地图渲染能力。
+    </div>
+  </section>
+
+  <!-- 三、数据体系 -->
+  <section id="s3">
+    <h2>三、数据体系与输入要求</h2>
+    <p>所有数据预先组织在 <code>苏州更新潜力评价数据.gdb</code> 中。系统根据地区允许部分缺项，但<strong>建成区范围</strong>和<strong>宗地数据</strong>为必选。</p>
+
+    <h3>3.1 基础控制数据</h3>
+    <table>
+      <tr><th>图层名称</th><th>几何类型</th><th>是否必选</th><th>作用</th></tr>
+      <tr><td>建成区/城区范围</td><td>Polygon</td><td><span class="badge badge-red">必选</span></td><td>划定分析边界，所有图层裁剪至此范围</td></tr>
+      <tr><td>行政区划</td><td>Polygon</td><td><span class="badge badge-orange">推荐</span></td><td>成果挂接行政区字段，分区统计</td></tr>
+      <tr><td>宗地/地块数据</td><td>Polygon</td><td><span class="badge badge-red">必选</span></td><td>最终潜力值关联载体</td></tr>
+    </table>
+
+    <h3>3.2 动力性分析数据</h3>
+    <table>
+      <tr><th>图层名称</th><th>几何类型</th><th>作用</th></tr>
+      <tr><td>城市现状路网</td><td>Polyline</td><td>路网可达性分析（Network Analyst）</td></tr>
+      <tr><td>轨道交通站点（分单线/多线）</td><td>Point</td><td>轨交通达性多级缓冲</td></tr>
+      <tr><td>城市CBD/高强度建设区</td><td>Polygon</td><td>区位优越性评价</td></tr>
+      <tr><td>大型交通设施</td><td>Point/Polygon</td><td>交通设施缓冲 300m</td></tr>
+      <tr><td>重要生态廊道/水系</td><td>Polyline/Polygon</td><td>生态舒适性缓冲 500m</td></tr>
+      <tr><td>大型开敞空间/湖泊</td><td>Polygon</td><td>开敞空间缓冲 500m</td></tr>
+      <tr><td>现状绿地</td><td>Polygon</td><td>绿地丰富性缓冲 300m</td></tr>
+      <tr><td>市级公共服务设施</td><td>Point</td><td>公服便利性缓冲 1000m</td></tr>
+      <tr><td>便民服务设施</td><td>Point</td><td>便民设施缓冲 300m</td></tr>
+      <tr><td>市级商业设施</td><td>Point</td><td>商业发达性缓冲 1000m</td></tr>
+      <tr><td>城市发展带/战略片区/近期重点发展区</td><td>Polygon</td><td>政策支持度空间叠加</td></tr>
+    </table>
+
+    <h3>3.3 可行度分析数据</h3>
+    <table>
+      <tr><th>数据名称</th><th>类型</th><th>作用</th></tr>
+      <tr><td>土地利用斑块（宗地细分）</td><td>Polygon</td><td>计算斑块破碎度 PD、形状指数 SI</td></tr>
+      <tr><td>DEM 高程栅格</td><td>Raster</td><td>提取高度因子（重分类为 -1 分）</td></tr>
+      <tr><td>DEM 坡度栅格</td><td>Raster</td><td>提取坡度因子（重分类为 -1 分）</td></tr>
+      <tr><td>人口密度栅格</td><td>Raster</td><td>人口因子（+2 分），参考 04 人口数据.png</td></tr>
+    </table>
+
+    <h3>3.4 预处理要求</h3>
+    <ul style="padding-left:22px;">
+      <li>所有矢量/栅格数据统一投影至 <strong>CGCS2000 3度带</strong>（<code>IGeoDataset.SpatialReference</code> 校验）</li>
+      <li>以建成区范围为掩膜，执行 <code>Clip</code> 裁剪</li>
+      <li>栅格数据需完成地理配准，像元大小建议统一为 <strong>10m 或 30m</strong></li>
+      <li>字段规范：地铁站点需区分单线/多线属性；土地利用斑块需 <code>landcode</code> 地类编码字段</li>
+    </ul>
+  </section>
+
+  <!-- 四、功能模块 -->
+  <section id="s4">
+    <h2>四、功能模块划分</h2>
+    <p>下列 M1～M8 均以<strong>插件 DLL</strong>形式实现，由宿主按插件机制加载后，自动在 Ribbon 主界面上挂接对应页签与命令。宿主只提供地图壳、Dock 布局、上下文与插件管理器，不内嵌各模块业务窗体逻辑。</p>
+    <div class="module-grid">
+      <div class="module-card">
+        <h4>M1 · 数据管理模块</h4>
+        <ul>
+          <li>GDB 连接与图层树加载（TOC）</li>
+          <li>数据完整性检查（必选图层、坐标系、字段）</li>
+          <li>批量投影/裁剪预处理</li>
+          <li>数据预览与属性表浏览</li>
+        </ul>
+      </div>
+      <div class="module-card">
+        <h4>M2 · 动力性分析模块</h4>
+        <ul>
+          <li>交通便捷度子分析（轨交缓冲 + 路网可达性 + CBD）</li>
+          <li>环境舒适度子分析（生态廊道 + 开敞空间 + 绿地）</li>
+          <li>设施完善度子分析（公服 + 商业 + 便民）</li>
+          <li>政策支持度子分析（发展带 + 战略区 + 近期重点区）</li>
+          <li>准则层加权合成「动力性栅格」</li>
+        </ul>
+      </div>
+      <div class="module-card">
+        <h4>M3 · 可行度分析模块</h4>
+        <ul>
+          <li>宗地斑块破碎度 PD / 形状指数 SI 计算</li>
+          <li>DEM 高程/坡度重分类</li>
+          <li>人口栅格重分类</li>
+          <li>可行度加权合成「可行度栅格」</li>
+        </ul>
+      </div>
+      <div class="module-card">
+        <h4>M4 · 叠置评价模块</h4>
+        <ul>
+          <li>动力性 + 可行度栅格加权叠置</li>
+          <li>更新潜力等级划分（极高/高/中/低/偏低 五级）</li>
+          <li>栅格统计（面积、占比）</li>
+        </ul>
+      </div>
+      <div class="module-card">
+        <h4>M5 · 宗地关联模块</h4>
+        <ul>
+          <li>潜力栅格值 Zonal Statistics 至宗地</li>
+          <li>宗地字段写入：潜力总分、动力分、可行分、等级</li>
+          <li>单宗地详情查看与标注</li>
+        </ul>
+      </div>
+      <div class="module-card">
+        <h4>M6 · 验证校核模块</h4>
+        <ul>
+          <li>评价结果与已更新宗地对标</li>
+          <li>权重参数手动调整与重新计算</li>
+          <li>差异区域标注与审核记录</li>
+        </ul>
+      </div>
+      <div class="module-card">
+        <h4>M7 · 成果输出模块</h4>
+        <ul>
+          <li>全域更新潜力评价专题图（PageLayout 布局）</li>
+          <li>宗地更新潜力分析专题图</li>
+          <li>导出 TIFF/PDF/SHP 成果</li>
+          <li>评价结果 Excel 报表</li>
+        </ul>
+      </div>
+      <div class="module-card">
+        <h4>M8 · 系统配置模块（插件）</h4>
+        <ul>
+          <li>因子权重配置（准则层/指标层）</li>
+          <li>缓冲距离/得分规则表维护</li>
+          <li>DevExpress 13.1 界面主题/皮肤切换与持久化</li>
+          <li>插件启用清单（plugins.config）维护入口</li>
+          <li>分析日志与 GP 执行记录</li>
+        </ul>
+      </div>
+    </div>
+  </section>
+
+  <!-- 五、核心分析 -->
+  <section id="s5">
+    <h2>五、核心分析算法详解</h2>
+    <p>评价体系采用<strong>目标层 → 准则层 → 影响要素 → 具体指标</strong>四级结构。各指标通过空间分析生成栅格得分面，再逐级加权叠置。</p>
+
+    <!-- 5.1 动力性 -->
+    <h3>5.1 更新动力性分析（正向驱动因子）</h3>
+    <p>动力性反映「为什么要更新」，分值越高代表更新动力越强。准则层默认权重如下（可在 M8 配置）：</p>
+    <table>
+      <tr><th>准则层</th><th>默认权重</th><th>影响要素</th><th>指标</th><th>得分规则</th></tr>
+      <tr>
+        <td rowspan="3"><strong>交通便捷度</strong></td>
+        <td rowspan="3">30%</td>
+        <td>轨交通达性</td>
+        <td>单线地铁站点</td>
+        <td>300m→3分，600m→2分，1000m→1分（缓冲区）</td>
+      </tr>
+      <tr>
+        <td>轨交通达性</td>
+        <td>两线及以上地铁站点</td>
+        <td>300m→4分，600m→3分，1000m→2分</td>
+      </tr>
+      <tr>
+        <td>区位优越性</td>
+        <td>路网可达性 / 交通设施 / CBD</td>
+        <td>路网可达性 1-5 分；交通设施缓冲300m→1分；CBD缓冲1000m→3分</td>
+      </tr>
+      <tr>
+        <td rowspan="2"><strong>环境舒适度</strong></td>
+        <td rowspan="2">20%</td>
+        <td>生态舒适性</td>
+        <td>重要生态廊道</td>
+        <td>建成区内河道/绿廊缓冲 500m → 2分</td>
+      </tr>
+      <tr>
+        <td>绿地丰富性</td>
+        <td>开敞空间 + 现状绿地</td>
+        <td>大型绿地/湖泊缓冲500m→2分；现状绿地缓冲300m→1分</td>
+      </tr>
+      <tr>
+        <td rowspan="2"><strong>设施完善度</strong></td>
+        <td rowspan="2">25%</td>
+        <td>公服便利性</td>
+        <td>市级公服 + 便民设施</td>
+        <td>市级公服缓冲1000m→2分；便民设施缓冲300m→1分</td>
+      </tr>
+      <tr>
+        <td>商业发达性</td>
+        <td>市级商业设施</td>
+        <td>缓冲 1000m → 1分</td>
+      </tr>
+      <tr>
+        <td><strong>政策支持度</strong></td>
+        <td>25%</td>
+        <td>战略发展区</td>
+        <td>发展圈带 / 战略片区 / 近期重点区</td>
+        <td>圈带→1分；战略片区→1分；近期重点区→2分</td>
+      </tr>
+    </table>
+
+    <h4>5.1.1 轨交通达性 — 多级缓冲区分析</h4>
+    <p><strong>原理：</strong>以地铁站点为源，按 300/600/1000m 半径生成多级缓冲区，不同级别赋予不同得分，取最大值合并为栅格。</p>
+    <p><strong>ArcEngine 实现：</strong></p>
+    <ul style="padding-left:22px; font-size:14px;">
+      <li>接口：<code>ITopologicalOperator.Buffer()</code> 生成矢量缓冲面</li>
+      <li>或 GP 工具：<code>Multiple Ring Buffer</code> 一步生成多环缓冲</li>
+      <li>面转栅格：<code>FeatureToRaster</code>，值字段 = 得分</li>
+      <li>多环合并：<code>RasterMapAlgebraOp</code> 取 MAX 合成单一轨交得分栅格</li>
+    </ul>
+
+    <h4>5.1.2 路网可达性 — 网络分析</h4>
+    <p><strong>原理：</strong>基于路网数据集，计算各栅格单元到城市中心/副中心的通行成本，成本越低得分越高（1-5 分）。</p>
+    <p><strong>ArcEngine 实现：</strong></p>
+    <ul style="padding-left:22px; font-size:14px;">
+      <li>构建 <code>INetworkDataset</code>，设置通行成本属性（道路等级/限速）</li>
+      <li>使用 <code>INASolverODCostMatrix</code> 或 <code>INAAgentSolverCostDistance</code></li>
+      <li>输出成本距离栅格，通过 <code>Reclassify</code> 映射为 1-5 分</li>
+      <li>备选简化方案：无 Network Analyst 许可时，用欧氏距离 + 道路密度栅格近似</li>
+    </ul>
+
+    <h4>5.1.3 环境/设施因子 — 缓冲区 + 欧氏距离</h4>
+    <p><strong>原理：</strong>对点/线/面要素按规则距离缓冲，缓冲范围内赋固定分值；多个因子栅格取 MAX 或 SUM（按指标设计）。</p>
+    <p><strong>ArcEngine 实现：</strong></p>
+    <ul style="padding-left:22px; font-size:14px;">
+      <li>点要素：<code>PointDistance</code> 或 <code>EuclideanDistance</code> 生成距离栅格 → 重分类</li>
+      <li>面要素：<code>Buffer</code> → <code>FeatureToRaster</code></li>
+      <li>线要素（生态廊道）：<code>Buffer(500)</code> → 面转栅格</li>
+    </ul>
+
+    <h4>5.1.4 政策支持度 — 空间包含检测</h4>
+    <p><strong>原理：</strong>判断评价单元是否落在政策红线范围内，采用 <code>Identity</code> 或 <code>SpatialJoin</code> 叠加检测。</p>
+    <p><strong>ArcEngine 实现：</strong></p>
+    <ul style="padding-left:22px; font-size:14px;">
+      <li><code>IGeoProcessor.Execute("Identity", ...)</code> 叠加政策区与评价格网</li>
+      <li>按重叠情况赋值：近期重点区 2 分 > 战略片区 1 分 > 发展圈带 1 分</li>
+      <li>面转栅格输出政策得分面</li>
+    </ul>
+
+    <h4>5.1.5 动力性准则层合成</h4>
+    <div class="formula">
+      动力性得分 = Σ (准则层权重<sub>i</sub> × 准则层得分<sub>i</sub>)<br>
+      准则层得分<sub>i</sub> = Σ (指标得分<sub>j</sub>) &nbsp;（同准则层内各指标得分相加，上限按设计封顶）
+    </div>
+    <p>通过 <code>RasterMapAlgebraOp</code> 或 <code>WeightedOverlay</code>（GP 工具 <code>Weighted Overlay</code>）实现栅格加权求和，输出 <strong>动力性栅格</strong>（值域建议标准化为 0-100）。</p>
+
+    <!-- 5.2 可行度 -->
+    <h3>5.2 更新可行度分析（约束与基础条件因子）</h3>
+    <p>可行度反映「能不能更新」，包含正向因子（人口密集）和负向因子（地形限制、破碎度高）。</p>
+    <table class="score-table">
+      <tr><th>影响要素</th><th>具体指标</th><th>得分</th><th>算法要点</th></tr>
+      <tr>
+        <td rowspan="2">宗地情况</td>
+        <td>斑块破碎度 PD</td>
+        <td>-2</td>
+        <td>PD 越高（地块越碎）扣分越多，通过 FS 指数映射</td>
+      </tr>
+      <tr>
+        <td>形状指数 SI</td>
+        <td>-1</td>
+        <td>形状越不规则扣分，SI 越大得分越低</td>
+      </tr>
+      <tr>
+        <td rowspan="2">基地情况</td>
+        <td>高度（DEM）</td>
+        <td>-1</td>
+        <td>高程超过阈值区域扣分</td>
+      </tr>
+      <tr>
+        <td>坡度（DEM）</td>
+        <td>-1</td>
+        <td>坡度 &gt; 15° 区域扣分</td>
+      </tr>
+      <tr>
+        <td>人口情况</td>
+        <td>人口密度栅格</td>
+        <td>+2</td>
+        <td>人口密度越高得分越高（更新需求大）</td>
+      </tr>
+    </table>
+
+    <h4>5.2.1 斑块破碎度 PD 与形状指数 SI</h4>
+    <p><strong>原理（来源：03 宗地分析.pdf）：</strong></p>
+    <div class="formula">
+      SI（形状指数）= P / (2 × √(π × A))&nbsp;&nbsp;&nbsp;（P=周长，A=面积；圆形 SI=1，越不规则越大）<br>
+      FS（综合破碎度）= 1 − 1/ASI&nbsp;&nbsp;&nbsp;（ASI = Σ(SI<sub>i</sub> × A<sub>i</sub>) / TA）<br>
+      PD（斑块密度）= NP / TA&nbsp;&nbsp;&nbsp;（NP=斑块数，TA=总面积 hm²）
+    </div>
+    <p><strong>ArcEngine 实现：</strong></p>
+    <ul style="padding-left:22px; font-size:14px;">
+      <li>对土地利用斑块执行 <code>Dissolve</code>（按 landcode 融合相邻同类型斑块）</li>
+      <li><code>AddGeometryAttributes</code> 计算面积、周长</li>
+      <li><code>ICursor</code> 遍历要素，<code>CalculateField</code> 计算 SI 字段</li>
+      <li><code>Statistics</code> 按地类汇总 → 计算 PD/MPS/ED/FS</li>
+      <li>将 FS 值关联回斑块面 → 面转栅格（PD 高区域 → -2 分）</li>
+      <li>SI 值直接映射：SI 1.0-1.3 不扣分，SI &gt; 3.0 扣 -1 分</li>
+    </ul>
+
+    <h4>5.2.2 DEM 高程与坡度</h4>
+    <p><strong>ArcEngine 实现：</strong></p>
+    <ul style="padding-left:22px; font-size:14px;">
+      <li>已有 DEM 栅格 → GP <code>Slope</code> 生成坡度栅格</li>
+      <li><code>Reclassify</code>：高程 &gt; 设定阈值（如 50m）→ 值 = -1，否则 = 0</li>
+      <li><code>Reclassify</code>：坡度 &gt; 15° → 值 = -1，否则 = 0</li>
+    </ul>
+
+    <h4>5.2.3 人口密度</h4>
+    <p><strong>原理：</strong>人口密度越高，更新需求和商业价值越大，为正向因子。</p>
+    <p><strong>ArcEngine 实现：</strong></p>
+    <ul style="padding-left:22px; font-size:14px;">
+      <li>加载人口栅格（参考 04 人口数据.png 热力分布）</li>
+      <li><code>Reclassify</code> 按自然断点分为 3-5 级，最高级 → +2 分，其余 → 0-1 分</li>
+      <li>裁剪至建成区范围</li>
+    </ul>
+
+    <h4>5.2.4 可行度合成</h4>
+    <div class="formula">
+      可行度得分 = 人口得分 + 地形得分（高程 + 坡度）+ 宗地得分（PD + SI）<br>
+      注：负向因子直接扣分，最终可行度栅格值域可能为负，后续需标准化处理
+    </div>
+
+    <!-- 5.3 总评价 -->
+    <h3>5.3 综合潜力评价与等级划分</h3>
+    <div class="formula">
+      更新潜力总分 = 动力性得分 × W<sub>动力</sub> + 可行度得分 × W<sub>可行</sub><br>
+      默认：W<sub>动力</sub> = 0.7，W<sub>可行</sub> = 0.3（可配置）
+    </div>
+    <table>
+      <tr><th>潜力等级</th><th>分值区间（标准化后）</th><th>颜色建议</th><th>含义</th></tr>
+      <tr><td>极高</td><td>80 - 100</td><td style="color:#c0392b;">■ 深红</td><td>优先更新区</td></tr>
+      <tr><td>高</td><td>60 - 80</td><td style="color:#e67e22;">■ 橙</td><td>重点更新区</td></tr>
+      <tr><td>中</td><td>40 - 60</td><td style="color:#f1c40f;">■ 黄</td><td>一般更新区</td></tr>
+      <tr><td>低</td><td>20 - 40</td><td style="color:#2ecc71;">■ 绿</td><td>暂缓更新区</td></tr>
+      <tr><td>偏低</td><td>0 - 20</td><td style="color:#3498db;">■ 蓝</td><td>暂不更新区</td></tr>
+    </table>
+
+    <!-- 5.4 宗地关联 -->
+    <h3>5.4 评价结果关联宗地</h3>
+    <p><strong>原理：</strong>将潜力栅格值统计到宗地面要素上，每个宗地获得代表性潜力分值。</p>
+    <p><strong>ArcEngine 实现：</strong></p>
+    <ul style="padding-left:22px; font-size:14px;">
+      <li>GP 工具 <code>Zonal Statistics as Table</code>：以宗地为区域，潜力栅格为值</li>
+      <li>统计方式：MEAN（均值）或 MAX（最大值），推荐 MEAN</li>
+      <li><code>JoinField</code> 将统计结果写回宗地属性表</li>
+      <li>新增字段：<code>POTENTIAL_SCORE</code>（总分）、<code>MOTIV_SCORE</code>（动力分）、<code>FEASIB_SCORE</code>（可行分）、<code>POTENTIAL_LEVEL</code>（等级）</li>
+      <li>按 POTENTIAL_SCORE 分级渲染宗地图层（成果图2）</li>
+    </ul>
+
+    <!-- 5.5 验证 -->
+    <h3>5.5 验证校核</h3>
+    <p><strong>原理：</strong>将系统评价结果与已知已更新宗地进行对比，检验模型合理性。</p>
+    <ul style="padding-left:22px; font-size:14px;">
+      <li>导入「已更新宗地」图层（带更新状态字段）</li>
+      <li>对比已更新宗地的潜力得分分布：已更新地块应集中在高/极高等级</li>
+      <li>若偏差较大，通过 M8 权重配置模块调整准则层权重，重新计算</li>
+      <li>记录校核意见，生成验证报告</li>
+    </ul>
+  </section>
+
+  <!-- 六、总流程图 -->
+  <section id="s6">
+    <h2>六、技术流程图 — 系统总流程</h2>
+    <div class="flow-box">
+      <div class="flow-chart">
+
+        <div class="flow-stage input">
+          <div class="flow-stage-title">① 数据输入</div>
+          <div class="flow-nodes">
+            <div class="flow-node"><strong>建成区范围</strong>（必选）</div>
+            <div class="flow-node"><strong>交通数据</strong>路网/地铁/CBD</div>
+            <div class="flow-node"><strong>环境数据</strong>生态廊道/绿地/开敞空间</div>
+            <div class="flow-node"><strong>设施数据</strong>公服/商业/便民</div>
+            <div class="flow-node"><strong>政策数据</strong>发展带/战略区/重点区</div>
+            <div class="flow-node"><strong>宗地数据</strong>（必选）</div>
+            <div class="flow-node"><strong>地形/人口</strong>DEM/人口栅格</div>
+          </div>
+        </div>
+
+        <div class="flow-arrow-down">▼</div>
+
+        <div class="flow-stage pre">
+          <div class="flow-stage-title">② 预处理阶段</div>
+          <div class="flow-row">
+            <div class="flow-node">坐标系统一<br>CGCS2000 3度带</div>
+            <div class="flow-arrow-right">→</div>
+            <div class="flow-node">建成区裁剪<br>Clip</div>
+            <div class="flow-arrow-right">→</div>
+            <div class="flow-node">数据质检<br>字段/拓扑检查</div>
+          </div>
+        </div>
+
+        <div class="flow-arrow-down">▼</div>
+
+        <div class="flow-stage eval">
+          <div class="flow-stage-title">③ 更新评价阶段</div>
+          <div class="flow-row">
+            <div class="flow-node">动力性分析<br>4准则层因子量化</div>
+            <div class="flow-node">可行度分析<br>宗地/DEM/人口</div>
+          </div>
+          <div class="flow-connector">↓ 两路分析结果汇入 ↓</div>
+          <div class="flow-row">
+            <div class="flow-node highlight">栅格加权叠置<br>潜力等级划分</div>
+            <div class="flow-arrow-right">→</div>
+            <div class="flow-node highlight">宗地关联赋值<br>Zonal Statistics</div>
+          </div>
+        </div>
+
+        <div class="flow-arrow-down">▼</div>
+
+        <div class="flow-stage verify">
+          <div class="flow-stage-title">④ 验证与输出阶段</div>
+          <div class="flow-row">
+            <div class="flow-node">已更新宗地<br>对标验证</div>
+          </div>
+          <div class="flow-branch">
+            <div class="flow-branch-item">
+              <div class="flow-branch-label">偏差大</div>
+              <div class="flow-arrow-down" style="padding:2px 0;">▼</div>
+              <div class="flow-node">权重调整<br>重新计算</div>
+              <div class="flow-arrow-down" style="padding:2px 0;">▼</div>
+              <div class="flow-node">返回 ③ 更新评价</div>
+            </div>
+            <div class="flow-branch-item">
+              <div class="flow-branch-label">验证通过</div>
+              <div class="flow-arrow-down" style="padding:2px 0;">▼</div>
+              <div class="flow-node">专题图输出<br>PDF / TIFF</div>
+              <div class="flow-arrow-down" style="padding:2px 0;">▼</div>
+              <div class="flow-node output">报表导出<br>Excel / SHP</div>
+            </div>
+          </div>
+        </div>
+
+      </div>
+    </div>
+  </section>
+
+  <!-- 七、动力性子流程 -->
+  <section id="s7">
+    <h2>七、技术流程图 — 动力性分析子系统</h2>
+    <div class="flow-box">
+      <div class="flow-chart">
+
+        <div class="flow-groups-row">
+          <div class="flow-group traffic">
+            <div class="flow-group-title">交通便捷度 · 30%</div>
+            <div class="flow-inline">
+              <div class="flow-node">地铁站点<br>单线/多线分类</div>
+              <div class="flow-arrow-right">→</div>
+              <div class="flow-node">多级缓冲<br>300/600/1000m</div>
+            </div>
+            <div class="flow-inline" style="margin-top:8px;">
+              <div class="flow-node">路网数据集<br>Network Analyst</div>
+              <div class="flow-arrow-right">→</div>
+              <div class="flow-node">可达性成本栅格<br>重分类 1-5分</div>
+            </div>
+            <div class="flow-node" style="margin-top:8px;">CBD / 交通设施缓冲分析</div>
+          </div>
+
+          <div class="flow-group env">
+            <div class="flow-group-title">环境舒适度 · 20%</div>
+            <div class="flow-node">生态廊道缓冲 500m</div>
+            <div class="flow-node" style="margin-top:6px;">开敞空间/湖泊缓冲 500m</div>
+            <div class="flow-node" style="margin-top:6px;">现状绿地缓冲 300m</div>
+          </div>
+
+          <div class="flow-group facility">
+            <div class="flow-group-title">设施完善度 · 25%</div>
+            <div class="flow-node">市级公服缓冲1000m → 2分</div>
+            <div class="flow-node" style="margin-top:6px;">便民设施缓冲300m → 1分</div>
+            <div class="flow-node" style="margin-top:6px;">市级商业缓冲1000m → 1分</div>
+          </div>
+
+          <div class="flow-group policy">
+            <div class="flow-group-title">政策支持度 · 25%</div>
+            <div class="flow-node">发展圈带 包含检测 → 1分</div>
+            <div class="flow-node" style="margin-top:6px;">战略片区 叠加检测 → 1分</div>
+            <div class="flow-node" style="margin-top:6px;">近期重点区 叠加检测 → 2分</div>
+          </div>
+        </div>
+
+        <div class="flow-arrow-down">▼<span>各准则层内部栅格合并（MAX / SUM）</span></div>
+
+        <div class="flow-merge-row">
+          <div class="flow-node">交通得分栅格</div>
+          <div class="flow-node">环境得分栅格</div>
+          <div class="flow-node">设施得分栅格</div>
+          <div class="flow-node">政策得分栅格</div>
+        </div>
+
+        <div class="flow-arrow-down">▼</div>
+
+        <div class="flow-row">
+          <div class="flow-node highlight">加权叠置<br>Weighted Overlay</div>
+          <div class="flow-arrow-right">→</div>
+          <div class="flow-node output">动力性栅格<br>0-100 标准化输出</div>
+        </div>
+
+      </div>
+    </div>
+  </section>
+
+  <!-- 八、可行度与验证子流程 -->
+  <section id="s8">
+    <h2>八、技术流程图 — 可行度分析与验证输出</h2>
+    <div class="flow-box">
+      <div class="flow-chart">
+
+        <div class="flow-three-col">
+
+          <!-- 可行度分析 -->
+          <div class="flow-stage feasib">
+            <div class="flow-stage-title">可行度分析</div>
+
+            <div class="flow-track">
+              <div class="flow-track-label">轨道 A · 宗地破碎度</div>
+              <div class="flow-inline">
+                <div class="flow-node">土地利用斑块</div>
+                <div class="flow-arrow-right">→</div>
+                <div class="flow-node">Dissolve融合</div>
+                <div class="flow-arrow-right">→</div>
+                <div class="flow-node">计算SI/PD</div>
+                <div class="flow-arrow-right">→</div>
+                <div class="flow-node">关联至斑块面</div>
+              </div>
+            </div>
+
+            <div class="flow-track">
+              <div class="flow-track-label">轨道 B · 地形因子</div>
+              <div class="flow-inline">
+                <div class="flow-node">DEM高程栅格</div>
+                <div class="flow-arrow-right">→</div>
+                <div class="flow-node">Reclassify<br>高程&gt;阈值 → -1</div>
+              </div>
+              <div class="flow-inline" style="margin-top:6px;">
+                <div class="flow-node">Slope坡度栅格</div>
+                <div class="flow-arrow-right">→</div>
+                <div class="flow-node">Reclassify<br>坡度&gt;15° → -1</div>
+              </div>
+            </div>
+
+            <div class="flow-track">
+              <div class="flow-track-label">轨道 C · 人口因子</div>
+              <div class="flow-inline">
+                <div class="flow-node">人口密度栅格</div>
+                <div class="flow-arrow-right">→</div>
+                <div class="flow-node">Reclassify<br>高密度 → +2分</div>
+              </div>
+            </div>
+          </div>
+
+          <!-- 叠置与宗地关联 -->
+          <div class="flow-stage overlay">
+            <div class="flow-stage-title">叠置与宗地关联</div>
+            <div class="flow-row" style="flex-direction:column; align-items:stretch;">
+              <div class="flow-node">可行度栅格合成<br>人口 + 地形 + 宗地</div>
+              <div class="flow-arrow-down" style="padding:4px 0;">▼</div>
+              <div class="flow-node highlight">综合潜力<br>动力×0.7 + 可行×0.3</div>
+              <div class="flow-arrow-down" style="padding:4px 0;">▼</div>
+              <div class="flow-node">五级分类<br>极高/高/中/低/偏低</div>
+              <div class="flow-arrow-down" style="padding:4px 0;">▼</div>
+              <div class="flow-node">Zonal Statistics<br>栅格值 → 宗地字段</div>
+              <div class="flow-arrow-down" style="padding:4px 0;">▼</div>
+              <div class="flow-node highlight">宗地图分级渲染</div>
+            </div>
+          </div>
+
+          <!-- 验证校核与输出 -->
+          <div class="flow-stage valid">
+            <div class="flow-stage-title">验证校核与输出</div>
+            <div class="flow-row" style="flex-direction:column; align-items:stretch;">
+              <div class="flow-node">导入已更新宗地</div>
+              <div class="flow-arrow-down" style="padding:4px 0;">▼</div>
+              <div class="flow-node decision">已更新地块<br>集中在高等级？</div>
+              <div class="flow-branch" style="margin-top:10px;">
+                <div class="flow-branch-item">
+                  <div class="flow-branch-label">否</div>
+                  <div class="flow-arrow-down" style="padding:2px 0;">▼</div>
+                  <div class="flow-node">调整权重参数</div>
+                  <div class="flow-arrow-down" style="padding:2px 0;">▼</div>
+                  <div class="flow-node">重新执行评价</div>
+                </div>
+                <div class="flow-branch-item">
+                  <div class="flow-branch-label">是</div>
+                  <div class="flow-arrow-down" style="padding:2px 0;">▼</div>
+                  <div class="flow-node">生成验证报告</div>
+                  <div class="flow-arrow-down" style="padding:2px 0;">▼</div>
+                  <div class="flow-node">专题图1 全域潜力图</div>
+                  <div class="flow-arrow-down" style="padding:2px 0;">▼</div>
+                  <div class="flow-node output">专题图2 宗地潜力图</div>
+                </div>
+              </div>
+            </div>
+          </div>
+
+        </div>
+
+        <div class="flow-connector" style="margin-top:16px;">
+          ↑ 轨道 A/B/C 三路可行度分析结果汇入「可行度栅格合成」
+        </div>
+
+      </div>
+    </div>
+  </section>
+
+  <!-- 九、系统架构 -->
+  <section id="s9">
+    <h2>九、系统架构与核心类库设计</h2>
+
+    <h3>9.1 解决方案结构</h3>
+    <table>
+      <tr><th>项目/命名空间</th><th>职责</th></tr>
+      <tr><td><code>UrbanRenewal.Host</code> / <code>UrbanRenewal.UI</code></td><td>DevExpress 13.1 <strong>RibbonForm</strong> 主壳、Dock 布局、嵌入 ArcEngine 地图控件、插件加载入口</td></tr>
+      <tr><td><code>UrbanRenewal.Contracts</code></td><td>插件契约：<code>IModulePlugin</code>、<code>IAppContext</code>、<code>IRibbonHost</code> 等，供宿主与各插件共同引用</td></tr>
+      <tr><td><code>UrbanRenewal.PluginLoader</code></td><td>扫描 <code>Plugins\</code>、反射实例化、生命周期管理、失败隔离与日志</td></tr>
+      <tr><td><code>UrbanRenewal.Plugins.*</code></td><td>M1～M8 各业务插件工程（独立 DLL，输出到 Plugins 目录）</td></tr>
+      <tr><td><code>UrbanRenewal.Core</code></td><td>评价引擎调度、流程编排、配置管理（供插件调用）</td></tr>
+      <tr><td><code>UrbanRenewal.Analysis</code></td><td>各因子分析器（交通/环境/设施/政策/宗地/DEM/人口）</td></tr>
+      <tr><td><code>UrbanRenewal.GIS</code></td><td>ArcEngine 封装：缓冲、重分类、叠置、区统计、制图</td></tr>
+      <tr><td><code>UrbanRenewal.Model</code></td><td>配置实体、评价结果、日志记录</td></tr>
+    </table>
+
+    <h3>9.2 核心接口设计</h3>
+    <h4>9.2.1 插件契约（宿主 ↔ 模块）</h4>
+    <table>
+      <tr><th>接口/类</th><th>方法 / 成员</th><th>说明</th></tr>
+      <tr>
+        <td><code>IModulePlugin</code></td>
+        <td><code>Id</code> / <code>Name</code> / <code>Order</code><br><code>Initialize(IAppContext)</code><br><code>RegisterRibbon(IRibbonHost)</code><br><code>Shutdown()</code></td>
+        <td>所有业务模块插件必须实现的统一接口</td>
+      </tr>
+      <tr>
+        <td><code>IAppContext</code></td>
+        <td><code>MapControl</code> / <code>TocControl</code><br><code>DockManager</code> / <code>Logger</code><br><code>ShowProgress</code> / <code>GdbPath</code></td>
+        <td>宿主注入的运行上下文，插件只依赖契约不依赖主窗体具体类</td>
+      </tr>
+      <tr>
+        <td><code>IRibbonHost</code></td>
+        <td><code>AddPage(name)</code><br><code>AddGroup(page, name)</code><br><code>AddButton(group, caption, handler)</code></td>
+        <td>封装 DevExpress 13.1 RibbonControl，供插件动态挂接命令</td>
+      </tr>
+      <tr>
+        <td><code>PluginManager</code></td>
+        <td><code>LoadAll(pluginsDir)</code><br><code>GetPlugins()</code> / <code>UnloadAll()</code></td>
+        <td>目录扫描、反射加载、按 Order 排序初始化</td>
+      </tr>
+      <tr>
+        <td>示例插件类</td>
+        <td><code>DataManagePlugin</code>、<code>MotivationPlugin</code>、<code>FeasibilityPlugin</code> …</td>
+        <td>分别对应 M1～M8，输出为 <code>UrbanRenewal.Plugins.Xxx.dll</code></td>
+      </tr>
+    </table>
+
+    <h4>9.2.2 分析引擎接口</h4>
+    <table>
+      <tr><th>接口/类</th><th>方法</th><th>说明</th></tr>
+      <tr>
+        <td><code>IFactorAnalyzer</code></td>
+        <td><code>IRaster Analyze(IFactorConfig config)</code></td>
+        <td>所有因子分析器的统一接口</td>
+      </tr>
+      <tr>
+        <td><code>TrafficAnalyzer</code></td>
+        <td><code>Analyze()</code> → 轨交缓冲 + 路网可达性栅格</td>
+        <td>实现 IFactorAnalyzer</td>
+      </tr>
+      <tr>
+        <td><code>EnvironmentAnalyzer</code></td>
+        <td><code>Analyze()</code> → 生态/绿地/开敞空间栅格</td>
+        <td>实现 IFactorAnalyzer</td>
+      </tr>
+      <tr>
+        <td><code>ParcelAnalyzer</code></td>
+        <td><code>CalcSI() / CalcFragmentation() / ToRaster()</code></td>
+        <td>宗地破碎度与形状指数</td>
+      </tr>
+      <tr>
+        <td><code>RasterOverlayEngine</code></td>
+        <td><code>WeightedSum() / Reclassify() / ZonalStats()</code></td>
+        <td>栅格叠置与区统计引擎</td>
+      </tr>
+      <tr>
+        <td><code>EvaluationPipeline</code></td>
+        <td><code>Run() / Validate() / Export()</code></td>
+        <td>评价流程编排器（串联全流程）</td>
+      </tr>
+      <tr>
+        <td><code>MapExportHelper</code></td>
+        <td><code>ExportLayout(format, dpi)</code></td>
+        <td>专题图布局与导出</td>
+      </tr>
+    </table>
+
+    <h3>9.3 主界面布局（DevExpress 13.1 Ribbon + 插件挂接）</h3>
+    <table>
+      <tr><th>区域</th><th>控件</th><th>功能</th></tr>
+      <tr><td>顶部</td><td><strong>RibbonControl（Ribbon 模式）</strong></td><td>宿主内置「地图」页签；M1～M8 页签由各插件动态注册</td></tr>
+      <tr><td>左侧</td><td>DockPanel + AxTOCControl（可选 TreeList）</td><td>数据图层管理，可停靠/自动隐藏</td></tr>
+      <tr><td>中部</td><td>AxMapControl（中间工作区）</td><td>地图浏览与分析结果展示</td></tr>
+      <tr><td>右侧</td><td>DockPanel + XtraTabControl</td><td>参数配置 / 分析日志 / 宗地属性（GridControl）；可由插件申请停靠页</td></tr>
+      <tr><td>底部</td><td>RibbonStatusBar + ProgressBarControl</td><td>GP 执行进度与状态反馈</td></tr>
+      <tr><td>全局</td><td>LookAndFeel / SkinManager（13.1）</td><td>统一皮肤；主题切换由配置插件提供</td></tr>
+    </table>
+    <div class="flow-box" style="margin-top:16px;">
+      <div class="flow-chart" style="min-width:0;">
+        <div class="flow-row">
+          <div class="flow-node highlight">Host 启动<br>RibbonForm</div>
+          <div class="flow-arrow-right">→</div>
+          <div class="flow-node">PluginManager<br>扫描 Plugins\</div>
+          <div class="flow-arrow-right">→</div>
+          <div class="flow-node">各插件 Initialize<br>+ RegisterRibbon</div>
+          <div class="flow-arrow-right">→</div>
+          <div class="flow-node output">Ribbon 页签就绪<br>用户操作命令</div>
+        </div>
+      </div>
+    </div>
+    <div class="note">
+      <strong>布局说明：</strong>主界面固定 Ribbon 模式。AxToolbarControl 不作为主入口；GIS 通用命令放宿主「地图」页签，业务命令全部由插件注册。新增模块只需增加插件 DLL 与（可选）plugins.config 条目，无需改主工程 UI 代码。
+    </div>
+  </section>
+
+  <!-- 十、开发阶段 -->
+  <section id="s10">
+    <h2>十、开发阶段与交付物</h2>
+    <p>按「宿主先稳、插件递进、分析后置、验证收口」推进。当前进入 <strong>P1 准备实施</strong>，优先落地 Ribbon 主壳与插件加载骨架。</p>
+
+    <h3>10.1 阶段总览</h3>
+    <table>
+      <tr><th>阶段</th><th>周期</th><th>核心目标</th><th>交付物</th><th>状态</th></tr>
+      <tr>
+        <td><span class="badge badge-blue">P1 基础框架</span></td>
+        <td>2 周</td>
+        <td>Ribbon 宿主 + 插件契约/加载器 + ArcEngine 嵌入 + M1 样例</td>
+        <td>可运行主程序；Plugins 目录可热挂 DLL</td>
+        <td><span class="badge badge-orange">进行中</span></td>
+      </tr>
+      <tr>
+        <td><span class="badge badge-blue">P2 动力性分析</span></td>
+        <td>3 周</td>
+        <td>交通/环境/设施/政策因子量化与准则层合成</td>
+        <td>动力性插件 + 动力性栅格</td>
+        <td><span class="badge badge-blue">待开始</span></td>
+      </tr>
+      <tr>
+        <td><span class="badge badge-green">P3 可行度分析</span></td>
+        <td>2 周</td>
+        <td>宗地 SI/PD、DEM、人口因子与可行度合成</td>
+        <td>可行度插件 + 可行度栅格</td>
+        <td><span class="badge badge-blue">待开始</span></td>
+      </tr>
+      <tr>
+        <td><span class="badge badge-green">P4 叠置与宗地关联</span></td>
+        <td>2 周</td>
+        <td>综合潜力叠置、五级分类、Zonal Statistics</td>
+        <td>叠置/宗地插件 + 潜力成果图层</td>
+        <td><span class="badge badge-blue">待开始</span></td>
+      </tr>
+      <tr>
+        <td><span class="badge badge-orange">P5 验证与输出</span></td>
+        <td>2 周</td>
+        <td>对标验证、权重重算、专题图与报表、皮肤配置</td>
+        <td>验证/输出/配置插件 + 两套图 + 报表</td>
+        <td><span class="badge badge-blue">待开始</span></td>
+      </tr>
+      <tr>
+        <td><span class="badge badge-orange">P6 测试与部署</span></td>
+        <td>1 周</td>
+        <td>苏州数据全流程回归、安装包与手册</td>
+        <td>安装程序 + 用户操作手册</td>
+        <td><span class="badge badge-blue">待开始</span></td>
+      </tr>
+    </table>
+    <p style="margin-top:12px;"><strong>总工期估算：约 12 周（3 个月）</strong></p>
+
+    <h3>10.2 P1 实施拆分（当前阶段）</h3>
+    <table>
+      <tr><th>子任务</th><th>内容</th><th>验收标准</th></tr>
+      <tr>
+        <td>P1-1 解决方案骨架</td>
+        <td>建立 Host / Contracts / PluginLoader / Model / Core / GIS / Analysis / Plugins.DataManage 工程；目标 .NET 4.5、C# 5.0、VS2012</td>
+        <td>解决方案可在 VS2012 打开；各工程引用关系正确</td>
+      </tr>
+      <tr>
+        <td>P1-2 插件契约</td>
+        <td>实现 <code>IModulePlugin</code>、<code>IAppContext</code>、<code>IRibbonHost</code>；可选 <code>plugins.config</code></td>
+        <td>契约程序集无 UI/GIS 强依赖，插件可单独编译</td>
+      </tr>
+      <tr>
+        <td>P1-3 插件加载器</td>
+        <td>扫描 <code>Plugins\</code>、反射加载、按 Order 初始化、失败隔离写日志</td>
+        <td>放入样例 DLL 后自动出现 Ribbon 页签；坏 DLL 不影响宿主</td>
+      </tr>
+      <tr>
+        <td>P1-4 Ribbon 主壳</td>
+        <td>DevExpress 13.1 RibbonForm；内置「地图」页签；LookAndFeel 皮肤初始化</td>
+        <td>启动即 Ribbon 界面；皮肤与 13.1 一致</td>
+      </tr>
+      <tr>
+        <td>P1-5 地图嵌入</td>
+        <td>Dock + AxMapControl / AxTOCControl；宿主「地图」页签绑定漫游/缩放等命令</td>
+        <td>可加载 mxd 或 gdb 图层并浏览</td>
+      </tr>
+      <tr>
+        <td>P1-6 M1 数据管理插件</td>
+        <td>注册 Ribbon「数据管理」页签：打开 GDB、完整性检查、投影/裁剪入口（可先做命令桩）</td>
+        <td>插件 DLL 拷贝至 Plugins 即可挂接；命令可弹出提示或执行基础加载</td>
+      </tr>
+    </table>
+
+    <h3>10.3 后续阶段入口条件</h3>
+    <ul style="padding-left:22px;">
+      <li><strong>进入 P2：</strong>P1 验收通过；建成区/宗地样例数据可加载；插件热挂机制稳定</li>
+      <li><strong>进入 P3：</strong>动力性至少 2 个准则层可产出得分栅格</li>
+      <li><strong>进入 P4：</strong>动力性、可行度栅格均可生成且像元对齐</li>
+      <li><strong>进入 P5：</strong>宗地已写入潜力分字段并可分级渲染</li>
+      <li><strong>进入 P6：</strong>主流程可在苏州数据上跑通，无阻塞性缺陷</li>
+    </ul>
+
+    <h3>10.4 工程目录约定（实施落地）</h3>
+    <table>
+      <tr><th>路径</th><th>说明</th></tr>
+      <tr><td><code>src/UrbanRenewal.sln</code></td><td>VS2012 解决方案</td></tr>
+      <tr><td><code>src/UrbanRenewal.Host</code></td><td>Ribbon 主程序（启动项目）</td></tr>
+      <tr><td><code>src/UrbanRenewal.Contracts</code></td><td>插件契约</td></tr>
+      <tr><td><code>src/UrbanRenewal.PluginLoader</code></td><td>插件扫描与生命周期</td></tr>
+      <tr><td><code>src/UrbanRenewal.Core / Model / GIS / Analysis</code></td><td>领域与 GIS 封装（P1 先建空壳，P2+ 充实）</td></tr>
+      <tr><td><code>src/UrbanRenewal.Plugins.DataManage</code></td><td>M1 插件样例</td></tr>
+      <tr><td><code>bin/Plugins/</code></td><td>运行时插件投放目录</td></tr>
+      <tr><td><code>资料/</code></td><td>本实施方案等文档</td></tr>
+    </table>
+  </section>
+
+</div>
+
+<div class="footer">
+  城市更新潜力评价与验证系统 · 实施方案 · C# + ArcGIS Engine 10.2 + DevExpress 13.1（Ribbon + 插件式） · 基于苏州示例数据编制
+</div>
+
+</body>
+</html>

@@ -1,0 +1,34 @@
+# Build
+[Dd]ebug/
+[Rr]elease/
+[Bb]in/
+[Oo]bj/
+*.user
+*.suo
+*.userosscache
+*.sln.docstates
+*.cache
+*.pdb
+.vs/
+packages/
+
+# DevExpress / local
+*.vshost.exe
+*.vshost.exe.manifest
+**/licenses.licx
+
+# GIS 大数据与地图文档（本地保留，不纳入版本库）
+*.gdb/
+*.gdb/**
+*.mxd
+*.lock
+
+# OS
+Thumbs.db
+Desktop.ini
+.DS_Store
+
+# Logs / temp
+*.log
+*.tmp
+~$*
