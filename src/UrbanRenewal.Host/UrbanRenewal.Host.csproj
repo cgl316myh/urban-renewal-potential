@@ -1,6 +1,7 @@
 ﻿<?xml version="1.0" encoding="utf-8"?>
 <Project ToolsVersion="4.0" DefaultTargets="Build" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
   <Import Project="$(MSBuildExtensionsPath)\$(MSBuildToolsVersion)\Microsoft.Common.props" Condition="Exists('$(MSBuildExtensionsPath)\$(MSBuildToolsVersion)\Microsoft.Common.props')" />
+  <Import Project="..\ArcGisPaths.props" Condition="Exists('..\ArcGisPaths.props')" />
   <PropertyGroup>
     <Configuration Condition=" '$(Configuration)' == '' ">Debug</Configuration>
     <Platform Condition=" '$(Platform)' == '' ">AnyCPU</Platform>
@@ -54,6 +55,26 @@
       <HintPath>$(DevExpressGac)\DevExpress.BonusSkins.v13.1\v4.0_13.1.5.0__b88d1754d700e49a\DevExpress.BonusSkins.v13.1.dll</HintPath>
       <Private>True</Private>
     </Reference>
+    <Reference Include="ESRI.ArcGIS.AxControls">
+      <HintPath>$(ArcGisDotNetDir)\ESRI.ArcGIS.AxControls.dll</HintPath>
+      <Private>False</Private>
+      <SpecificVersion>False</SpecificVersion>
+    </Reference>
+    <Reference Include="ESRI.ArcGIS.Controls">
+      <HintPath>$(ArcGisDotNetDir)\ESRI.ArcGIS.Controls.dll</HintPath>
+      <Private>False</Private>
+      <SpecificVersion>False</SpecificVersion>
+    </Reference>
+    <Reference Include="ESRI.ArcGIS.System">
+      <HintPath>$(ArcGisDotNetDir)\ESRI.ArcGIS.System.dll</HintPath>
+      <Private>False</Private>
+      <SpecificVersion>False</SpecificVersion>
+    </Reference>
+    <Reference Include="ESRI.ArcGIS.Version">
+      <HintPath>$(ArcGisDotNetDir)\ESRI.ArcGIS.Version.dll</HintPath>
+      <Private>False</Private>
+      <SpecificVersion>False</SpecificVersion>
+    </Reference>
     <Reference Include="System" />
     <Reference Include="System.Core" />
     <Reference Include="System.Drawing" />
@@ -65,9 +86,17 @@
       <Project>{A1111111-1111-1111-1111-111111111111}</Project>
       <Name>UrbanRenewal.Contracts</Name>
     </ProjectReference>
+    <ProjectReference Include="..\UrbanRenewal.Analysis\UrbanRenewal.Analysis.csproj">
+      <Project>{A6666666-6666-6666-6666-666666666666}</Project>
+      <Name>UrbanRenewal.Analysis</Name>
+    </ProjectReference>
     <ProjectReference Include="..\UrbanRenewal.Core\UrbanRenewal.Core.csproj">
       <Project>{A4444444-4444-4444-4444-444444444444}</Project>
       <Name>UrbanRenewal.Core</Name>
+    </ProjectReference>
+    <ProjectReference Include="..\UrbanRenewal.GIS\UrbanRenewal.GIS.csproj">
+      <Project>{A5555555-5555-5555-5555-555555555555}</Project>
+      <Name>UrbanRenewal.GIS</Name>
     </ProjectReference>
     <ProjectReference Include="..\UrbanRenewal.Model\UrbanRenewal.Model.csproj">
       <Project>{A2222222-2222-2222-2222-222222222222}</Project>
@@ -99,9 +128,19 @@
     <EmbeddedResource Include="MainRibbonForm.resx">
       <DependentUpon>MainRibbonForm.cs</DependentUpon>
     </EmbeddedResource>
+    <EmbeddedResource Include="Properties\licenses.licx" />
   </ItemGroup>
   <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />
   <PropertyGroup>
-    <PostBuildEvent>if not exist "$(TargetDir)Plugins" mkdir "$(TargetDir)Plugins"</PostBuildEvent>
+    <PostBuildEvent>if not exist "$(TargetDir)Plugins" mkdir "$(TargetDir)Plugins"
+copy /Y "$(SolutionDir)UrbanRenewal.Plugins.DataManage\bin\$(ConfigurationName)\UrbanRenewal.Plugins.DataManage.dll" "$(TargetDir)Plugins\" 2>nul
+copy /Y "$(SolutionDir)UrbanRenewal.Plugins.Motivation\bin\$(ConfigurationName)\UrbanRenewal.Plugins.Motivation.dll" "$(TargetDir)Plugins\" 2>nul
+rem 清理 Plugins 中的依赖 DLL，避免与主程序双份加载
+del /Q "$(TargetDir)Plugins\UrbanRenewal.Contracts.dll" 2>nul
+del /Q "$(TargetDir)Plugins\UrbanRenewal.Model.dll" 2>nul
+del /Q "$(TargetDir)Plugins\UrbanRenewal.GIS.dll" 2>nul
+del /Q "$(TargetDir)Plugins\UrbanRenewal.Analysis.dll" 2>nul
+del /Q "$(TargetDir)Plugins\UrbanRenewal.PluginLoader.dll" 2>nul
+del /Q "$(TargetDir)Plugins\UrbanRenewal.Core.dll" 2>nul</PostBuildEvent>
   </PropertyGroup>
 </Project>

@@ -37,11 +37,19 @@ namespace UrbanRenewal.Host
             this.ribbonPageMap = new DevExpress.XtraBars.Ribbon.RibbonPage();
             this.ribbonPageGroupView = new DevExpress.XtraBars.Ribbon.RibbonPageGroup();
             this.ribbonStatusBar = new DevExpress.XtraBars.Ribbon.RibbonStatusBar();
-            this.panelMapHost = new System.Windows.Forms.Panel();
+            this.splitMap = new System.Windows.Forms.SplitContainer();
+            this.panelToc = new System.Windows.Forms.Panel();
+            this.labelTocTip = new System.Windows.Forms.Label();
+            this.panelMap = new System.Windows.Forms.Panel();
             this.labelMapTip = new System.Windows.Forms.Label();
             this.listBoxLog = new System.Windows.Forms.ListBox();
             ((System.ComponentModel.ISupportInitialize)(this.ribbonControl)).BeginInit();
-            this.panelMapHost.SuspendLayout();
+            ((System.ComponentModel.ISupportInitialize)(this.splitMap)).BeginInit();
+            this.splitMap.Panel1.SuspendLayout();
+            this.splitMap.Panel2.SuspendLayout();
+            this.splitMap.SuspendLayout();
+            this.panelToc.SuspendLayout();
+            this.panelMap.SuspendLayout();
             this.SuspendLayout();
             // 
             // ribbonControl
@@ -115,24 +123,60 @@ namespace UrbanRenewal.Host
             this.ribbonStatusBar.Ribbon = this.ribbonControl;
             this.ribbonStatusBar.Size = new System.Drawing.Size(1280, 30);
             // 
-            // panelMapHost
+            // splitMap
             // 
-            this.panelMapHost.BackColor = System.Drawing.Color.FromArgb(((int)(((byte)(245)))), ((int)(((byte)(245)))), ((int)(((byte)(245)))));
-            this.panelMapHost.Controls.Add(this.labelMapTip);
-            this.panelMapHost.Dock = System.Windows.Forms.DockStyle.Fill;
-            this.panelMapHost.Location = new System.Drawing.Point(0, 145);
-            this.panelMapHost.Name = "panelMapHost";
-            this.panelMapHost.Size = new System.Drawing.Size(1280, 485);
-            this.panelMapHost.TabIndex = 2;
+            this.splitMap.Dock = System.Windows.Forms.DockStyle.Fill;
+            this.splitMap.Location = new System.Drawing.Point(0, 145);
+            this.splitMap.Name = "splitMap";
+            // 
+            // splitMap.Panel1
+            // 
+            this.splitMap.Panel1.Controls.Add(this.panelToc);
+            // 
+            // splitMap.Panel2
+            // 
+            this.splitMap.Panel2.Controls.Add(this.panelMap);
+            this.splitMap.Size = new System.Drawing.Size(1280, 485);
+            this.splitMap.SplitterDistance = 260;
+            this.splitMap.TabIndex = 2;
+            // 
+            // panelToc
+            // 
+            this.panelToc.BackColor = System.Drawing.Color.FromArgb(((int)(((byte)(250)))), ((int)(((byte)(250)))), ((int)(((byte)(250)))));
+            this.panelToc.Controls.Add(this.labelTocTip);
+            this.panelToc.Dock = System.Windows.Forms.DockStyle.Fill;
+            this.panelToc.Location = new System.Drawing.Point(0, 0);
+            this.panelToc.Name = "panelToc";
+            this.panelToc.Size = new System.Drawing.Size(260, 485);
+            this.panelToc.TabIndex = 0;
+            // 
+            // labelTocTip
+            // 
+            this.labelTocTip.AutoSize = true;
+            this.labelTocTip.Location = new System.Drawing.Point(12, 12);
+            this.labelTocTip.Name = "labelTocTip";
+            this.labelTocTip.Size = new System.Drawing.Size(173, 12);
+            this.labelTocTip.TabIndex = 0;
+            this.labelTocTip.Text = "图层目录（AxTOCControl）";
+            // 
+            // panelMap
+            // 
+            this.panelMap.BackColor = System.Drawing.Color.FromArgb(((int)(((byte)(245)))), ((int)(((byte)(245)))), ((int)(((byte)(245)))));
+            this.panelMap.Controls.Add(this.labelMapTip);
+            this.panelMap.Dock = System.Windows.Forms.DockStyle.Fill;
+            this.panelMap.Location = new System.Drawing.Point(0, 0);
+            this.panelMap.Name = "panelMap";
+            this.panelMap.Size = new System.Drawing.Size(1016, 485);
+            this.panelMap.TabIndex = 0;
             // 
             // labelMapTip
             // 
             this.labelMapTip.AutoSize = true;
-            this.labelMapTip.Location = new System.Drawing.Point(24, 24);
+            this.labelMapTip.Location = new System.Drawing.Point(12, 12);
             this.labelMapTip.Name = "labelMapTip";
-            this.labelMapTip.Size = new System.Drawing.Size(341, 12);
+            this.labelMapTip.Size = new System.Drawing.Size(173, 12);
             this.labelMapTip.TabIndex = 0;
-            this.labelMapTip.Text = "地图工作区（P1-5 在此嵌入 AxMapControl / AxTOCControl）";
+            this.labelMapTip.Text = "地图视图（AxMapControl）";
             // 
             // listBoxLog
             // 
@@ -150,7 +194,7 @@ namespace UrbanRenewal.Host
             this.AutoScaleDimensions = new System.Drawing.SizeF(6F, 12F);
             this.AutoScaleMode = System.Windows.Forms.AutoScaleMode.Font;
             this.ClientSize = new System.Drawing.Size(1280, 800);
-            this.Controls.Add(this.panelMapHost);
+            this.Controls.Add(this.splitMap);
             this.Controls.Add(this.listBoxLog);
             this.Controls.Add(this.ribbonStatusBar);
             this.Controls.Add(this.ribbonControl);
@@ -160,8 +204,14 @@ namespace UrbanRenewal.Host
             this.StatusBar = this.ribbonStatusBar;
             this.Text = "城市更新潜力评价与验证系统";
             ((System.ComponentModel.ISupportInitialize)(this.ribbonControl)).EndInit();
-            this.panelMapHost.ResumeLayout(false);
-            this.panelMapHost.PerformLayout();
+            this.splitMap.Panel1.ResumeLayout(false);
+            this.splitMap.Panel2.ResumeLayout(false);
+            ((System.ComponentModel.ISupportInitialize)(this.splitMap)).EndInit();
+            this.splitMap.ResumeLayout(false);
+            this.panelToc.ResumeLayout(false);
+            this.panelToc.PerformLayout();
+            this.panelMap.ResumeLayout(false);
+            this.panelMap.PerformLayout();
             this.ResumeLayout(false);
             this.PerformLayout();
 
@@ -177,7 +227,10 @@ namespace UrbanRenewal.Host
         private DevExpress.XtraBars.Ribbon.RibbonPage ribbonPageMap;
         private DevExpress.XtraBars.Ribbon.RibbonPageGroup ribbonPageGroupView;
         private DevExpress.XtraBars.Ribbon.RibbonStatusBar ribbonStatusBar;
-        private System.Windows.Forms.Panel panelMapHost;
+        private System.Windows.Forms.SplitContainer splitMap;
+        private System.Windows.Forms.Panel panelToc;
+        private System.Windows.Forms.Label labelTocTip;
+        private System.Windows.Forms.Panel panelMap;
         private System.Windows.Forms.Label labelMapTip;
         private System.Windows.Forms.ListBox listBoxLog;
     }

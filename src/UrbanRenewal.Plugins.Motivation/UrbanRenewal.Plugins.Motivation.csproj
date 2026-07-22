@@ -4,10 +4,10 @@
   <PropertyGroup>
     <Configuration Condition=" '$(Configuration)' == '' ">Debug</Configuration>
     <Platform Condition=" '$(Platform)' == '' ">AnyCPU</Platform>
-    <ProjectGuid>{A6666666-6666-6666-6666-666666666666}</ProjectGuid>
+    <ProjectGuid>{A9999999-9999-9999-9999-999999999999}</ProjectGuid>
     <OutputType>Library</OutputType>
-    <RootNamespace>UrbanRenewal.Analysis</RootNamespace>
-    <AssemblyName>UrbanRenewal.Analysis</AssemblyName>
+    <RootNamespace>UrbanRenewal.Plugins.Motivation</RootNamespace>
+    <AssemblyName>UrbanRenewal.Plugins.Motivation</AssemblyName>
     <TargetFrameworkVersion>v4.5</TargetFrameworkVersion>
     <FileAlignment>512</FileAlignment>
     <LangVersion>5</LangVersion>
@@ -33,8 +33,18 @@
   <ItemGroup>
     <Reference Include="System" />
     <Reference Include="System.Core" />
+    <Reference Include="System.Drawing" />
+    <Reference Include="System.Windows.Forms" />
   </ItemGroup>
   <ItemGroup>
+    <ProjectReference Include="..\UrbanRenewal.Analysis\UrbanRenewal.Analysis.csproj">
+      <Project>{A6666666-6666-6666-6666-666666666666}</Project>
+      <Name>UrbanRenewal.Analysis</Name>
+    </ProjectReference>
+    <ProjectReference Include="..\UrbanRenewal.Contracts\UrbanRenewal.Contracts.csproj">
+      <Project>{A1111111-1111-1111-1111-111111111111}</Project>
+      <Name>UrbanRenewal.Contracts</Name>
+    </ProjectReference>
     <ProjectReference Include="..\UrbanRenewal.GIS\UrbanRenewal.GIS.csproj">
       <Project>{A5555555-5555-5555-5555-555555555555}</Project>
       <Name>UrbanRenewal.GIS</Name>
@@ -45,9 +55,24 @@
     </ProjectReference>
   </ItemGroup>
   <ItemGroup>
-    <Compile Include="IFactorAnalyzer.cs" />
-    <Compile Include="MotivationAnalysisEngine.cs" />
+    <Compile Include="MotivationPlugin.cs" />
+    <Compile Include="MotivationRunForm.cs">
+      <SubType>Form</SubType>
+    </Compile>
+    <Compile Include="MotivationRunForm.Designer.cs">
+      <DependentUpon>MotivationRunForm.cs</DependentUpon>
+    </Compile>
     <Compile Include="Properties\AssemblyInfo.cs" />
   </ItemGroup>
+  <ItemGroup>
+    <EmbeddedResource Include="MotivationRunForm.resx">
+      <DependentUpon>MotivationRunForm.cs</DependentUpon>
+    </EmbeddedResource>
+  </ItemGroup>
   <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />
+  <PropertyGroup>
+    <PostBuildEvent>if not exist "$(SolutionDir)UrbanRenewal.Host\bin\$(ConfigurationName)\Plugins" mkdir "$(SolutionDir)UrbanRenewal.Host\bin\$(ConfigurationName)\Plugins"
+copy /Y "$(TargetPath)" "$(SolutionDir)UrbanRenewal.Host\bin\$(ConfigurationName)\Plugins\"
+if exist "$(TargetDir)$(TargetName).pdb" copy /Y "$(TargetDir)$(TargetName).pdb" "$(SolutionDir)UrbanRenewal.Host\bin\$(ConfigurationName)\Plugins\"</PostBuildEvent>
+  </PropertyGroup>
 </Project>

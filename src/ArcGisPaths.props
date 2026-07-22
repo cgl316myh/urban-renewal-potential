@@ -1,0 +1,7 @@
+<?xml version="1.0" encoding="utf-8"?>
+<Project xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+  <!-- 本机 ArcGIS 10.2 Developer Kit；若路径不同请修改 -->
+  <PropertyGroup>
+    <ArcGisDotNetDir Condition=" '$(ArcGisDotNetDir)' == '' ">D:\Program Files (x86)\ArcGIS\DeveloperKit10.2\DotNet</ArcGisDotNetDir>
+  </PropertyGroup>
+</Project>

@@ -5,7 +5,7 @@ using UrbanRenewal.Contracts;
 namespace UrbanRenewal.Plugins.DataManage
 {
     /// <summary>
-    /// M1 数据管理插件样例：动态注册 Ribbon「数据管理」页签。
+    /// M1 数据管理插件：打开 GDB、完整性检查、预处理入口。
     /// </summary>
     public sealed class DataManagePlugin : IModulePlugin
     {
@@ -61,17 +61,40 @@ namespace UrbanRenewal.Plugins.DataManage
 
         private void OnOpenGdb(object sender, EventArgs e)
         {
+            if (_context == null)
+            {
+                return;
+            }
+
             using (FolderBrowserDialog dlg = new FolderBrowserDialog())
             {
                 dlg.Description = "选择 File Geodatabase 文件夹（*.gdb）";
-                if (dlg.ShowDialog() == DialogResult.OK)
+                if (!string.IsNullOrEmpty(_context.GdbPath))
                 {
-                    if (_context != null)
-                    {
-                        _context.GdbPath = dlg.SelectedPath;
-                        _context.LogInfo("已选择 GDB: " + dlg.SelectedPath);
-                        _context.ShowMessage("打开 GDB", "工作空间已设置为:\r\n" + dlg.SelectedPath);
-                    }
+                    dlg.SelectedPath = _context.GdbPath;
+                }
+
+                if (dlg.ShowDialog() != DialogResult.OK)
+                {
+                    return;
+                }
+
+                string path = dlg.SelectedPath;
+                _context.ShowProgress("加载 GDB", 10);
+                string message;
+                bool ok = _context.OpenFileGdb(path, out message);
+                _context.HideProgress();
+
+                if (ok)
+                {
+                    _context.LogInfo(message);
+                    _context.ZoomToFullExtent();
+                    _context.ShowMessage("打开 GDB", message);
+                }
+                else
+                {
+                    _context.LogError(message);
+                    _context.ShowMessage("打开 GDB", message);
                 }
             }
         }
@@ -89,9 +112,10 @@ namespace UrbanRenewal.Plugins.DataManage
                 return;
             }
 
-            // P1：命令桩；后续检查建成区/宗地必选图层与坐标系
             _context.LogInfo("开始数据完整性检查: " + _context.GdbPath);
-            _context.ShowMessage("数据完整性检查", "检查逻辑将在 P1-6 完善（必选图层、坐标系、字段）。");
+            string report = _context.CheckDataIntegrity();
+            _context.LogInfo(report.Replace("\r\n", " | "));
+            _context.ShowMessage("数据完整性检查", report);
         }
 
         private void OnPreprocess(object sender, EventArgs e)
@@ -101,8 +125,17 @@ namespace UrbanRenewal.Plugins.DataManage
                 return;
             }
 
-            _context.LogInfo("投影/裁剪预处理命令已触发（待接 ArcEngine GP）。");
-            _context.ShowMessage("预处理", "将调用投影统一与建成区 Clip（P1-6 / P2 前完善）。");
+            if (string.IsNullOrEmpty(_context.GdbPath))
+            {
+                _context.ShowMessage("预处理", "请先打开 GDB 工作空间。");
+                return;
+            }
+
+            // 完整投影/Clip 在 P2 前用 GP 实现；此处先给出入口与说明
+            _context.LogInfo("投影/裁剪预处理：待接 Geoprocessor（统一 CGCS2000 + 建成区 Clip）。");
+            _context.ShowMessage("预处理",
+                "当前工作空间:\r\n" + _context.GdbPath +
+                "\r\n\r\n下一步将调用投影统一与建成区 Clip（P2 前完善）。");
         }
     }
 }

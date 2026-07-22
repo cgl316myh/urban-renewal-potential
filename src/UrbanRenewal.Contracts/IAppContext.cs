@@ -7,22 +7,28 @@ namespace UrbanRenewal.Contracts
     /// </summary>
     public interface IAppContext
     {
-        /// <summary>
-        /// ArcEngine MapControl 宿主控件（实际类型为 AxMapControl，此处用 object 解耦）。
-        /// </summary>
         object MapControl { get; }
 
-        /// <summary>
-        /// ArcEngine TOC 控件（可为 null）。
-        /// </summary>
         object TocControl { get; }
 
-        /// <summary>
-        /// DevExpress DockManager（可为 null）。
-        /// </summary>
         object DockManager { get; }
 
         string GdbPath { get; set; }
+
+        bool OpenFileGdb(string gdbPath, out string message);
+
+        string CheckDataIntegrity();
+
+        void ZoomToFullExtent();
+
+        void ActivatePanTool();
+
+        void ActivateZoomInTool();
+
+        /// <summary>
+        /// 将栅格结果加载到地图。
+        /// </summary>
+        bool AddRasterLayer(string rasterPath, string layerName, out string message);
 
         void LogInfo(string message);
 

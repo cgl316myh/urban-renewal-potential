@@ -8,18 +8,20 @@ using UrbanRenewal.Contracts;
 namespace UrbanRenewal.PluginLoader
 {
     /// <summary>
-    /// 扫描 Plugins 目录，反射加载实现 IModulePlugin 的类型。
+    /// 扫描 Plugins 目录，仅加载 UrbanRenewal.Plugins.*.dll。
     /// </summary>
     public sealed class PluginManager
     {
         private readonly List<IModulePlugin> _plugins = new List<IModulePlugin>();
         private readonly Action<string> _logInfo;
         private readonly Action<string> _logError;
+        private static bool _resolveHooked;
 
         public PluginManager(Action<string> logInfo, Action<string> logError)
         {
             _logInfo = logInfo ?? (delegate(string m) { });
             _logError = logError ?? (delegate(string m) { });
+            EnsureAssemblyResolve();
         }
 
         public IList<IModulePlugin> Plugins
@@ -37,8 +39,17 @@ namespace UrbanRenewal.PluginLoader
                 return;
             }
 
-            string[] files = Directory.GetFiles(pluginsDirectory, "*.dll", SearchOption.TopDirectoryOnly);
+            _logInfo("扫描插件目录: " + pluginsDirectory);
+
+            // 只加载插件程序集，避免把 Contracts/GIS 等依赖再 LoadFrom 造成类型不一致
+            string[] files = Directory.GetFiles(pluginsDirectory, "UrbanRenewal.Plugins.*.dll", SearchOption.TopDirectoryOnly);
             Array.Sort(files, StringComparer.OrdinalIgnoreCase);
+
+            if (files.Length == 0)
+            {
+                _logInfo("未找到 UrbanRenewal.Plugins.*.dll，请先生成插件工程。");
+                return;
+            }
 
             for (int i = 0; i < files.Length; i++)
             {
@@ -50,6 +61,10 @@ namespace UrbanRenewal.PluginLoader
                 catch (Exception ex)
                 {
                     _logError("加载插件失败 [" + Path.GetFileName(file) + "]: " + ex.Message);
+                    if (ex.InnerException != null)
+                    {
+                        _logError("  内部错误: " + ex.InnerException.Message);
+                    }
                 }
             }
 
@@ -106,8 +121,20 @@ namespace UrbanRenewal.PluginLoader
             catch (ReflectionTypeLoadException ex)
             {
                 types = ex.Types.Where(t => t != null).ToArray();
+                if (ex.LoaderExceptions != null)
+                {
+                    for (int e = 0; e < ex.LoaderExceptions.Length; e++)
+                    {
+                        if (ex.LoaderExceptions[e] != null)
+                        {
+                            _logError("反射类型失败: " + ex.LoaderExceptions[e].Message);
+                        }
+                    }
+                }
             }
 
+            Type pluginInterface = typeof(IModulePlugin);
+            int found = 0;
             for (int i = 0; i < types.Length; i++)
             {
                 Type type = types[i];
@@ -116,15 +143,68 @@ namespace UrbanRenewal.PluginLoader
                     continue;
                 }
 
-                if (!typeof(IModulePlugin).IsAssignableFrom(type))
+                if (!pluginInterface.IsAssignableFrom(type))
                 {
                     continue;
                 }
 
                 IModulePlugin plugin = (IModulePlugin)Activator.CreateInstance(type);
                 _plugins.Add(plugin);
+                found++;
                 _logInfo("发现插件: " + plugin.Name + " <- " + Path.GetFileName(assemblyPath));
             }
+
+            if (found == 0)
+            {
+                _logInfo("程序集中未发现 IModulePlugin: " + Path.GetFileName(assemblyPath));
+            }
+        }
+
+        private static void EnsureAssemblyResolve()
+        {
+            if (_resolveHooked)
+            {
+                return;
+            }
+            _resolveHooked = true;
+            AppDomain.CurrentDomain.AssemblyResolve += OnAssemblyResolve;
+        }
+
+        /// <summary>
+        /// 插件依赖优先从主程序目录加载，避免 Plugins 下重复 DLL 造成双份 Contracts。
+        /// </summary>
+        private static Assembly OnAssemblyResolve(object sender, ResolveEventArgs args)
+        {
+            try
+            {
+                AssemblyName name = new AssemblyName(args.Name);
+                string simple = name.Name;
+                if (string.IsNullOrEmpty(simple))
+                {
+                    return null;
+                }
+
+                // 已加载则直接返回
+                Assembly[] loaded = AppDomain.CurrentDomain.GetAssemblies();
+                for (int i = 0; i < loaded.Length; i++)
+                {
+                    if (string.Equals(loaded[i].GetName().Name, simple, StringComparison.OrdinalIgnoreCase))
+                    {
+                        return loaded[i];
+                    }
+                }
+
+                string baseDir = AppDomain.CurrentDomain.BaseDirectory;
+                string candidate = Path.Combine(baseDir, simple + ".dll");
+                if (File.Exists(candidate))
+                {
+                    return Assembly.LoadFrom(candidate);
+                }
+            }
+            catch
+            {
+            }
+            return null;
         }
     }
 }
