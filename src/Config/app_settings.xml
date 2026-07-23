@@ -1,0 +1,15 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  全局设置（输出 GDB / 城市配置）。
+  也可在程序「数据管理 → 全局设置」中修改，会自动覆盖本文件。
+  设置一次后，动力性及后续分析模块均写入 OutputGdbPath。
+-->
+<GlobalAppSettings xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xmlns:xsd="http://www.w3.org/2001/XMLSchema">
+  <SkinName>Office 2013</SkinName>
+  <PluginsDirectoryName>Plugins</PluginsDirectoryName>
+  <InputGdbPath></InputGdbPath>
+  <OutputGdbPath></OutputGdbPath>
+  <ActiveCityProfileId>Suzhou</ActiveCityProfileId>
+  <MotivationWeight>0.7</MotivationWeight>
+  <FeasibilityWeight>0.3</FeasibilityWeight>
+</GlobalAppSettings>

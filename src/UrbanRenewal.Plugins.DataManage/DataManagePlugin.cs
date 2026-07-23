@@ -5,7 +5,7 @@ using UrbanRenewal.Contracts;
 namespace UrbanRenewal.Plugins.DataManage
 {
     /// <summary>
-    /// M1 数据管理插件：打开 GDB、完整性检查、预处理入口。
+    /// M1 数据管理插件：打开 GDB、完整性检查、全局设置、预处理入口。
     /// </summary>
     public sealed class DataManagePlugin : IModulePlugin
     {
@@ -32,6 +32,15 @@ namespace UrbanRenewal.Plugins.DataManage
             if (_context != null)
             {
                 _context.LogInfo("数据管理插件已初始化。");
+                _context.RegisterGlobalSettingsUI(ShowGlobalSettingsDialog);
+            }
+        }
+
+        private void ShowGlobalSettingsDialog()
+        {
+            using (GlobalSettingsForm form = new GlobalSettingsForm(_context))
+            {
+                form.ShowDialog();
             }
         }
 
@@ -46,6 +55,7 @@ namespace UrbanRenewal.Plugins.DataManage
             object group = ribbonHost.AddGroup(page, "工作空间");
 
             ribbonHost.AddButton(group, "打开 GDB", OnOpenGdb);
+            ribbonHost.AddButton(group, "全局设置", OnGlobalSettings);
             ribbonHost.AddButton(group, "数据完整性检查", OnValidateData);
             ribbonHost.AddButton(group, "投影/裁剪预处理", OnPreprocess);
         }
@@ -89,7 +99,13 @@ namespace UrbanRenewal.Plugins.DataManage
                 {
                     _context.LogInfo(message);
                     _context.ZoomToFullExtent();
-                    _context.ShowMessage("打开 GDB", message);
+                    string tip = message;
+                    tip += "\r\n\r\n全局输出 GDB:\r\n"
+                        + (string.IsNullOrEmpty(_context.OutputGdbPath)
+                            ? "(未设置 — 请打开「全局设置」指定；后续所有分析结果均写入该库)"
+                            : _context.OutputGdbPath);
+                    tip += "\r\n城市配置: " + (_context.ActiveCityProfileId ?? "(未设置)");
+                    _context.ShowMessage("打开 GDB", tip);
                 }
                 else
                 {
@@ -97,6 +113,15 @@ namespace UrbanRenewal.Plugins.DataManage
                     _context.ShowMessage("打开 GDB", message);
                 }
             }
+        }
+
+        private void OnGlobalSettings(object sender, EventArgs e)
+        {
+            if (_context == null)
+            {
+                return;
+            }
+            _context.ShowGlobalSettings();
         }
 
         private void OnValidateData(object sender, EventArgs e)
@@ -131,11 +156,11 @@ namespace UrbanRenewal.Plugins.DataManage
                 return;
             }
 
-            // 完整投影/Clip 在 P2 前用 GP 实现；此处先给出入口与说明
             _context.LogInfo("投影/裁剪预处理：待接 Geoprocessor（统一 CGCS2000 + 建成区 Clip）。");
             _context.ShowMessage("预处理",
-                "当前工作空间:\r\n" + _context.GdbPath +
-                "\r\n\r\n下一步将调用投影统一与建成区 Clip（P2 前完善）。");
+                "当前输入 GDB:\r\n" + _context.GdbPath +
+                "\r\n\r\n全局输出 GDB:\r\n" + (_context.OutputGdbPath ?? "(未设置)") +
+                "\r\n\r\n下一步将调用投影统一与建成区 Clip（结果写入输出 GDB）。");
         }
     }
 }

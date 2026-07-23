@@ -73,7 +73,7 @@ namespace UrbanRenewal.Analysis
             job.WorkDirectory = outGdb;
             result.OutputGdbPath = outGdb;
             result.Messages.Add("输出 GDB: " + outGdb);
-            OutputGdbHelper.Remember(outGdb);
+            // 全局路径记忆由宿主 SaveGlobalSettings 统一负责
 
             string studyLayer = Resolve(job, names, "StudyArea", "中心城区", "分析范围");
             string extentPath = null;

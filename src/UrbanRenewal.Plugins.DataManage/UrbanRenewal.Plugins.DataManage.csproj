@@ -11,6 +11,7 @@
     <TargetFrameworkVersion>v4.5</TargetFrameworkVersion>
     <FileAlignment>512</FileAlignment>
     <LangVersion>5</LangVersion>
+    <PlatformTarget>x86</PlatformTarget>
   </PropertyGroup>
   <PropertyGroup Condition=" '$(Configuration)|$(Platform)' == 'Debug|AnyCPU' ">
     <DebugSymbols>true</DebugSymbols>
@@ -32,6 +33,7 @@
   <ItemGroup>
     <Reference Include="System" />
     <Reference Include="System.Core" />
+    <Reference Include="System.Drawing" />
     <Reference Include="System.Windows.Forms" />
   </ItemGroup>
   <ItemGroup>
@@ -39,13 +41,31 @@
       <Project>{A1111111-1111-1111-1111-111111111111}</Project>
       <Name>UrbanRenewal.Contracts</Name>
     </ProjectReference>
+    <ProjectReference Include="..\UrbanRenewal.GIS\UrbanRenewal.GIS.csproj">
+      <Project>{A5555555-5555-5555-5555-555555555555}</Project>
+      <Name>UrbanRenewal.GIS</Name>
+    </ProjectReference>
+    <ProjectReference Include="..\UrbanRenewal.Model\UrbanRenewal.Model.csproj">
+      <Project>{A2222222-2222-2222-2222-222222222222}</Project>
+      <Name>UrbanRenewal.Model</Name>
+    </ProjectReference>
   </ItemGroup>
   <ItemGroup>
     <Compile Include="DataManagePlugin.cs" />
+    <Compile Include="GlobalSettingsForm.cs">
+      <SubType>Form</SubType>
+    </Compile>
+    <Compile Include="GlobalSettingsForm.Designer.cs">
+      <DependentUpon>GlobalSettingsForm.cs</DependentUpon>
+    </Compile>
     <Compile Include="Properties\AssemblyInfo.cs" />
   </ItemGroup>
+  <ItemGroup>
+    <EmbeddedResource Include="GlobalSettingsForm.resx">
+      <DependentUpon>GlobalSettingsForm.cs</DependentUpon>
+    </EmbeddedResource>
+  </ItemGroup>
   <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />
-  <!-- 编译后复制到 Host 的 Plugins 目录 -->
   <PropertyGroup>
     <PostBuildEvent>if not exist "$(SolutionDir)UrbanRenewal.Host\bin\$(ConfigurationName)\Plugins" mkdir "$(SolutionDir)UrbanRenewal.Host\bin\$(ConfigurationName)\Plugins"
 copy /Y "$(TargetPath)" "$(SolutionDir)UrbanRenewal.Host\bin\$(ConfigurationName)\Plugins\"

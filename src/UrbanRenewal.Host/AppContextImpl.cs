@@ -11,10 +11,13 @@ namespace UrbanRenewal.Host
     internal sealed class AppContextImpl : IAppContext
     {
         private readonly MainRibbonForm _form;
+        private GlobalAppSettings _settings;
+        private Action _showGlobalSettings;
 
         public AppContextImpl(MainRibbonForm form)
         {
             _form = form;
+            ReloadGlobalSettings();
         }
 
         public object MapControl
@@ -32,9 +35,98 @@ namespace UrbanRenewal.Host
             get { return null; }
         }
 
-        public string GdbPath { get; set; }
+        public string GdbPath
+        {
+            get { return _settings != null ? _settings.InputGdbPath : null; }
+            set
+            {
+                EnsureSettings();
+                _settings.InputGdbPath = value;
+            }
+        }
 
-        public string ActiveCityProfileId { get; set; }
+        public string OutputGdbPath
+        {
+            get { return _settings != null ? _settings.OutputGdbPath : null; }
+            set
+            {
+                EnsureSettings();
+                _settings.OutputGdbPath = value;
+            }
+        }
+
+        public string ActiveCityProfileId
+        {
+            get { return _settings != null ? _settings.ActiveCityProfileId : null; }
+            set
+            {
+                EnsureSettings();
+                _settings.ActiveCityProfileId = value;
+            }
+        }
+
+        public void SaveGlobalSettings()
+        {
+            EnsureSettings();
+            GlobalAppSettingsStore.Save(_settings);
+            if (!string.IsNullOrEmpty(_settings.OutputGdbPath))
+            {
+                OutputGdbHelper.Remember(_settings.OutputGdbPath);
+            }
+            if (!string.IsNullOrEmpty(_settings.ActiveCityProfileId))
+            {
+                CityProfileStore.RememberId(_settings.ActiveCityProfileId);
+            }
+            LogInfo("全局设置已保存: 输出GDB=" + (_settings.OutputGdbPath ?? "(空)")
+                + "；城市=" + (_settings.ActiveCityProfileId ?? "(空)"));
+            RefreshStatusBar();
+        }
+
+        public void ReloadGlobalSettings()
+        {
+            _settings = GlobalAppSettingsStore.Load() ?? new GlobalAppSettings();
+            RefreshStatusBar();
+        }
+
+        public void RegisterGlobalSettingsUI(Action showDialog)
+        {
+            _showGlobalSettings = showDialog;
+        }
+
+        public void ShowGlobalSettings()
+        {
+            if (_showGlobalSettings != null)
+            {
+                _showGlobalSettings();
+                ReloadGlobalSettings();
+                return;
+            }
+            ShowMessage("全局设置",
+                "全局设置界面未就绪。请通过 Ribbon「数据管理 → 全局设置」打开。");
+        }
+
+        private void RefreshStatusBar()
+        {
+            if (_form == null)
+            {
+                return;
+            }
+            string city = _settings != null ? _settings.ActiveCityProfileId : null;
+            string outGdb = _settings != null ? _settings.OutputGdbPath : null;
+            string outShort = string.IsNullOrEmpty(outGdb)
+                ? "输出GDB未设"
+                : System.IO.Path.GetFileName(outGdb);
+            string cityShort = string.IsNullOrEmpty(city) ? "城市未设" : city;
+            _form.SetStatus("就绪 | " + cityShort + " | " + outShort);
+        }
+
+        private void EnsureSettings()
+        {
+            if (_settings == null)
+            {
+                _settings = new GlobalAppSettings();
+            }
+        }
 
         public bool OpenFileGdb(string gdbPath, out string message)
         {
@@ -47,6 +139,14 @@ namespace UrbanRenewal.Host
 
             IMapControl3 map = _form.MapControl.Object as IMapControl3;
             int count = MapWorkspaceService.LoadFileGdb(map, gdbPath, out message);
+            if (count > 0)
+            {
+                if (string.IsNullOrEmpty(OutputGdbPath))
+                {
+                    OutputGdbPath = OutputGdbHelper.SuggestDefaultBesideInput(gdbPath);
+                }
+                SaveGlobalSettings();
+            }
             return count > 0;
         }
 
@@ -54,6 +154,9 @@ namespace UrbanRenewal.Host
         {
             StringBuilder sb = new StringBuilder();
             sb.AppendLine(MapWorkspaceService.CheckIntegrity(GdbPath));
+
+            sb.AppendLine("全局输出 GDB: "
+                + (string.IsNullOrEmpty(OutputGdbPath) ? "(未设置 — 请在「数据管理 → 全局设置」中指定)" : OutputGdbPath));
 
             CityProfile profile = CityProfileStore.ResolveActive(ActiveCityProfileId);
             if (profile != null)
@@ -85,8 +188,7 @@ namespace UrbanRenewal.Host
             else
             {
                 sb.AppendLine();
-                sb.AppendLine("[提示] 未找到城市配置（Config\\Cities\\*.xml）。");
-                sb.AppendLine("换城市步骤：动力性分析窗体 →「从 GDB 生成配置」或复制 _Template.xml 填写图层名。");
+                sb.AppendLine("[提示] 未选择城市配置。请打开「数据管理 → 全局设置」选择或生成城市配置。");
             }
 
             return sb.ToString();

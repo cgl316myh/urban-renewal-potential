@@ -17,18 +17,10 @@ namespace UrbanRenewal.Plugins.Motivation
 
         private void InitializeComponent()
         {
-            this.lblGdb = new System.Windows.Forms.Label();
-            this.txtGdbPath = new System.Windows.Forms.TextBox();
-            this.btnBrowse = new System.Windows.Forms.Button();
-            this.lblOutGdb = new System.Windows.Forms.Label();
-            this.txtOutGdb = new System.Windows.Forms.TextBox();
-            this.btnBrowseOut = new System.Windows.Forms.Button();
-            this.btnSuggestOut = new System.Windows.Forms.Button();
-            this.lblCity = new System.Windows.Forms.Label();
-            this.cboCity = new System.Windows.Forms.ComboBox();
-            this.btnDetect = new System.Windows.Forms.Button();
-            this.btnDraft = new System.Windows.Forms.Button();
-            this.btnOpenConfig = new System.Windows.Forms.Button();
+            this.lblGlobal = new System.Windows.Forms.Label();
+            this.lblOutInfo = new System.Windows.Forms.Label();
+            this.lblCityInfo = new System.Windows.Forms.Label();
+            this.btnOpenGlobal = new System.Windows.Forms.Button();
             this.lblCell = new System.Windows.Forms.Label();
             this.nudCellSize = new System.Windows.Forms.NumericUpDown();
             this.grpWeights = new System.Windows.Forms.GroupBox();
@@ -52,134 +44,59 @@ namespace UrbanRenewal.Plugins.Motivation
             ((System.ComponentModel.ISupportInitialize)(this.nudPolicy)).BeginInit();
             this.SuspendLayout();
             // 
-            // lblGdb
+            // lblGlobal
             // 
-            this.lblGdb.AutoSize = true;
-            this.lblGdb.Location = new System.Drawing.Point(18, 20);
-            this.lblGdb.Name = "lblGdb";
-            this.lblGdb.Size = new System.Drawing.Size(77, 12);
-            this.lblGdb.TabIndex = 0;
-            this.lblGdb.Text = "输入 GDB：";
+            this.lblGlobal.AutoSize = true;
+            this.lblGlobal.Font = new System.Drawing.Font("宋体", 9F, System.Drawing.FontStyle.Bold);
+            this.lblGlobal.Location = new System.Drawing.Point(18, 16);
+            this.lblGlobal.Name = "lblGlobal";
+            this.lblGlobal.Size = new System.Drawing.Size(57, 12);
+            this.lblGlobal.TabIndex = 0;
+            this.lblGlobal.Text = "全局设置";
             // 
-            // txtGdbPath
+            // lblOutInfo
             // 
-            this.txtGdbPath.Location = new System.Drawing.Point(101, 16);
-            this.txtGdbPath.Name = "txtGdbPath";
-            this.txtGdbPath.Size = new System.Drawing.Size(420, 21);
-            this.txtGdbPath.TabIndex = 1;
+            this.lblOutInfo.Location = new System.Drawing.Point(18, 38);
+            this.lblOutInfo.Name = "lblOutInfo";
+            this.lblOutInfo.Size = new System.Drawing.Size(480, 32);
+            this.lblOutInfo.TabIndex = 1;
+            this.lblOutInfo.Text = "输出 GDB：（未设置）";
             // 
-            // btnBrowse
+            // lblCityInfo
             // 
-            this.btnBrowse.Location = new System.Drawing.Point(527, 14);
-            this.btnBrowse.Name = "btnBrowse";
-            this.btnBrowse.Size = new System.Drawing.Size(75, 25);
-            this.btnBrowse.TabIndex = 2;
-            this.btnBrowse.Text = "浏览...";
-            this.btnBrowse.UseVisualStyleBackColor = true;
-            this.btnBrowse.Click += new System.EventHandler(this.btnBrowse_Click);
+            this.lblCityInfo.Location = new System.Drawing.Point(18, 72);
+            this.lblCityInfo.Name = "lblCityInfo";
+            this.lblCityInfo.Size = new System.Drawing.Size(480, 20);
+            this.lblCityInfo.TabIndex = 2;
+            this.lblCityInfo.Text = "城市配置：（未设置）";
             // 
-            // lblOutGdb
+            // btnOpenGlobal
             // 
-            this.lblOutGdb.AutoSize = true;
-            this.lblOutGdb.Location = new System.Drawing.Point(18, 52);
-            this.lblOutGdb.Name = "lblOutGdb";
-            this.lblOutGdb.Size = new System.Drawing.Size(77, 12);
-            this.lblOutGdb.TabIndex = 15;
-            this.lblOutGdb.Text = "输出 GDB：";
-            // 
-            // txtOutGdb
-            // 
-            this.txtOutGdb.Location = new System.Drawing.Point(101, 48);
-            this.txtOutGdb.Name = "txtOutGdb";
-            this.txtOutGdb.Size = new System.Drawing.Size(340, 21);
-            this.txtOutGdb.TabIndex = 16;
-            // 
-            // btnBrowseOut
-            // 
-            this.btnBrowseOut.Location = new System.Drawing.Point(447, 46);
-            this.btnBrowseOut.Name = "btnBrowseOut";
-            this.btnBrowseOut.Size = new System.Drawing.Size(75, 25);
-            this.btnBrowseOut.TabIndex = 17;
-            this.btnBrowseOut.Text = "浏览...";
-            this.btnBrowseOut.UseVisualStyleBackColor = true;
-            this.btnBrowseOut.Click += new System.EventHandler(this.btnBrowseOut_Click);
-            // 
-            // btnSuggestOut
-            // 
-            this.btnSuggestOut.Location = new System.Drawing.Point(527, 46);
-            this.btnSuggestOut.Name = "btnSuggestOut";
-            this.btnSuggestOut.Size = new System.Drawing.Size(75, 25);
-            this.btnSuggestOut.TabIndex = 18;
-            this.btnSuggestOut.Text = "默认";
-            this.btnSuggestOut.UseVisualStyleBackColor = true;
-            this.btnSuggestOut.Click += new System.EventHandler(this.btnSuggestOut_Click);
-            // 
-            // lblCity
-            // 
-            this.lblCity.AutoSize = true;
-            this.lblCity.Location = new System.Drawing.Point(18, 88);
-            this.lblCity.Name = "lblCity";
-            this.lblCity.Size = new System.Drawing.Size(77, 12);
-            this.lblCity.TabIndex = 3;
-            this.lblCity.Text = "城市配置：";
-            // 
-            // cboCity
-            // 
-            this.cboCity.DropDownStyle = System.Windows.Forms.ComboBoxStyle.DropDownList;
-            this.cboCity.FormattingEnabled = true;
-            this.cboCity.Location = new System.Drawing.Point(101, 84);
-            this.cboCity.Name = "cboCity";
-            this.cboCity.Size = new System.Drawing.Size(200, 20);
-            this.cboCity.TabIndex = 4;
-            this.cboCity.SelectedIndexChanged += new System.EventHandler(this.cboCity_SelectedIndexChanged);
-            // 
-            // btnDetect
-            // 
-            this.btnDetect.Location = new System.Drawing.Point(310, 82);
-            this.btnDetect.Name = "btnDetect";
-            this.btnDetect.Size = new System.Drawing.Size(90, 25);
-            this.btnDetect.TabIndex = 5;
-            this.btnDetect.Text = "检测匹配";
-            this.btnDetect.UseVisualStyleBackColor = true;
-            this.btnDetect.Click += new System.EventHandler(this.btnDetect_Click);
-            // 
-            // btnDraft
-            // 
-            this.btnDraft.Location = new System.Drawing.Point(406, 82);
-            this.btnDraft.Name = "btnDraft";
-            this.btnDraft.Size = new System.Drawing.Size(100, 25);
-            this.btnDraft.TabIndex = 13;
-            this.btnDraft.Text = "从GDB生成";
-            this.btnDraft.UseVisualStyleBackColor = true;
-            this.btnDraft.Click += new System.EventHandler(this.btnDraft_Click);
-            // 
-            // btnOpenConfig
-            // 
-            this.btnOpenConfig.Location = new System.Drawing.Point(512, 82);
-            this.btnOpenConfig.Name = "btnOpenConfig";
-            this.btnOpenConfig.Size = new System.Drawing.Size(90, 25);
-            this.btnOpenConfig.TabIndex = 14;
-            this.btnOpenConfig.Text = "配置目录";
-            this.btnOpenConfig.UseVisualStyleBackColor = true;
-            this.btnOpenConfig.Click += new System.EventHandler(this.btnOpenConfig_Click);
+            this.btnOpenGlobal.Location = new System.Drawing.Point(510, 38);
+            this.btnOpenGlobal.Name = "btnOpenGlobal";
+            this.btnOpenGlobal.Size = new System.Drawing.Size(95, 40);
+            this.btnOpenGlobal.TabIndex = 3;
+            this.btnOpenGlobal.Text = "修改全局设置";
+            this.btnOpenGlobal.UseVisualStyleBackColor = true;
+            this.btnOpenGlobal.Click += new System.EventHandler(this.btnOpenGlobal_Click);
             // 
             // lblCell
             // 
             this.lblCell.AutoSize = true;
-            this.lblCell.Location = new System.Drawing.Point(18, 123);
+            this.lblCell.Location = new System.Drawing.Point(18, 110);
             this.lblCell.Name = "lblCell";
             this.lblCell.Size = new System.Drawing.Size(101, 12);
-            this.lblCell.TabIndex = 6;
+            this.lblCell.TabIndex = 4;
             this.lblCell.Text = "像元大小(米)：";
             // 
             // nudCellSize
             // 
-            this.nudCellSize.Location = new System.Drawing.Point(125, 119);
+            this.nudCellSize.Location = new System.Drawing.Point(125, 106);
             this.nudCellSize.Maximum = new decimal(new int[] { 500, 0, 0, 0 });
             this.nudCellSize.Minimum = new decimal(new int[] { 5, 0, 0, 0 });
             this.nudCellSize.Name = "nudCellSize";
             this.nudCellSize.Size = new System.Drawing.Size(80, 21);
-            this.nudCellSize.TabIndex = 7;
+            this.nudCellSize.TabIndex = 5;
             this.nudCellSize.Value = new decimal(new int[] { 30, 0, 0, 0 });
             // 
             // grpWeights
@@ -192,12 +109,12 @@ namespace UrbanRenewal.Plugins.Motivation
             this.grpWeights.Controls.Add(this.nudFacility);
             this.grpWeights.Controls.Add(this.lblPolicy);
             this.grpWeights.Controls.Add(this.nudPolicy);
-            this.grpWeights.Location = new System.Drawing.Point(20, 153);
+            this.grpWeights.Location = new System.Drawing.Point(20, 140);
             this.grpWeights.Name = "grpWeights";
             this.grpWeights.Size = new System.Drawing.Size(582, 110);
-            this.grpWeights.TabIndex = 8;
+            this.grpWeights.TabIndex = 6;
             this.grpWeights.TabStop = false;
-            this.grpWeights.Text = "准则层权重（%）";
+            this.grpWeights.Text = "准则层权重（%，可被城市配置覆盖）";
             // 
             // lblTraffic
             // 
@@ -269,20 +186,20 @@ namespace UrbanRenewal.Plugins.Motivation
             // 
             // btnRun
             // 
-            this.btnRun.Location = new System.Drawing.Point(420, 283);
+            this.btnRun.Location = new System.Drawing.Point(420, 270);
             this.btnRun.Name = "btnRun";
             this.btnRun.Size = new System.Drawing.Size(90, 30);
-            this.btnRun.TabIndex = 9;
+            this.btnRun.TabIndex = 7;
             this.btnRun.Text = "开始分析";
             this.btnRun.UseVisualStyleBackColor = true;
             this.btnRun.Click += new System.EventHandler(this.btnRun_Click);
             // 
             // btnClose
             // 
-            this.btnClose.Location = new System.Drawing.Point(516, 283);
+            this.btnClose.Location = new System.Drawing.Point(516, 270);
             this.btnClose.Name = "btnClose";
             this.btnClose.Size = new System.Drawing.Size(86, 30);
-            this.btnClose.TabIndex = 10;
+            this.btnClose.TabIndex = 8;
             this.btnClose.Text = "关闭";
             this.btnClose.UseVisualStyleBackColor = true;
             this.btnClose.Click += new System.EventHandler(this.btnClose_Click);
@@ -290,25 +207,25 @@ namespace UrbanRenewal.Plugins.Motivation
             // lblStatus
             // 
             this.lblStatus.AutoSize = true;
-            this.lblStatus.Location = new System.Drawing.Point(20, 291);
+            this.lblStatus.Location = new System.Drawing.Point(20, 278);
             this.lblStatus.Name = "lblStatus";
             this.lblStatus.Size = new System.Drawing.Size(29, 12);
-            this.lblStatus.TabIndex = 11;
+            this.lblStatus.TabIndex = 9;
             this.lblStatus.Text = "就绪";
             // 
             // lblHint
             // 
-            this.lblHint.Location = new System.Drawing.Point(18, 328);
+            this.lblHint.Location = new System.Drawing.Point(18, 312);
             this.lblHint.Name = "lblHint";
-            this.lblHint.Size = new System.Drawing.Size(584, 48);
-            this.lblHint.TabIndex = 12;
-            this.lblHint.Text = "中间缓冲/栅格与最终 mot_score 均写入「输出 GDB」。换城市：从GDB生成配置 → 检测匹配。空间参考须统一。";
+            this.lblHint.Size = new System.Drawing.Size(584, 36);
+            this.lblHint.TabIndex = 10;
+            this.lblHint.Text = "输出 GDB 与城市配置在「数据管理 → 全局设置」中统一配置，全模块共用。";
             // 
             // MotivationRunForm
             // 
             this.AutoScaleDimensions = new System.Drawing.SizeF(6F, 12F);
             this.AutoScaleMode = System.Windows.Forms.AutoScaleMode.Font;
-            this.ClientSize = new System.Drawing.Size(624, 390);
+            this.ClientSize = new System.Drawing.Size(624, 360);
             this.Controls.Add(this.lblHint);
             this.Controls.Add(this.lblStatus);
             this.Controls.Add(this.btnClose);
@@ -316,18 +233,10 @@ namespace UrbanRenewal.Plugins.Motivation
             this.Controls.Add(this.grpWeights);
             this.Controls.Add(this.nudCellSize);
             this.Controls.Add(this.lblCell);
-            this.Controls.Add(this.btnOpenConfig);
-            this.Controls.Add(this.btnDraft);
-            this.Controls.Add(this.btnDetect);
-            this.Controls.Add(this.cboCity);
-            this.Controls.Add(this.lblCity);
-            this.Controls.Add(this.btnSuggestOut);
-            this.Controls.Add(this.btnBrowseOut);
-            this.Controls.Add(this.txtOutGdb);
-            this.Controls.Add(this.lblOutGdb);
-            this.Controls.Add(this.btnBrowse);
-            this.Controls.Add(this.txtGdbPath);
-            this.Controls.Add(this.lblGdb);
+            this.Controls.Add(this.btnOpenGlobal);
+            this.Controls.Add(this.lblCityInfo);
+            this.Controls.Add(this.lblOutInfo);
+            this.Controls.Add(this.lblGlobal);
             this.FormBorderStyle = System.Windows.Forms.FormBorderStyle.FixedDialog;
             this.MaximizeBox = false;
             this.MinimizeBox = false;
@@ -347,18 +256,10 @@ namespace UrbanRenewal.Plugins.Motivation
 
         #endregion
 
-        private System.Windows.Forms.Label lblGdb;
-        private System.Windows.Forms.TextBox txtGdbPath;
-        private System.Windows.Forms.Button btnBrowse;
-        private System.Windows.Forms.Label lblOutGdb;
-        private System.Windows.Forms.TextBox txtOutGdb;
-        private System.Windows.Forms.Button btnBrowseOut;
-        private System.Windows.Forms.Button btnSuggestOut;
-        private System.Windows.Forms.Label lblCity;
-        private System.Windows.Forms.ComboBox cboCity;
-        private System.Windows.Forms.Button btnDetect;
-        private System.Windows.Forms.Button btnDraft;
-        private System.Windows.Forms.Button btnOpenConfig;
+        private System.Windows.Forms.Label lblGlobal;
+        private System.Windows.Forms.Label lblOutInfo;
+        private System.Windows.Forms.Label lblCityInfo;
+        private System.Windows.Forms.Button btnOpenGlobal;
         private System.Windows.Forms.Label lblCell;
         private System.Windows.Forms.NumericUpDown nudCellSize;
         private System.Windows.Forms.GroupBox grpWeights;

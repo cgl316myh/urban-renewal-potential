@@ -30,7 +30,11 @@ namespace UrbanRenewal.Host
             {
                 return GetLarge("map_zoomin");
             }
-            if (caption.IndexOf("打开 GDB", StringComparison.Ordinal) >= 0 || caption.IndexOf("打开GDB", StringComparison.Ordinal) >= 0)
+                    if (caption.IndexOf("全局设置", StringComparison.Ordinal) >= 0)
+                    {
+                        return GetLarge("global_settings");
+                    }
+                    if (caption.IndexOf("打开 GDB", StringComparison.Ordinal) >= 0 || caption.IndexOf("打开GDB", StringComparison.Ordinal) >= 0)
             {
                 return GetLarge("open_gdb");
             }
@@ -111,6 +115,17 @@ namespace UrbanRenewal.Host
                             g.DrawLine(p, 18, 18, 26, 26);
                             g.DrawLine(p, 10, 13, 16, 13);
                             g.DrawLine(p, 13, 10, 13, 16);
+                        }
+                        break;
+                    case "global_settings":
+                        DrawRoundRect(g, bounds, Color.FromArgb(60, 90, 130), Color.FromArgb(100, 130, 170));
+                        using (Pen p = new Pen(Color.White, 2f))
+                        {
+                            g.DrawEllipse(p, 10, 10, 12, 12);
+                            g.DrawLine(p, 16, 6, 16, 10);
+                            g.DrawLine(p, 16, 22, 16, 26);
+                            g.DrawLine(p, 6, 16, 10, 16);
+                            g.DrawLine(p, 22, 16, 26, 16);
                         }
                         break;
                     case "open_gdb":

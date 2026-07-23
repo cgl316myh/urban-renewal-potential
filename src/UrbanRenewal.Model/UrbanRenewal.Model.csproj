@@ -37,6 +37,7 @@
   <ItemGroup>
     <Compile Include="AppSettings.cs" />
     <Compile Include="CityProfile.cs" />
+    <Compile Include="GlobalAppSettings.cs" />
     <Compile Include="MotivationJob.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
   </ItemGroup>
