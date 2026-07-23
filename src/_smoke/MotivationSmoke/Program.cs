@@ -103,8 +103,18 @@ namespace MotivationSmoke
 
                 if (result.Success && usedSa)
                 {
-                    Console.WriteLine("SMOKE_OK_ROAD_SA");
-                    Log(logPath, "SMOKE_OK_ROAD_SA");
+                    bool scaled = false;
+                    for (int i = 0; i < result.Messages.Count; i++)
+                    {
+                        if (result.Messages[i].IndexOf("0–100", StringComparison.Ordinal) >= 0
+                            || result.Messages[i].IndexOf("0-100", StringComparison.Ordinal) >= 0)
+                        {
+                            scaled = true;
+                            break;
+                        }
+                    }
+                    Console.WriteLine(scaled ? "SMOKE_OK_ROAD_SA_100" : "SMOKE_OK_ROAD_SA");
+                    Log(logPath, scaled ? "SMOKE_OK_ROAD_SA_100" : "SMOKE_OK_ROAD_SA");
                     return 0;
                 }
                 if (result.Success)

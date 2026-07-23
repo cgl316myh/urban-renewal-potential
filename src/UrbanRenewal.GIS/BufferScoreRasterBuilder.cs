@@ -133,6 +133,42 @@ namespace UrbanRenewal.GIS
             return outRaster;
         }
 
+        /// <summary>
+        /// 将准则层原始得分缩放到 0–100：score/theoreticalMax×100；NoData 视为 0。
+        /// </summary>
+        public static string NormalizeTo100(
+            GeoprocessorHelper gp,
+            string inRaster,
+            double theoreticalMax,
+            string outputGdb,
+            string namePrefix)
+        {
+            if (gp == null || string.IsNullOrEmpty(inRaster))
+            {
+                throw new ArgumentException("标准化输入栅格无效。");
+            }
+            if (theoreticalMax <= 0)
+            {
+                throw new ArgumentException("理论满分必须大于 0。");
+            }
+
+            string outRaster = OutputGdbHelper.DatasetPath(outputGdb, ShortName(namePrefix) + "n");
+            OutputGdbHelper.TryDeleteDataset(gp, outRaster);
+
+            // Con(IsNull(r),0,r) / max * 100
+            string expr = "(Float(Con(IsNull(\"" + inRaster + "\"),0,\"" + inRaster
+                + "\")) / " + theoreticalMax.ToString(CultureInfo.InvariantCulture) + ") * 100";
+
+            RasterCalculator calc = new RasterCalculator();
+            calc.expression = expr;
+            calc.output_raster = outRaster;
+            gp.Execute(calc, "RasterCalculator-Normalize100-" + namePrefix);
+            return outRaster;
+        }
+
+        /// <summary>
+        /// 对已标准化为 0–100 的准则栅格做加权求和（权重自动归一化），输出约 0–100。
+        /// </summary>
         public static string WeightedSum(
             GeoprocessorHelper gp,
             IList<string> rasters,
@@ -162,13 +198,17 @@ namespace UrbanRenewal.GIS
                 {
                     expr.Append(" + ");
                 }
-                expr.Append("(\"");
+                // 再保险：加权前空值填 0，避免某一准则 NoData 污染整幅
+                expr.Append("(Con(IsNull(\"");
                 expr.Append(rasters[i]);
-                expr.Append("\" * ");
+                expr.Append("\"),0,\"");
+                expr.Append(rasters[i]);
+                expr.Append("\") * ");
                 expr.Append(w.ToString(CultureInfo.InvariantCulture));
                 expr.Append(")");
             }
 
+            OutputGdbHelper.TryDeleteDataset(gp, outRaster);
             RasterCalculator calc = new RasterCalculator();
             calc.expression = expr.ToString();
             calc.output_raster = outRaster;
@@ -236,6 +276,11 @@ namespace UrbanRenewal.GIS
             if (sb.Length == 0)
             {
                 sb.Append('r');
+            }
+            // File GDB 栅格名不能以数字开头
+            if (sb[0] >= '0' && sb[0] <= '9')
+            {
+                sb.Insert(0, 'r');
             }
             sb.Append(_nameSeq.ToString("00"));
             return sb.ToString();

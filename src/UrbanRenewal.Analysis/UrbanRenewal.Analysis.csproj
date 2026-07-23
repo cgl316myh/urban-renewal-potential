@@ -53,6 +53,7 @@
   <ItemGroup>
     <Compile Include="IFactorAnalyzer.cs" />
     <Compile Include="MotivationAnalysisEngine.cs" />
+    <Compile Include="MotivationScoreScale.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
   </ItemGroup>
   <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />

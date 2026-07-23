@@ -112,6 +112,7 @@ namespace UrbanRenewal.Analysis
 
             List<string> criterionRasters = new List<string>();
             List<double> weights = new List<double>();
+            List<double> scoreMaxes = new List<double>();
 
             // 交通 30%
             Report(progress, result, "交通便捷度分析...", 20);
@@ -120,6 +121,7 @@ namespace UrbanRenewal.Analysis
             {
                 criterionRasters.Add(traffic);
                 weights.Add(job.TrafficWeight);
+                scoreMaxes.Add(MotivationScoreScale.TrafficMax);
                 result.CriterionRasters["交通便捷度"] = traffic;
             }
 
@@ -130,6 +132,7 @@ namespace UrbanRenewal.Analysis
             {
                 criterionRasters.Add(env);
                 weights.Add(job.EnvironmentWeight);
+                scoreMaxes.Add(MotivationScoreScale.EnvironmentMax);
                 result.CriterionRasters["环境舒适度"] = env;
             }
 
@@ -140,6 +143,7 @@ namespace UrbanRenewal.Analysis
             {
                 criterionRasters.Add(facility);
                 weights.Add(job.FacilityWeight);
+                scoreMaxes.Add(MotivationScoreScale.FacilityMax);
                 result.CriterionRasters["设施完善度"] = facility;
             }
 
@@ -150,6 +154,7 @@ namespace UrbanRenewal.Analysis
             {
                 criterionRasters.Add(policy);
                 weights.Add(job.PolicyWeight);
+                scoreMaxes.Add(MotivationScoreScale.PolicyMax);
                 result.CriterionRasters["政策支持度"] = policy;
             }
 
@@ -160,13 +165,34 @@ namespace UrbanRenewal.Analysis
                 return result;
             }
 
+            Report(progress, result, "准则层标准化到 0–100...", 85);
+            List<string> normalized = new List<string>();
+            List<string> criterionLabels = new List<string>();
+            List<string> normPrefixes = new List<string>();
+            if (!string.IsNullOrEmpty(traffic)) { criterionLabels.Add("交通"); normPrefixes.Add("ntraf"); }
+            if (!string.IsNullOrEmpty(env)) { criterionLabels.Add("环境"); normPrefixes.Add("nenv"); }
+            if (!string.IsNullOrEmpty(facility)) { criterionLabels.Add("设施"); normPrefixes.Add("nfac"); }
+            if (!string.IsNullOrEmpty(policy)) { criterionLabels.Add("政策"); normPrefixes.Add("npol"); }
+
+            for (int i = 0; i < criterionRasters.Count; i++)
+            {
+                string label = i < criterionLabels.Count ? criterionLabels[i] : ("c" + i.ToString());
+                string prefix = i < normPrefixes.Count ? normPrefixes[i] : ("nc" + i.ToString());
+                string n100 = BufferScoreRasterBuilder.NormalizeTo100(
+                    _gp, criterionRasters[i], scoreMaxes[i], OutGdb, prefix);
+                normalized.Add(n100);
+                result.Messages.Add("准则「" + label + "」标准化 0–100（理论满分="
+                    + scoreMaxes[i].ToString(System.Globalization.CultureInfo.InvariantCulture)
+                    + "）: " + n100);
+            }
+
             Report(progress, result, "准则层加权叠置...", 90);
             string outRaster = OutputGdbHelper.DatasetPath(job.OutputGdbPath, "mot_score");
-            BufferScoreRasterBuilder.WeightedSum(_gp, criterionRasters, weights, outRaster);
+            BufferScoreRasterBuilder.WeightedSum(_gp, normalized, weights, outRaster);
             result.MotivationRasterPath = outRaster;
             result.OutputGdbPath = job.OutputGdbPath;
             result.Success = true;
-            result.Messages.Add("动力性栅格已生成: " + outRaster);
+            result.Messages.Add("动力性栅格已生成（0–100 标准化）: " + outRaster);
             Report(progress, result, "完成", 100);
             return result;
         }
