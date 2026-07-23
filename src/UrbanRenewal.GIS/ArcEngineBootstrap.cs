@@ -31,6 +31,16 @@ namespace UrbanRenewal.GIS
 
             try
             {
+                // 避免 PATH 中 64 位 GDAL 插件被 x86 ArcEngine 加载导致崩溃
+                try
+                {
+                    Environment.SetEnvironmentVariable("GDAL_DRIVER_PATH", "");
+                    Environment.SetEnvironmentVariable("GDAL_DATA", "");
+                }
+                catch
+                {
+                }
+
                 if (!RuntimeManager.Bind(ProductCode.EngineOrDesktop))
                 {
                     message = "无法绑定 ArcGIS Runtime（Engine/Desktop）。请确认已安装 ArcGIS 10.2。";

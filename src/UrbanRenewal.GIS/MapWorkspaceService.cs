@@ -6,7 +6,6 @@ using ESRI.ArcGIS.Controls;
 using ESRI.ArcGIS.DataSourcesGDB;
 using ESRI.ArcGIS.esriSystem;
 using ESRI.ArcGIS.Geodatabase;
-using ESRI.ArcGIS.Geometry;
 using ESRI.ArcGIS.SystemUI;
 
 namespace UrbanRenewal.GIS
@@ -100,42 +99,8 @@ namespace UrbanRenewal.GIS
                 sb.AppendLine(hasBuiltUp ? "[通过] 疑似建成区/城区范围图层" : "[警告] 未匹配到建成区/城区范围（必选）");
                 sb.AppendLine(hasParcel ? "[通过] 疑似宗地/地块图层" : "[警告] 未匹配到宗地/地块（必选）");
 
-                IFeatureWorkspace fws = (IFeatureWorkspace)workspace;
-                ISpatialReference firstSr = null;
-                for (int i = 0; i < classNames.Count; i++)
-                {
-                    try
-                    {
-                        IFeatureClass fc = fws.OpenFeatureClass(classNames[i]);
-                        IGeoDataset geo = fc as IGeoDataset;
-                        if (geo != null && geo.SpatialReference != null)
-                        {
-                            firstSr = geo.SpatialReference;
-                            break;
-                        }
-                    }
-                    catch
-                    {
-                    }
-                }
-
-                if (firstSr == null)
-                {
-                    sb.AppendLine("[警告] 无法读取空间参考。");
-                }
-                else
-                {
-                    sb.AppendLine("空间参考: " + firstSr.Name);
-                    IProjectedCoordinateSystem pcs = firstSr as IProjectedCoordinateSystem;
-                    if (pcs != null)
-                    {
-                        sb.AppendLine("[通过] 投影坐标系（可用于距离缓冲分析）");
-                    }
-                    else
-                    {
-                        sb.AppendLine("[警告] 非投影坐标系，后续缓冲/距离分析前需投影转换");
-                    }
-                }
+                // 详细空间参考一致性（不一致图层逐条警告）
+                sb.Append(SpatialReferenceAudit.Audit(gdbPath).ToCheckReport());
 
                 return sb.ToString();
             }

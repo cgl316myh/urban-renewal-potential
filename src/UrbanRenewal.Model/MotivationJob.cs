@@ -17,8 +17,15 @@ namespace UrbanRenewal.Model
             LayerHints = new Dictionary<string, string>();
         }
 
+        /// <summary>输入工作空间 File GDB。</summary>
         public string GdbPath { get; set; }
 
+        /// <summary>
+        /// 输出 File GDB：全部中间要素/栅格与最终结果写入此库。
+        /// </summary>
+        public string OutputGdbPath { get; set; }
+
+        /// <summary>兼容旧字段；若未设 OutputGdbPath 且本字段为 *.gdb 则当作输出库。</summary>
         public string WorkDirectory { get; set; }
 
         public double CellSize { get; set; }
@@ -48,6 +55,8 @@ namespace UrbanRenewal.Model
         public bool Success { get; set; }
 
         public string MotivationRasterPath { get; set; }
+
+        public string OutputGdbPath { get; set; }
 
         public Dictionary<string, string> CriterionRasters { get; set; }
 

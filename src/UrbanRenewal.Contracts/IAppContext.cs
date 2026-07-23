@@ -15,6 +15,9 @@ namespace UrbanRenewal.Contracts
 
         string GdbPath { get; set; }
 
+        /// <summary>当前城市配置 Id（Config/Cities 下 xml 的 id）。</summary>
+        string ActiveCityProfileId { get; set; }
+
         bool OpenFileGdb(string gdbPath, out string message);
 
         string CheckDataIntegrity();

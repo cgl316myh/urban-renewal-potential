@@ -3,6 +3,7 @@ using System.ComponentModel;
 using System.IO;
 using System.Windows.Forms;
 using DevExpress.XtraBars;
+using DevExpress.XtraBars.Ribbon;
 using ESRI.ArcGIS.Controls;
 using UrbanRenewal.GIS;
 using UrbanRenewal.Model;
@@ -26,6 +27,7 @@ namespace UrbanRenewal.Host
         public MainRibbonForm()
         {
             InitializeComponent();
+            ApplyRibbonLargeImages();
 
             // 设计器打开时不创建 AO 对象、不加载插件
             if (LicenseManager.UsageMode != LicenseUsageMode.Designtime)
@@ -33,6 +35,16 @@ namespace UrbanRenewal.Host
                 CreateArcEngineControls();
                 LoadPlugins();
             }
+        }
+
+        /// <summary>
+        /// 为主界面 Ribbon 按钮设置 LargeGlyph（大图标）。
+        /// </summary>
+        private void ApplyRibbonLargeImages()
+        {
+            RibbonHostImpl.ApplyLargeImage(this.btnMapFit, this.btnMapFit.Caption);
+            RibbonHostImpl.ApplyLargeImage(this.btnMapPan, this.btnMapPan.Caption);
+            RibbonHostImpl.ApplyLargeImage(this.btnMapZoomIn, this.btnMapZoomIn.Caption);
         }
 
         internal AxMapControl MapControl

@@ -1,0 +1,39 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  城市配置模板：复制为 CityName.xml（不要以下划线开头），或程序内「从GDB生成」。
+  换城市通常只需改各 Layer 的 name（精确/包含匹配）和 keywords（逗号分隔备用）。
+
+  role 取值（与动力性引擎一致）：
+    StudyArea, MetroMulti, Metro, CBD, TrafficFacility,
+    EcoCorridor, OpenSpace, Green,
+    PublicService, Convenience, Commercial,
+    PolicyBelt, PolicyStrategy, PolicyKey
+
+  required="true" 表示缺失则拒绝运行分析。
+  preferredCrsName：建议投影坐标系名称（完整性检查对照用）。
+  权重可用 0~1 或百分数（如 30）。
+-->
+<CityProfile id="Template"
+             displayName="（模板-请复制改名）"
+             isDefault="false"
+             cellSize="30"
+             preferredCrsName=""
+             trafficWeight="0.30"
+             environmentWeight="0.20"
+             facilityWeight="0.25"
+             policyWeight="0.25">
+  <Layer role="StudyArea" name="中心城区" keywords="分析范围,建成区" required="true" />
+  <Layer role="MetroMulti" name="" keywords="两线地铁,换乘" />
+  <Layer role="Metro" name="" keywords="地铁站,地铁" />
+  <Layer role="CBD" name="" keywords="CBD,中心区,开发强度" />
+  <Layer role="TrafficFacility" name="" keywords="交通枢纽,高铁,机场" />
+  <Layer role="EcoCorridor" name="" keywords="生态廊道,水系" />
+  <Layer role="OpenSpace" name="" keywords="开敞空间,湖泊" />
+  <Layer role="Green" name="" keywords="公园绿地,绿地" />
+  <Layer role="PublicService" name="" keywords="医院,高校,公服" />
+  <Layer role="Convenience" name="" keywords="文体,便民" />
+  <Layer role="Commercial" name="" keywords="商业,商场" />
+  <Layer role="PolicyBelt" name="" keywords="战略圈层,发展带" />
+  <Layer role="PolicyStrategy" name="" keywords="战略片区" />
+  <Layer role="PolicyKey" name="" keywords="近期重点,重点发展" />
+</CityProfile>

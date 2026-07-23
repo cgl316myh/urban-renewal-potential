@@ -19,6 +19,9 @@ namespace UrbanRenewal.Model
 
         public string LastGdbPath { get; set; }
 
+        /// <summary>当前选用的城市配置 Id（对应 Config/Cities/*.xml）。</summary>
+        public string ActiveCityProfileId { get; set; }
+
         public double MotivationWeight { get; set; }
 
         public double FeasibilityWeight { get; set; }

@@ -1,0 +1,22 @@
+<?xml version="1.0" encoding="utf-8"?>
+<CityProfile id="Suzhou"
+             displayName="苏州"
+             isDefault="true"
+             cellSize="30"
+             preferredCrsName="CGCS2000_3_Degree_GK_Zone_40"
+             trafficWeight="0.30"
+             environmentWeight="0.20"
+             facilityWeight="0.25"
+             policyWeight="0.25">
+  <Layer role="StudyArea" name="中心城区（分析范围）" keywords="中心城区,分析范围" required="true" />
+  <Layer role="MetroMulti" name="两线地铁站" keywords="两线地铁" />
+  <Layer role="Metro" name="一线地铁站" keywords="一线地铁,地铁站" />
+  <Layer role="CBD" name="开发强度高区域（CBD）" keywords="CBD,开发强度" />
+  <Layer role="EcoCorridor" name="重要生态廊道" keywords="生态廊道" />
+  <Layer role="OpenSpace" name="大型开敞空间" keywords="开敞空间" />
+  <Layer role="Green" name="城市公园绿地" keywords="公园绿地,绿地" />
+  <Layer role="PublicService" name="市级医院" keywords="医院" />
+  <Layer role="Convenience" name="苏州市建成区文体设施" keywords="文体设施,文体" />
+  <Layer role="PolicyBelt" name="城市战略圈层和片区" keywords="战略圈层,片区" />
+  <Layer role="PolicyKey" name="近期重点发展区域" keywords="近期重点,重点发展" />
+</CityProfile>

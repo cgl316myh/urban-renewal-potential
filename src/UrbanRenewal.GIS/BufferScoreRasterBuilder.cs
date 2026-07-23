@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using System.Globalization;
 using System.IO;
 using ESRI.ArcGIS.AnalysisTools;
 using ESRI.ArcGIS.ConversionTools;
@@ -9,10 +10,17 @@ using ESRI.ArcGIS.SpatialAnalystTools;
 namespace UrbanRenewal.GIS
 {
     /// <summary>
-    /// 缓冲区赋分 → 转栅格 → MAX 合并。
+    /// 缓冲区赋分 → 转栅格 → MAX 合并（中间/结果均写入输出 File GDB）。
     /// </summary>
     public static class BufferScoreRasterBuilder
     {
+        private static int _nameSeq;
+
+        public static void ResetNameSequence()
+        {
+            _nameSeq = 0;
+        }
+
         /// <summary>
         /// 单环缓冲固定得分。
         /// </summary>
@@ -21,17 +29,18 @@ namespace UrbanRenewal.GIS
             string inFeatureClass,
             double distanceMeters,
             int score,
-            string workDir,
+            string outputGdb,
             string namePrefix,
             double cellSize)
         {
-            string buf = Path.Combine(workDir, namePrefix + "_buf.shp");
-            string raster = Path.Combine(workDir, namePrefix + "_r");
+            string shortName = ShortName(namePrefix);
+            string buf = OutputGdbHelper.DatasetPath(outputGdb, shortName + "_b");
+            string raster = OutputGdbHelper.DatasetPath(outputGdb, shortName);
 
             ESRI.ArcGIS.AnalysisTools.Buffer buffer = new ESRI.ArcGIS.AnalysisTools.Buffer();
             buffer.in_features = inFeatureClass;
             buffer.out_feature_class = buf;
-            buffer.buffer_distance_or_field = distanceMeters.ToString(System.Globalization.CultureInfo.InvariantCulture) + " Meters";
+            buffer.buffer_distance_or_field = distanceMeters.ToString(CultureInfo.InvariantCulture) + " Meters";
             buffer.dissolve_option = "ALL";
             gp.Execute(buffer, "Buffer-" + namePrefix);
 
@@ -48,7 +57,7 @@ namespace UrbanRenewal.GIS
             string inFeatureClass,
             double[] distancesMeters,
             int[] scores,
-            string workDir,
+            string outputGdb,
             string namePrefix,
             double cellSize)
         {
@@ -60,7 +69,7 @@ namespace UrbanRenewal.GIS
             List<string> rasters = new List<string>();
             for (int i = 0; i < distancesMeters.Length; i++)
             {
-                string r = BuildSingle(gp, inFeatureClass, distancesMeters[i], scores[i], workDir, namePrefix + "_r" + i, cellSize);
+                string r = BuildSingle(gp, inFeatureClass, distancesMeters[i], scores[i], outputGdb, namePrefix + i.ToString(), cellSize);
                 rasters.Add(r);
             }
 
@@ -69,7 +78,7 @@ namespace UrbanRenewal.GIS
                 return rasters[0];
             }
 
-            string outRaster = Path.Combine(workDir, namePrefix + "_max");
+            string outRaster = OutputGdbHelper.DatasetPath(outputGdb, ShortName(namePrefix) + "mx");
             CellStatistics stats = new CellStatistics();
             stats.in_rasters_or_constants = string.Join(";", rasters.ToArray());
             stats.out_raster = outRaster;
@@ -86,23 +95,24 @@ namespace UrbanRenewal.GIS
             GeoprocessorHelper gp,
             string inFeatureClass,
             int score,
-            string workDir,
+            string outputGdb,
             string namePrefix,
             double cellSize)
         {
-            string scored = Path.Combine(workDir, namePrefix + "_scored.shp");
+            string shortName = ShortName(namePrefix);
+            string scored = OutputGdbHelper.DatasetPath(outputGdb, shortName + "_s");
             CopyFeatures copy = new CopyFeatures();
             copy.in_features = inFeatureClass;
             copy.out_feature_class = scored;
             gp.Execute(copy, "CopyFeatures-" + namePrefix);
 
             EnsureScoreField(gp, scored, score);
-            string raster = Path.Combine(workDir, namePrefix + "_r");
+            string raster = OutputGdbHelper.DatasetPath(outputGdb, shortName);
             FeatureToRaster(gp, scored, raster, cellSize);
             return raster;
         }
 
-        public static string MaxCombine(GeoprocessorHelper gp, IList<string> rasters, string workDir, string namePrefix)
+        public static string MaxCombine(GeoprocessorHelper gp, IList<string> rasters, string outputGdb, string namePrefix)
         {
             if (rasters == null || rasters.Count == 0)
             {
@@ -113,7 +123,7 @@ namespace UrbanRenewal.GIS
                 return rasters[0];
             }
 
-            string outRaster = Path.Combine(workDir, namePrefix + "_max");
+            string outRaster = OutputGdbHelper.DatasetPath(outputGdb, ShortName(namePrefix) + "mx");
             CellStatistics stats = new CellStatistics();
             stats.in_rasters_or_constants = string.Join(";", ToArray(rasters));
             stats.out_raster = outRaster;
@@ -134,7 +144,6 @@ namespace UrbanRenewal.GIS
                 throw new ArgumentException("加权叠置输入无效。");
             }
 
-            // 归一化权重
             double sumW = 0;
             for (int i = 0; i < weights.Count; i++)
             {
@@ -156,11 +165,10 @@ namespace UrbanRenewal.GIS
                 expr.Append("(\"");
                 expr.Append(rasters[i]);
                 expr.Append("\" * ");
-                expr.Append(w.ToString(System.Globalization.CultureInfo.InvariantCulture));
+                expr.Append(w.ToString(CultureInfo.InvariantCulture));
                 expr.Append(")");
             }
 
-            // Con 处理 NoData：用 Float(IsNull()) 较复杂；此处要求各准则已对齐，缺侧已跳过
             RasterCalculator calc = new RasterCalculator();
             calc.expression = expr.ToString();
             calc.output_raster = outRaster;
@@ -180,7 +188,6 @@ namespace UrbanRenewal.GIS
             }
             catch
             {
-                // 字段可能已存在
             }
 
             CalculateField calc = new CalculateField();
@@ -197,7 +204,7 @@ namespace UrbanRenewal.GIS
             f2r.in_features = inFeatures;
             f2r.field = "SCORE";
             f2r.out_raster = outRaster;
-            f2r.cell_size = cellSize.ToString(System.Globalization.CultureInfo.InvariantCulture);
+            f2r.cell_size = cellSize.ToString(CultureInfo.InvariantCulture);
             gp.Execute(f2r, "FeatureToRaster");
         }
 
@@ -209,6 +216,29 @@ namespace UrbanRenewal.GIS
                 arr[i] = list[i];
             }
             return arr;
+        }
+
+        private static string ShortName(string namePrefix)
+        {
+            _nameSeq++;
+            System.Text.StringBuilder sb = new System.Text.StringBuilder();
+            if (!string.IsNullOrEmpty(namePrefix))
+            {
+                for (int i = 0; i < namePrefix.Length && sb.Length < 4; i++)
+                {
+                    char c = namePrefix[i];
+                    if ((c >= 'a' && c <= 'z') || (c >= 'A' && c <= 'Z') || (c >= '0' && c <= '9'))
+                    {
+                        sb.Append(char.ToLowerInvariant(c));
+                    }
+                }
+            }
+            if (sb.Length == 0)
+            {
+                sb.Append('r');
+            }
+            sb.Append(_nameSeq.ToString("00"));
+            return sb.ToString();
         }
     }
 }

@@ -57,6 +57,11 @@
       <Private>False</Private>
       <SpecificVersion>False</SpecificVersion>
     </Reference>
+    <Reference Include="ESRI.ArcGIS.DataSourcesFile">
+      <HintPath>$(ArcGisDotNetDir)\ESRI.ArcGIS.DataSourcesFile.dll</HintPath>
+      <Private>False</Private>
+      <SpecificVersion>False</SpecificVersion>
+    </Reference>
     <Reference Include="ESRI.ArcGIS.DataSourcesGDB">
       <HintPath>$(ArcGisDotNetDir)\ESRI.ArcGIS.DataSourcesGDB.dll</HintPath>
       <Private>False</Private>
@@ -119,9 +124,12 @@
   <ItemGroup>
     <Compile Include="ArcEngineBootstrap.cs" />
     <Compile Include="BufferScoreRasterBuilder.cs" />
+    <Compile Include="FeatureProjectionHelper.cs" />
     <Compile Include="GeoprocessorHelper.cs" />
     <Compile Include="MapWorkspaceService.cs" />
+    <Compile Include="OutputGdbHelper.cs" />
     <Compile Include="RasterLayerHelper.cs" />
+    <Compile Include="SpatialReferenceAudit.cs" />
     <Compile Include="WorkspaceCatalog.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
   </ItemGroup>

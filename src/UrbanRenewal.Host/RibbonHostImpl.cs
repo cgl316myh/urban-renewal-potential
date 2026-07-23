@@ -1,4 +1,5 @@
 using System;
+using System.Drawing;
 using DevExpress.XtraBars;
 using DevExpress.XtraBars.Ribbon;
 using UrbanRenewal.Contracts;
@@ -47,6 +48,9 @@ namespace UrbanRenewal.Host
 
             BarButtonItem item = new BarButtonItem();
             item.Caption = caption;
+            item.Name = "btn_" + Math.Abs(caption.GetHashCode()).ToString();
+            ApplyLargeImage(item, caption);
+
             if (clickHandler != null)
             {
                 item.ItemClick += delegate(object sender, ItemClickEventArgs e)
@@ -55,8 +59,24 @@ namespace UrbanRenewal.Host
                 };
             }
 
+            _ribbon.Items.Add(item);
             ribbonGroup.ItemLinks.Add(item);
             return item;
+        }
+
+        /// <summary>
+        /// 为设计器中的地图按钮等补上大图标。
+        /// </summary>
+        public static void ApplyLargeImage(BarButtonItem item, string caption)
+        {
+            if (item == null)
+            {
+                return;
+            }
+            Image large = RibbonIconFactory.GetLargeByCaption(caption ?? item.Caption);
+            item.LargeGlyph = large;
+            item.Glyph = large;
+            item.RibbonStyle = RibbonItemStyles.Large;
         }
     }
 }

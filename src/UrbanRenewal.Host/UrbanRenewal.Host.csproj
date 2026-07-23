@@ -117,10 +117,19 @@
     </Compile>
     <Compile Include="Program.cs" />
     <Compile Include="RibbonHostImpl.cs" />
+    <Compile Include="RibbonIconFactory.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
   </ItemGroup>
   <ItemGroup>
     <None Include="plugins.config">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </None>
+    <None Include="..\Config\Cities\*.xml">
+      <Link>Config\Cities\%(Filename)%(Extension)</Link>
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </None>
+    <None Include="..\Config\Cities\README.txt">
+      <Link>Config\Cities\README.txt</Link>
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
     </None>
   </ItemGroup>

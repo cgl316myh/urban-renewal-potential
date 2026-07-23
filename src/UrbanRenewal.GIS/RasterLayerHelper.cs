@@ -1,6 +1,7 @@
 using System;
 using ESRI.ArcGIS.Carto;
 using ESRI.ArcGIS.Controls;
+using ESRI.ArcGIS.DataSourcesGDB;
 using ESRI.ArcGIS.DataSourcesRaster;
 using ESRI.ArcGIS.Geodatabase;
 
@@ -19,12 +20,12 @@ namespace UrbanRenewal.GIS
 
             try
             {
-                string folder = System.IO.Path.GetDirectoryName(rasterPath);
-                string name = System.IO.Path.GetFileName(rasterPath);
-
-                IWorkspaceFactory factory = new RasterWorkspaceFactoryClass();
-                IRasterWorkspace rasterWs = (IRasterWorkspace)factory.OpenFromFile(folder, 0);
-                IRasterDataset dataset = rasterWs.OpenRasterDataset(name);
+                IRasterDataset dataset = OpenRasterDataset(rasterPath);
+                if (dataset == null)
+                {
+                    message = "无法打开栅格: " + rasterPath;
+                    return false;
+                }
 
                 IRasterLayer layer = new RasterLayerClass();
                 layer.CreateFromDataset(dataset);
@@ -43,6 +44,28 @@ namespace UrbanRenewal.GIS
                 message = "加载栅格失败: " + ex.Message;
                 return false;
             }
+        }
+
+        private static IRasterDataset OpenRasterDataset(string rasterPath)
+        {
+            string folder = System.IO.Path.GetDirectoryName(rasterPath);
+            string name = System.IO.Path.GetFileName(rasterPath);
+
+            // File GDB 内栅格：...\xxx.gdb\rasterName
+            if (!string.IsNullOrEmpty(folder) && folder.EndsWith(".gdb", StringComparison.OrdinalIgnoreCase))
+            {
+                IWorkspaceFactory gwf = new FileGDBWorkspaceFactoryClass();
+                IWorkspace ws = gwf.OpenFromFile(folder, 0);
+                IRasterWorkspaceEx rws = ws as IRasterWorkspaceEx;
+                if (rws != null)
+                {
+                    return rws.OpenRasterDataset(name);
+                }
+            }
+
+            IWorkspaceFactory factory = new RasterWorkspaceFactoryClass();
+            IRasterWorkspace rasterWs = (IRasterWorkspace)factory.OpenFromFile(folder, 0);
+            return rasterWs.OpenRasterDataset(name);
         }
     }
 }
