@@ -19,4 +19,6 @@
   <Layer role="Convenience" name="苏州市建成区文体设施" keywords="文体设施,文体" />
   <Layer role="PolicyBelt" name="城市战略圈层和片区" keywords="战略圈层,片区" />
   <Layer role="PolicyKey" name="近期重点发展区域" keywords="近期重点,重点发展" />
+  <!-- 路网须在 ArcGIS 中预先构建；程序只做服务区可达性分析 -->
+  <NetworkDataset featureDataset="roadNet" name="roadNet_ND" impedanceAttribute="Length" />
 </CityProfile>

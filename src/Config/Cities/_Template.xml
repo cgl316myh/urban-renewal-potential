@@ -9,6 +9,7 @@
     PublicService, Convenience, Commercial,
     PolicyBelt, PolicyStrategy, PolicyKey
 
+  NetworkDataset：预建路网（featureDataset + name）。路网可达性分析不会自动构建 Network Dataset。
   required="true" 表示缺失则拒绝运行分析。
   preferredCrsName：建议投影坐标系名称（完整性检查对照用）。
   权重可用 0~1 或百分数（如 30）。
@@ -36,4 +37,5 @@
   <Layer role="PolicyBelt" name="" keywords="战略圈层,发展带" />
   <Layer role="PolicyStrategy" name="" keywords="战略片区" />
   <Layer role="PolicyKey" name="" keywords="近期重点,重点发展" />
+  <NetworkDataset featureDataset="roadNet" name="roadNet_ND" impedanceAttribute="Length" />
 </CityProfile>

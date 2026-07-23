@@ -102,6 +102,9 @@ namespace UrbanRenewal.GIS
                 // 详细空间参考一致性（不一致图层逐条警告）
                 sb.Append(SpatialReferenceAudit.Audit(gdbPath).ToCheckReport());
 
+                // 预建路网（路网可达性前置条件）
+                sb.Append(NetworkDatasetHelper.BuildIntegrityReport(gdbPath));
+
                 return sb.ToString();
             }
             catch (Exception ex)

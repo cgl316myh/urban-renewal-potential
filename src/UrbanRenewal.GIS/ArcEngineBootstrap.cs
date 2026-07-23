@@ -88,15 +88,32 @@ namespace UrbanRenewal.GIS
                 {
                     ext = _aoInit.CheckOutExtension(esriLicenseExtensionCode.esriLicenseExtensionCodeSpatialAnalyst);
                 }
-                if (ext != esriLicenseStatus.esriLicenseCheckedOut)
+                bool hasSa = ext == esriLicenseStatus.esriLicenseCheckedOut;
+
+                // 路网可达性需要 Network Analyst（枚举名在 10.2 为 Network；无许可时引擎回退欧氏距离）
+                esriLicenseStatus naExt = _aoInit.IsExtensionCodeAvailable(
+                    usedProduct,
+                    esriLicenseExtensionCode.esriLicenseExtensionCodeNetwork);
+                if (naExt == esriLicenseStatus.esriLicenseAvailable)
                 {
-                    message = "ArcGIS 主许可已签出，但 Spatial Analyst 扩展不可用（状态: " + ext + "）。动力性栅格分析可能失败。";
-                    _initialized = true;
-                    return true;
+                    naExt = _aoInit.CheckOutExtension(esriLicenseExtensionCode.esriLicenseExtensionCodeNetwork);
                 }
+                bool hasNa = naExt == esriLicenseStatus.esriLicenseCheckedOut;
 
                 _initialized = true;
-                message = "ArcGIS 许可初始化成功（含 Spatial Analyst）。";
+                if (hasSa && hasNa)
+                {
+                    message = "ArcGIS 许可初始化成功（含 Spatial Analyst、Network Analyst）。";
+                }
+                else if (hasSa)
+                {
+                    message = "ArcGIS 许可初始化成功（含 Spatial Analyst；Network Analyst 不可用，路网可达性将回退欧氏近似）。";
+                }
+                else
+                {
+                    message = "ArcGIS 主许可已签出，但 Spatial Analyst 不可用（状态: " + ext
+                        + "）。动力性栅格分析可能失败。Network Analyst: " + naExt + "。";
+                }
                 return true;
             }
             catch (Exception ex)

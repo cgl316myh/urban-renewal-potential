@@ -132,16 +132,6 @@ namespace UrbanRenewal.Plugins.Motivation
                 return;
             }
 
-            SpatialReferenceAuditResult srAudit = SpatialReferenceAudit.Audit(gdb);
-            if (!srAudit.Success || !srAudit.IsUnified)
-            {
-                string block = srAudit.ToBlockMessage();
-                this.lblStatus.Text = "空间参考不统一";
-                _context.LogError(block);
-                MessageBox.Show(this, block, "动力性分析", MessageBoxButtons.OK, MessageBoxIcon.Warning);
-                return;
-            }
-
             MotivationJob job = new MotivationJob();
             job.GdbPath = gdb;
             job.OutputGdbPath = outGdb;
@@ -165,6 +155,19 @@ namespace UrbanRenewal.Plugins.Motivation
                     return;
                 }
                 profile.ApplyToJob(job, names, applyMsgs);
+            }
+
+            List<string> usedLayers = SpatialReferenceAudit.CollectMotivationLayerNames(job.LayerHints, names);
+            SpatialReferenceAuditResult srAudit = usedLayers.Count > 0
+                ? SpatialReferenceAudit.Audit(gdb, usedLayers)
+                : SpatialReferenceAudit.Audit(gdb);
+            if (!srAudit.Success || !srAudit.IsUnified)
+            {
+                string block = srAudit.ToBlockMessage();
+                this.lblStatus.Text = "空间参考不统一";
+                _context.LogError(block);
+                MessageBox.Show(this, block, "动力性分析", MessageBoxButtons.OK, MessageBoxIcon.Warning);
+                return;
             }
 
             this.btnRun.Enabled = false;

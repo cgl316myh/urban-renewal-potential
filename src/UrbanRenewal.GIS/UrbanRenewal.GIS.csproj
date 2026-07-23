@@ -87,6 +87,11 @@
       <Private>False</Private>
       <SpecificVersion>False</SpecificVersion>
     </Reference>
+    <Reference Include="ESRI.ArcGIS.NetworkAnalyst">
+      <HintPath>$(ArcGisDotNetDir)\ESRI.ArcGIS.NetworkAnalyst.dll</HintPath>
+      <Private>False</Private>
+      <SpecificVersion>False</SpecificVersion>
+    </Reference>
     <Reference Include="ESRI.ArcGIS.Geoprocessing">
       <HintPath>$(ArcGisDotNetDir)\ESRI.ArcGIS.Geoprocessing.dll</HintPath>
       <Private>False</Private>
@@ -127,8 +132,10 @@
     <Compile Include="FeatureProjectionHelper.cs" />
     <Compile Include="GeoprocessorHelper.cs" />
     <Compile Include="MapWorkspaceService.cs" />
+    <Compile Include="NetworkDatasetHelper.cs" />
     <Compile Include="OutputGdbHelper.cs" />
     <Compile Include="RasterLayerHelper.cs" />
+    <Compile Include="RoadNetworkAccessibilityBuilder.cs" />
     <Compile Include="SpatialReferenceAudit.cs" />
     <Compile Include="WorkspaceCatalog.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />

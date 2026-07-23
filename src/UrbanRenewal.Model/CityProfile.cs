@@ -52,6 +52,10 @@ namespace UrbanRenewal.Model
         [XmlElement("Layer")]
         public List<CityLayerMapping> Layers { get; set; }
 
+        /// <summary>预建路网（Network Dataset）；分析不会自动构建。</summary>
+        [XmlElement("NetworkDataset")]
+        public CityNetworkDataset NetworkDataset { get; set; }
+
         /// <summary>配置文件完整路径（加载后填充，不序列化）。</summary>
         [XmlIgnore]
         public string SourcePath { get; set; }
@@ -115,6 +119,30 @@ namespace UrbanRenewal.Model
                 {
                     messages.Add("配置未匹配 " + map.Role
                         + (string.IsNullOrEmpty(map.Name) ? string.Empty : "（期望: " + map.Name + "）"));
+                }
+            }
+
+            if (NetworkDataset != null)
+            {
+                if (!string.IsNullOrEmpty(NetworkDataset.FeatureDataset))
+                {
+                    job.LayerHints["RoadFeatureDataset"] = NetworkDataset.FeatureDataset;
+                }
+                if (!string.IsNullOrEmpty(NetworkDataset.Name))
+                {
+                    job.LayerHints["RoadNetwork"] = NetworkDataset.Name;
+                }
+                if (!string.IsNullOrEmpty(NetworkDataset.ImpedanceAttribute))
+                {
+                    job.LayerHints["RoadImpedance"] = NetworkDataset.ImpedanceAttribute;
+                }
+                if (messages != null)
+                {
+                    messages.Add("配置路网 "
+                        + (NetworkDataset.FeatureDataset ?? "")
+                        + "\\"
+                        + (NetworkDataset.Name ?? "")
+                        + "（须预先构建 Network Dataset）");
                 }
             }
         }
@@ -225,6 +253,12 @@ namespace UrbanRenewal.Model
             AddDraftLayer(profile, featureClassNames, "PolicyStrategy", false, "战略片区", "战略区");
             AddDraftLayer(profile, featureClassNames, "PolicyKey", false, "近期重点", "重点发展");
 
+            // 默认路网命名（须用户预先在 GDB 中构建；分析不会自动创建）
+            profile.NetworkDataset = new CityNetworkDataset();
+            profile.NetworkDataset.FeatureDataset = "roadNet";
+            profile.NetworkDataset.Name = "roadNet_ND";
+            profile.NetworkDataset.ImpedanceAttribute = "Length";
+
             // 建议坐标系：优先分析范围图层的名称提示，留给用户填写 preferredCrsName
             return profile;
         }
@@ -312,6 +346,21 @@ namespace UrbanRenewal.Model
 
         [XmlAttribute("required")]
         public bool Required { get; set; }
+    }
+
+    /// <summary>
+    /// 城市预建路网配置（分析程序只打开、不构建）。
+    /// </summary>
+    public class CityNetworkDataset
+    {
+        [XmlAttribute("featureDataset")]
+        public string FeatureDataset { get; set; }
+
+        [XmlAttribute("name")]
+        public string Name { get; set; }
+
+        [XmlAttribute("impedanceAttribute")]
+        public string ImpedanceAttribute { get; set; }
     }
 
     /// <summary>

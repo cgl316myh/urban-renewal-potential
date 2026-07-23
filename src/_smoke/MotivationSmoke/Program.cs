@@ -64,27 +64,60 @@ namespace MotivationSmoke
                     Log(logPath, result.Messages[i]);
                 }
 
-                // 苏州示例 GDB 含 WGS84/CGCS2000 混用：应被空间参考门禁拦截
-                UrbanRenewal.GIS.SpatialReferenceAuditResult audit = UrbanRenewal.GIS.SpatialReferenceAudit.Audit(gdb);
-                Log(logPath, "AuditUnified=" + audit.IsUnified + " Mismatch=" + audit.MismatchedLayers.Count);
-                if (!audit.IsUnified)
+                // 坐标系：动力性仅校验分析所用图层；全库仍可能有宗地等未统一图层
+                List<string> used = UrbanRenewal.GIS.SpatialReferenceAudit.CollectMotivationLayerNames(
+                    job.LayerHints, WorkspaceCatalog.ListFeatureClassNames(gdb));
+                UrbanRenewal.GIS.SpatialReferenceAuditResult auditUsed =
+                    UrbanRenewal.GIS.SpatialReferenceAudit.Audit(gdb, used);
+                UrbanRenewal.GIS.SpatialReferenceAuditResult auditAll =
+                    UrbanRenewal.GIS.SpatialReferenceAudit.Audit(gdb);
+                Log(logPath, "AuditUsedUnified=" + auditUsed.IsUnified + " UsedCount=" + used.Count);
+                Log(logPath, "AuditAllUnified=" + auditAll.IsUnified + " MismatchAll=" + auditAll.MismatchedLayers.Count);
+                if (!auditUsed.IsUnified)
                 {
                     bool blocked = !result.Success
-                        && result.Messages.Count > 0
-                        && (result.Messages[0].IndexOf("空间参考", StringComparison.Ordinal) >= 0
-                            || string.Join("\n", result.Messages.ToArray()).IndexOf("空间参考不统一", StringComparison.Ordinal) >= 0);
+                        && string.Join("\n", result.Messages.ToArray()).IndexOf("空间参考", StringComparison.Ordinal) >= 0;
                     Console.WriteLine(blocked ? "SMOKE_OK_SR_BLOCKED" : "SMOKE_FAIL_EXPECTED_BLOCK");
                     Log(logPath, blocked ? "SMOKE_OK_SR_BLOCKED" : "SMOKE_FAIL_EXPECTED_BLOCK");
                     return blocked ? 0 : 1;
                 }
 
+                bool usedSa = false;
+                bool usedEuc = false;
+                for (int i = 0; i < result.Messages.Count; i++)
+                {
+                    string m = result.Messages[i];
+                    if (m.IndexOf("路网可达性（服务区）", StringComparison.Ordinal) >= 0)
+                    {
+                        usedSa = true;
+                    }
+                    if (m.IndexOf("路网可达性（欧氏近似）", StringComparison.Ordinal) >= 0)
+                    {
+                        usedEuc = true;
+                    }
+                }
+                Log(logPath, "RoadAccess_SA=" + usedSa + " RoadAccess_Euc=" + usedEuc);
+
                 Log(logPath, "Success=" + result.Success);
                 Log(logPath, "Raster=" + result.MotivationRasterPath);
 
-                Console.WriteLine(result.Success ? "SMOKE_OK" : "SMOKE_FAIL");
-                Log(logPath, result.Success ? "SMOKE_OK" : "SMOKE_FAIL");
+                if (result.Success && usedSa)
+                {
+                    Console.WriteLine("SMOKE_OK_ROAD_SA");
+                    Log(logPath, "SMOKE_OK_ROAD_SA");
+                    return 0;
+                }
+                if (result.Success)
+                {
+                    Console.WriteLine(usedEuc ? "SMOKE_OK_ROAD_EUC" : "SMOKE_OK");
+                    Log(logPath, usedEuc ? "SMOKE_OK_ROAD_EUC" : "SMOKE_OK");
+                    return 0;
+                }
+
+                Console.WriteLine("SMOKE_FAIL");
+                Log(logPath, "SMOKE_FAIL");
                 Log(logPath, "LogFile=" + logPath);
-                return result.Success ? 0 : 1;
+                return 1;
             }
             catch (Exception ex)
             {
@@ -112,6 +145,7 @@ namespace MotivationSmoke
             TryHint(job, names, "MetroMulti", "两线地铁站");
             TryHint(job, names, "Metro", "一线地铁站");
             TryHint(job, names, "CBD", "开发强度高区域（CBD）");
+            TryHint(job, names, "StudyArea", "中心城区");
             TryHint(job, names, "EcoCorridor", "重要生态廊道");
             TryHint(job, names, "OpenSpace", "大型开敞空间");
             TryHint(job, names, "Green", "城市公园绿地");
@@ -119,6 +153,11 @@ namespace MotivationSmoke
             TryHint(job, names, "Convenience", "苏州市建成区文体设施");
             TryHint(job, names, "PolicyBelt", "城市战略圈层和片区");
             TryHint(job, names, "PolicyKey", "近期重点发展区域");
+
+            // 预建路网（与 Suzhou.xml NetworkDataset 一致）
+            job.LayerHints["RoadFeatureDataset"] = "roadNet";
+            job.LayerHints["RoadNetwork"] = "roadNet_ND";
+            job.LayerHints["RoadImpedance"] = "Length";
         }
 
         private static void TryHint(MotivationJob job, List<string> names, string key, string exactName)

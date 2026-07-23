@@ -89,7 +89,7 @@ namespace UrbanRenewal.GIS
             else
             {
                 sb.AppendLine("[警告] 空间参考不统一：共 " + MismatchedLayers.Count
-                    + " 个图层与基准不一致（动力性分析将拒绝执行，请先统一投影）");
+                    + " 个图层与基准不一致（动力性分析仅校验所用图层；未用图层如宗地可后续再统一）");
                 for (int i = 0; i < MismatchedLayers.Count; i++)
                 {
                     SpatialReferenceLayerInfo info = MismatchedLayers[i];
@@ -113,7 +113,8 @@ namespace UrbanRenewal.GIS
 
             StringBuilder sb = new StringBuilder();
             sb.AppendLine("空间参考不统一，已取消动力性分析。");
-            sb.AppendLine("请先在「数据管理 → 数据完整性检查」中查看详情，并将全部相关图层投影到同一坐标系后再执行。");
+            sb.AppendLine("请将本次分析用到的图层投影到同一坐标系后再执行（未参与分析的图层可暂不处理）。");
+            sb.AppendLine("可在「数据管理 → 数据完整性检查」中查看全库详情。");
             if (!string.IsNullOrEmpty(ReferenceSpatialReferenceName))
             {
                 sb.AppendLine("建议基准: " + ReferenceSpatialReferenceName
@@ -146,6 +147,15 @@ namespace UrbanRenewal.GIS
         /// </summary>
         public static SpatialReferenceAuditResult Audit(string gdbPath)
         {
+            return Audit(gdbPath, null);
+        }
+
+        /// <summary>
+        /// 审计指定要素类；onlyLayerNames 为空则审计全部。
+        /// 动力性分析应只传入本次将用到的图层，避免未用图层（如宗地）阻断运行。
+        /// </summary>
+        public static SpatialReferenceAuditResult Audit(string gdbPath, IList<string> onlyLayerNames)
+        {
             SpatialReferenceAuditResult result = new SpatialReferenceAuditResult();
             if (string.IsNullOrEmpty(gdbPath) || !System.IO.Directory.Exists(gdbPath))
             {
@@ -155,7 +165,8 @@ namespace UrbanRenewal.GIS
 
             try
             {
-                List<string> names = WorkspaceCatalog.ListFeatureClassNames(gdbPath);
+                List<string> allNames = WorkspaceCatalog.ListFeatureClassNames(gdbPath);
+                List<string> names = FilterLayerNames(allNames, onlyLayerNames);
                 IWorkspaceFactory factory = new FileGDBWorkspaceFactoryClass();
                 IWorkspace workspace = factory.OpenFromFile(gdbPath, 0);
                 IFeatureWorkspace fws = (IFeatureWorkspace)workspace;
@@ -248,6 +259,105 @@ namespace UrbanRenewal.GIS
                 result.ErrorMessage = ex.Message;
                 return result;
             }
+        }
+
+        /// <summary>
+        /// 从动力性作业 LayerHints 收集待校验图层名（含路网边要素）。
+        /// </summary>
+        public static List<string> CollectMotivationLayerNames(
+            IDictionary<string, string> layerHints,
+            IList<string> gdbFeatureClassNames)
+        {
+            List<string> list = new List<string>();
+            if (layerHints == null)
+            {
+                return list;
+            }
+
+            foreach (KeyValuePair<string, string> kv in layerHints)
+            {
+                if (string.IsNullOrEmpty(kv.Key) || string.IsNullOrEmpty(kv.Value))
+                {
+                    continue;
+                }
+                if (string.Equals(kv.Key, "RoadFeatureDataset", StringComparison.OrdinalIgnoreCase)
+                    || string.Equals(kv.Key, "RoadNetwork", StringComparison.OrdinalIgnoreCase)
+                    || string.Equals(kv.Key, "RoadImpedance", StringComparison.OrdinalIgnoreCase))
+                {
+                    continue;
+                }
+                AddIfPresent(list, gdbFeatureClassNames, kv.Value);
+            }
+
+            // 预建路网边要素（通常名为 road）
+            if (layerHints.ContainsKey("RoadFeatureDataset")
+                || layerHints.ContainsKey("RoadNetwork"))
+            {
+                AddIfPresent(list, gdbFeatureClassNames, "road");
+            }
+
+            return list;
+        }
+
+        private static List<string> FilterLayerNames(List<string> allNames, IList<string> onlyLayerNames)
+        {
+            if (onlyLayerNames == null || onlyLayerNames.Count == 0)
+            {
+                return allNames;
+            }
+
+            List<string> filtered = new List<string>();
+            for (int i = 0; i < onlyLayerNames.Count; i++)
+            {
+                string want = onlyLayerNames[i];
+                if (string.IsNullOrEmpty(want))
+                {
+                    continue;
+                }
+                for (int j = 0; j < allNames.Count; j++)
+                {
+                    if (string.Equals(allNames[j], want, StringComparison.OrdinalIgnoreCase))
+                    {
+                        if (!ContainsIgnoreCase(filtered, allNames[j]))
+                        {
+                            filtered.Add(allNames[j]);
+                        }
+                        break;
+                    }
+                }
+            }
+            return filtered;
+        }
+
+        private static void AddIfPresent(List<string> target, IList<string> gdbNames, string name)
+        {
+            if (string.IsNullOrEmpty(name) || gdbNames == null)
+            {
+                return;
+            }
+            for (int i = 0; i < gdbNames.Count; i++)
+            {
+                if (string.Equals(gdbNames[i], name, StringComparison.OrdinalIgnoreCase))
+                {
+                    if (!ContainsIgnoreCase(target, gdbNames[i]))
+                    {
+                        target.Add(gdbNames[i]);
+                    }
+                    return;
+                }
+            }
+        }
+
+        private static bool ContainsIgnoreCase(List<string> list, string name)
+        {
+            for (int i = 0; i < list.Count; i++)
+            {
+                if (string.Equals(list[i], name, StringComparison.OrdinalIgnoreCase))
+                {
+                    return true;
+                }
+            }
+            return false;
         }
 
         private static bool TryOpenSr(IFeatureWorkspace fws, string name, out ISpatialReference sr)

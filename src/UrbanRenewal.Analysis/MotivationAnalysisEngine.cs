@@ -52,9 +52,12 @@ namespace UrbanRenewal.Analysis
             List<string> names = WorkspaceCatalog.ListFeatureClassNames(job.GdbPath);
             result.Messages.Add("GDB 要素类数量: " + names.Count);
 
-            // 空间参考必须统一，否则拒绝执行（不做隐式重投影）
+            // 空间参考：仅校验本次分析用到的图层（避免未用宗地等阻断）
             Report(progress, result, "检查空间参考一致性...", 8);
-            SpatialReferenceAuditResult srAudit = SpatialReferenceAudit.Audit(job.GdbPath);
+            List<string> usedLayers = SpatialReferenceAudit.CollectMotivationLayerNames(job.LayerHints, names);
+            SpatialReferenceAuditResult srAudit = usedLayers.Count > 0
+                ? SpatialReferenceAudit.Audit(job.GdbPath, usedLayers)
+                : SpatialReferenceAudit.Audit(job.GdbPath);
             if (!srAudit.Success || !srAudit.IsUnified)
             {
                 string block = srAudit.ToBlockMessage();
@@ -64,7 +67,8 @@ namespace UrbanRenewal.Analysis
                 return result;
             }
             result.Messages.Add("空间参考一致: " + srAudit.ReferenceSpatialReferenceName
-                + "（" + srAudit.Layers.Count + " 个要素类）");
+                + "（校验 " + srAudit.Layers.Count + " 个分析图层"
+                + (usedLayers.Count > 0 ? "，未用图层已忽略" : string.Empty) + "）");
 
             _gp = new GeoprocessorHelper();
             Report(progress, result, "准备输出 GDB...", 10);
@@ -198,6 +202,7 @@ namespace UrbanRenewal.Analysis
             string metro = Resolve(job, names, "Metro", "一线地铁", "一线", "单线地铁");
             string cbd = Resolve(job, names, "CBD", "开发强度高", "CBD", "中心区", "高强度");
             string trafficFac = Resolve(job, names, "TrafficFacility", "交通设施", "交通枢纽", "高铁", "机场", "客运");
+            string study = Resolve(job, names, "StudyArea", "中心城区", "分析范围");
 
             if (!string.IsNullOrEmpty(metroMulti))
             {
@@ -219,6 +224,13 @@ namespace UrbanRenewal.Analysis
                     OutGdb, "metro", cell));
             }
 
+            // 路网可达性（须预先构建 Network Dataset，如 roadNet\roadNet_ND）
+            string roadAccess = BuildRoadAccessibility(job, cbd, study, metro, result);
+            if (!string.IsNullOrEmpty(roadAccess))
+            {
+                parts.Add(roadAccess);
+            }
+
             if (!string.IsNullOrEmpty(cbd))
             {
                 result.Messages.Add("CBD: " + cbd);
@@ -238,6 +250,64 @@ namespace UrbanRenewal.Analysis
             }
 
             return BufferScoreRasterBuilder.MaxCombine(_gp, parts, OutGdb, "traffic");
+        }
+
+        /// <summary>
+        /// 到城市中心的路网可达性（1–5 分）。路网数据集须事先建好。
+        /// </summary>
+        private string BuildRoadAccessibility(
+            MotivationJob job,
+            string cbdLayer,
+            string studyLayer,
+            string metroLayer,
+            MotivationResult result)
+        {
+            string facilityLayer = cbdLayer;
+            if (string.IsNullOrEmpty(facilityLayer))
+            {
+                facilityLayer = studyLayer;
+            }
+            if (string.IsNullOrEmpty(facilityLayer))
+            {
+                facilityLayer = metroLayer;
+            }
+            if (string.IsNullOrEmpty(facilityLayer))
+            {
+                result.Messages.Add("路网可达性：无 CBD/分析范围/地铁作为中心设施，已跳过。");
+                return null;
+            }
+
+            string fdName = ResolveHint(job, "RoadFeatureDataset") ?? NetworkDatasetHelper.DefaultFeatureDataset;
+            string ndName = ResolveHint(job, "RoadNetwork") ?? NetworkDatasetHelper.DefaultNetworkName;
+            string impedance = ResolveHint(job, "RoadImpedance") ?? NetworkDatasetHelper.DefaultImpedance;
+
+            result.Messages.Add("路网可达性：中心设施=" + facilityLayer
+                + "；网络=" + fdName + "\\" + ndName + "（须预先构建）");
+
+            return RoadNetworkAccessibilityBuilder.Build(
+                _gp,
+                job.GdbPath,
+                OutGdb,
+                Prepared(facilityLayer, result),
+                fdName,
+                ndName,
+                impedance,
+                job.CellSize,
+                result.Messages);
+        }
+
+        private static string ResolveHint(MotivationJob job, string hintKey)
+        {
+            if (job == null || job.LayerHints == null || string.IsNullOrEmpty(hintKey))
+            {
+                return null;
+            }
+            if (!job.LayerHints.ContainsKey(hintKey))
+            {
+                return null;
+            }
+            string v = job.LayerHints[hintKey];
+            return string.IsNullOrEmpty(v) ? null : v;
         }
 
         private string BuildEnvironment(MotivationJob job, List<string> names, MotivationResult result)
