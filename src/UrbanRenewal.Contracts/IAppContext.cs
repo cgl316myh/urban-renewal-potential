@@ -51,6 +51,26 @@ namespace UrbanRenewal.Contracts
         /// </summary>
         bool AddRasterLayer(string rasterPath, string layerName, out string message);
 
+        /// <summary>
+        /// 将要素类结果加载到地图（File GDB 路径）。
+        /// </summary>
+        bool AddFeatureLayer(string featureClassPath, string layerName, out string message);
+
+        /// <summary>综合潜力叠置：动力性权重（默认 0.7）。</summary>
+        double MotivationWeight { get; set; }
+
+        /// <summary>综合潜力叠置：可行度权重（默认 0.3）。</summary>
+        double FeasibilityWeight { get; set; }
+
+        /// <summary>当前 DevExpress 皮肤名。</summary>
+        string SkinName { get; set; }
+
+        /// <summary>应用并可选持久化皮肤。</summary>
+        void ApplySkin(string skinName);
+
+        /// <summary>获取宿主日志文本（最近条目）。</summary>
+        string GetLogText();
+
         void LogInfo(string message);
 
         void LogWarn(string message);

@@ -148,6 +148,11 @@
     <PostBuildEvent>if not exist "$(TargetDir)Plugins" mkdir "$(TargetDir)Plugins"
 copy /Y "$(SolutionDir)UrbanRenewal.Plugins.DataManage\bin\$(ConfigurationName)\UrbanRenewal.Plugins.DataManage.dll" "$(TargetDir)Plugins\" 2>nul
 copy /Y "$(SolutionDir)UrbanRenewal.Plugins.Motivation\bin\$(ConfigurationName)\UrbanRenewal.Plugins.Motivation.dll" "$(TargetDir)Plugins\" 2>nul
+copy /Y "$(SolutionDir)UrbanRenewal.Plugins.Feasibility\bin\$(ConfigurationName)\UrbanRenewal.Plugins.Feasibility.dll" "$(TargetDir)Plugins\" 2>nul
+copy /Y "$(SolutionDir)UrbanRenewal.Plugins.Overlay\bin\$(ConfigurationName)\UrbanRenewal.Plugins.Overlay.dll" "$(TargetDir)Plugins\" 2>nul
+copy /Y "$(SolutionDir)UrbanRenewal.Plugins.Validation\bin\$(ConfigurationName)\UrbanRenewal.Plugins.Validation.dll" "$(TargetDir)Plugins\" 2>nul
+copy /Y "$(SolutionDir)UrbanRenewal.Plugins.Output\bin\$(ConfigurationName)\UrbanRenewal.Plugins.Output.dll" "$(TargetDir)Plugins\" 2>nul
+copy /Y "$(SolutionDir)UrbanRenewal.Plugins.Config\bin\$(ConfigurationName)\UrbanRenewal.Plugins.Config.dll" "$(TargetDir)Plugins\" 2>nul
 rem 清理 Plugins 中的依赖 DLL，避免与主程序双份加载
 del /Q "$(TargetDir)Plugins\UrbanRenewal.Contracts.dll" 2>nul
 del /Q "$(TargetDir)Plugins\UrbanRenewal.Model.dll" 2>nul

@@ -46,6 +46,34 @@ namespace UrbanRenewal.Host
             {
                 return GetLarge("preprocess");
             }
+            if (caption.IndexOf("验证", StringComparison.Ordinal) >= 0)
+            {
+                return GetLarge("run_validation");
+            }
+            if (caption.IndexOf("成果", StringComparison.Ordinal) >= 0 || caption.IndexOf("导出", StringComparison.Ordinal) >= 0)
+            {
+                return GetLarge("run_output");
+            }
+            if (caption.IndexOf("皮肤", StringComparison.Ordinal) >= 0 || caption.IndexOf("权重", StringComparison.Ordinal) >= 0 || caption.IndexOf("配置", StringComparison.Ordinal) >= 0)
+            {
+                return GetLarge("run_config");
+            }
+            if (caption.IndexOf("日志", StringComparison.Ordinal) >= 0)
+            {
+                return GetLarge("run_config");
+            }
+            if (caption.IndexOf("宗地", StringComparison.Ordinal) >= 0)
+            {
+                return GetLarge("run_parcel");
+            }
+            if (caption.IndexOf("叠置", StringComparison.Ordinal) >= 0 || caption.IndexOf("综合潜力", StringComparison.Ordinal) >= 0)
+            {
+                return GetLarge("run_overlay");
+            }
+            if (caption.IndexOf("可行度", StringComparison.Ordinal) >= 0)
+            {
+                return GetLarge("run_feasibility");
+            }
             if (caption.IndexOf("动力性", StringComparison.Ordinal) >= 0 || caption.IndexOf("运行", StringComparison.Ordinal) >= 0)
             {
                 return GetLarge("run_motivation");
@@ -164,6 +192,58 @@ namespace UrbanRenewal.Host
                         using (Brush b = new SolidBrush(Color.White))
                         {
                             g.FillPolygon(b, new Point[] { new Point(11, 8), new Point(24, 16), new Point(11, 24) });
+                        }
+                        break;
+                    case "run_feasibility":
+                        DrawRoundRect(g, bounds, Color.FromArgb(40, 110, 160), Color.FromArgb(70, 150, 200));
+                        using (Pen p = new Pen(Color.White, 2.5f))
+                        {
+                            p.StartCap = LineCap.Round;
+                            p.EndCap = LineCap.Round;
+                            g.DrawLines(p, new Point[] { new Point(8, 18), new Point(13, 23), new Point(24, 9) });
+                        }
+                        break;
+                    case "run_overlay":
+                        DrawRoundRect(g, bounds, Color.FromArgb(140, 70, 40), Color.FromArgb(190, 110, 60));
+                        using (Pen p = new Pen(Color.White, 2f))
+                        {
+                            g.DrawRectangle(p, 7, 7, 10, 10);
+                            g.DrawRectangle(p, 14, 14, 10, 10);
+                        }
+                        break;
+                    case "run_parcel":
+                        DrawRoundRect(g, bounds, Color.FromArgb(50, 120, 90), Color.FromArgb(90, 160, 120));
+                        using (Pen p = new Pen(Color.White, 2f))
+                        {
+                            g.DrawPolygon(p, new Point[] { new Point(8, 22), new Point(12, 8), new Point(24, 10), new Point(22, 24) });
+                        }
+                        break;
+                    case "run_validation":
+                        DrawRoundRect(g, bounds, Color.FromArgb(100, 60, 140), Color.FromArgb(140, 100, 180));
+                        using (Pen p = new Pen(Color.White, 2.5f))
+                        {
+                            g.DrawEllipse(p, 8, 8, 16, 16);
+                            g.DrawLine(p, 16, 12, 16, 18);
+                            g.DrawLine(p, 16, 20, 16, 22);
+                        }
+                        break;
+                    case "run_output":
+                        DrawRoundRect(g, bounds, Color.FromArgb(30, 100, 140), Color.FromArgb(60, 140, 180));
+                        using (Pen p = new Pen(Color.White, 2f))
+                        {
+                            g.DrawRectangle(p, 9, 7, 14, 18);
+                            g.DrawLine(p, 12, 12, 20, 12);
+                            g.DrawLine(p, 12, 16, 20, 16);
+                            g.DrawLine(p, 12, 20, 18, 20);
+                        }
+                        break;
+                    case "run_config":
+                        DrawRoundRect(g, bounds, Color.FromArgb(80, 80, 90), Color.FromArgb(120, 120, 130));
+                        using (Pen p = new Pen(Color.White, 2f))
+                        {
+                            g.DrawEllipse(p, 11, 11, 10, 10);
+                            g.DrawLine(p, 16, 6, 16, 11);
+                            g.DrawLine(p, 16, 21, 16, 26);
                         }
                         break;
                     default:

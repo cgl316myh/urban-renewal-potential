@@ -262,6 +262,46 @@ namespace UrbanRenewal.GIS
         }
 
         /// <summary>
+        /// 从可行度作业 LayerHints 收集待校验要素类（不含 DEM/人口等栅格）。
+        /// </summary>
+        public static List<string> CollectFeasibilityLayerNames(
+            IDictionary<string, string> layerHints,
+            IList<string> gdbFeatureClassNames)
+        {
+            List<string> list = new List<string>();
+            if (layerHints == null)
+            {
+                return list;
+            }
+
+            string[] featureRoles = new string[] { "StudyArea", "Parcel" };
+            for (int i = 0; i < featureRoles.Length; i++)
+            {
+                string role = featureRoles[i];
+                if (!layerHints.ContainsKey(role))
+                {
+                    continue;
+                }
+                string name = layerHints[role];
+                if (!string.IsNullOrEmpty(name))
+                {
+                    AddIfPresent(list, gdbFeatureClassNames, name);
+                }
+            }
+
+            // 无显式提示时，至少尝试匹配分析范围与宗地关键词
+            if (list.Count == 0 && gdbFeatureClassNames != null)
+            {
+                string study = WorkspaceCatalog.FindByKeywords(gdbFeatureClassNames, "中心城区", "分析范围", "建成区");
+                string parcel = WorkspaceCatalog.FindByKeywords(gdbFeatureClassNames, "宗地", "地块", "土地利用");
+                AddIfPresent(list, gdbFeatureClassNames, study);
+                AddIfPresent(list, gdbFeatureClassNames, parcel);
+            }
+
+            return list;
+        }
+
+        /// <summary>
         /// 从动力性作业 LayerHints 收集待校验图层名（含路网边要素）。
         /// </summary>
         public static List<string> CollectMotivationLayerNames(

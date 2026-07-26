@@ -1,6 +1,7 @@
 using System;
 using System.ComponentModel;
 using System.IO;
+using System.Text;
 using System.Windows.Forms;
 using DevExpress.XtraBars;
 using DevExpress.XtraBars.Ribbon;
@@ -94,6 +95,10 @@ namespace UrbanRenewal.Host
         private void LoadPlugins()
         {
             _appContext = new AppContextImpl(this);
+            if (!string.IsNullOrEmpty(_appContext.SkinName))
+            {
+                _appContext.ApplySkin(_appContext.SkinName);
+            }
             _ribbonHost = new RibbonHostImpl(this.ribbonControl);
             _pluginManager = new PluginManager(
                 delegate(string m) { AppendLog("INFO", m); },
@@ -122,6 +127,17 @@ namespace UrbanRenewal.Host
             {
                 this.listBoxLog.Items.Insert(0, line);
             }
+        }
+
+        internal string GetLogText()
+        {
+            StringBuilder sb = new StringBuilder();
+            int max = Math.Min(200, this.listBoxLog.Items.Count);
+            for (int i = 0; i < max; i++)
+            {
+                sb.AppendLine(Convert.ToString(this.listBoxLog.Items[i]));
+            }
+            return sb.ToString();
         }
 
         internal void SetStatus(string text)

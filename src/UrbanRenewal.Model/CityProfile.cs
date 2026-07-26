@@ -88,39 +88,7 @@ namespace UrbanRenewal.Model
             job.FacilityWeight = FacilityWeight;
             job.PolicyWeight = PolicyWeight;
 
-            if (job.LayerHints == null)
-            {
-                job.LayerHints = new Dictionary<string, string>();
-            }
-
-            if (Layers == null)
-            {
-                return;
-            }
-
-            for (int i = 0; i < Layers.Count; i++)
-            {
-                CityLayerMapping map = Layers[i];
-                if (map == null || string.IsNullOrEmpty(map.Role))
-                {
-                    continue;
-                }
-
-                string resolved = ResolveLayerName(map, featureClassNames);
-                if (!string.IsNullOrEmpty(resolved))
-                {
-                    job.LayerHints[map.Role] = resolved;
-                    if (messages != null)
-                    {
-                        messages.Add("配置映射 " + map.Role + " → " + resolved);
-                    }
-                }
-                else if (messages != null)
-                {
-                    messages.Add("配置未匹配 " + map.Role
-                        + (string.IsNullOrEmpty(map.Name) ? string.Empty : "（期望: " + map.Name + "）"));
-                }
-            }
+            ApplyLayerHintsToDictionary(job.LayerHints, featureClassNames, messages);
 
             if (NetworkDataset != null)
             {
@@ -143,6 +111,132 @@ namespace UrbanRenewal.Model
                         + "\\"
                         + (NetworkDataset.Name ?? "")
                         + "（须预先构建 Network Dataset）");
+                }
+            }
+        }
+
+        /// <summary>
+        /// 将配置写入可行度作业：像元、图层提示（要素 + 栅格名列表均可匹配）。
+        /// </summary>
+        public void ApplyToFeasibilityJob(
+            FeasibilityJob job,
+            IList<string> featureClassNames,
+            IList<string> rasterDatasetNames,
+            IList<string> messages)
+        {
+            if (job == null)
+            {
+                return;
+            }
+
+            if (CellSize > 0)
+            {
+                job.CellSize = CellSize;
+            }
+
+            if (job.LayerHints == null)
+            {
+                job.LayerHints = new Dictionary<string, string>();
+            }
+
+            // 可行度要素角色（勿把 DEM/人口等栅格角色拿去匹配要素类名）
+            string[] featureRoles = new string[] { "StudyArea", "Parcel" };
+            string[] rasterRoles = new string[] { "DEM", "Population", "Slope" };
+            ApplyLayerHintsForRoles(job.LayerHints, featureClassNames, featureRoles, messages, false);
+
+            if (Layers == null || rasterDatasetNames == null)
+            {
+                return;
+            }
+            ApplyLayerHintsForRoles(job.LayerHints, rasterDatasetNames, rasterRoles, messages, true);
+        }
+
+        private void ApplyLayerHintsForRoles(
+            Dictionary<string, string> hints,
+            IList<string> names,
+            string[] roles,
+            IList<string> messages,
+            bool rasterLabel)
+        {
+            if (hints == null || Layers == null || names == null || roles == null)
+            {
+                return;
+            }
+
+            for (int i = 0; i < Layers.Count; i++)
+            {
+                CityLayerMapping map = Layers[i];
+                if (map == null || string.IsNullOrEmpty(map.Role))
+                {
+                    continue;
+                }
+                bool matchRole = false;
+                for (int r = 0; r < roles.Length; r++)
+                {
+                    if (string.Equals(map.Role, roles[r], StringComparison.OrdinalIgnoreCase))
+                    {
+                        matchRole = true;
+                        break;
+                    }
+                }
+                if (!matchRole)
+                {
+                    continue;
+                }
+                if (hints.ContainsKey(map.Role) && !string.IsNullOrEmpty(hints[map.Role]))
+                {
+                    continue;
+                }
+
+                string resolved = ResolveLayerName(map, names);
+                if (!string.IsNullOrEmpty(resolved))
+                {
+                    hints[map.Role] = resolved;
+                    if (messages != null)
+                    {
+                        messages.Add((rasterLabel ? "配置映射(栅格) " : "配置映射 ")
+                            + map.Role + " → " + resolved);
+                    }
+                }
+                else if (messages != null)
+                {
+                    messages.Add("配置未匹配 " + map.Role
+                        + (string.IsNullOrEmpty(map.Name) ? string.Empty : "（期望: " + map.Name + "）"));
+                }
+            }
+        }
+
+        private void ApplyLayerHintsToDictionary(
+            Dictionary<string, string> hints,
+            IList<string> featureClassNames,
+            IList<string> messages)
+        {
+            if (hints == null || Layers == null)
+            {
+                return;
+            }
+
+            for (int i = 0; i < Layers.Count; i++)
+            {
+                CityLayerMapping map = Layers[i];
+                if (map == null || string.IsNullOrEmpty(map.Role))
+                {
+                    continue;
+                }
+
+                string resolved = ResolveLayerName(map, featureClassNames);
+                if (!string.IsNullOrEmpty(resolved))
+                {
+                    hints[map.Role] = resolved;
+                    if (messages != null)
+                    {
+                        messages.Add("配置映射 " + map.Role + " → " + resolved);
+                    }
+                }
+                else if (messages != null)
+                {
+                    messages.Add("配置未匹配 " + map.Role
+                        + (string.IsNullOrEmpty(map.Name) ? string.Empty : "（期望: " + map.Name + "）"));
                 }
             }
         }
@@ -252,6 +346,11 @@ namespace UrbanRenewal.Model
             AddDraftLayer(profile, featureClassNames, "PolicyBelt", false, "战略圈层", "发展带", "片区");
             AddDraftLayer(profile, featureClassNames, "PolicyStrategy", false, "战略片区", "战略区");
             AddDraftLayer(profile, featureClassNames, "PolicyKey", false, "近期重点", "重点发展");
+            AddDraftLayer(profile, featureClassNames, "Parcel", false, "宗地", "地块", "土地利用", "LandParcel");
+            AddDraftLayer(profile, featureClassNames, "UpdatedParcel", false, "已更新", "已改造", "更新宗地", "更新地块");
+            AddDraftLayer(profile, featureClassNames, "DEM", false, "DEM", "高程", "Elevation");
+            AddDraftLayer(profile, featureClassNames, "Population", false, "人口", "人口密度", "population");
+            AddDraftLayer(profile, featureClassNames, "Slope", false, "坡度", "Slope");
 
             // 默认路网命名（须用户预先在 GDB 中构建；分析不会自动创建）
             profile.NetworkDataset = new CityNetworkDataset();

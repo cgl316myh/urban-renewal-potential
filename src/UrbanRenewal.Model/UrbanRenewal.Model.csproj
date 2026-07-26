@@ -37,8 +37,14 @@
   <ItemGroup>
     <Compile Include="AppSettings.cs" />
     <Compile Include="CityProfile.cs" />
+    <Compile Include="FeasibilityJob.cs" />
     <Compile Include="GlobalAppSettings.cs" />
     <Compile Include="MotivationJob.cs" />
+    <Compile Include="OutputJob.cs" />
+    <Compile Include="OverlayJob.cs" />
+    <Compile Include="ParcelLinkJob.cs" />
+    <Compile Include="PotentialLevel.cs" />
+    <Compile Include="ValidationJob.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
   </ItemGroup>
   <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />

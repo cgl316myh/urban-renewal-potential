@@ -3,11 +3,12 @@
   城市配置模板：复制为 CityName.xml（不要以下划线开头），或程序内「从GDB生成」。
   换城市通常只需改各 Layer 的 name（精确/包含匹配）和 keywords（逗号分隔备用）。
 
-  role 取值（与动力性引擎一致）：
-    StudyArea, MetroMulti, Metro, CBD, TrafficFacility,
-    EcoCorridor, OpenSpace, Green,
-    PublicService, Convenience, Commercial,
-    PolicyBelt, PolicyStrategy, PolicyKey
+  role 取值：
+    【动力性】StudyArea, MetroMulti, Metro, CBD, TrafficFacility,
+      EcoCorridor, OpenSpace, Green,
+      PublicService, Convenience, Commercial,
+      PolicyBelt, PolicyStrategy, PolicyKey
+    【可行度】Parcel（土地利用斑块）, DEM, Slope（可选已有坡度栅格）, Population
 
   NetworkDataset：预建路网（featureDataset + name）。路网可达性分析不会自动构建 Network Dataset。
   required="true" 表示缺失则拒绝运行分析。
@@ -37,5 +38,11 @@
   <Layer role="PolicyBelt" name="" keywords="战略圈层,发展带" />
   <Layer role="PolicyStrategy" name="" keywords="战略片区" />
   <Layer role="PolicyKey" name="" keywords="近期重点,重点发展" />
+  <!-- 可行度：斑块面 + DEM/人口栅格（Slope 可选；缺省由 DEM 生成） -->
+  <Layer role="Parcel" name="" keywords="宗地,地块,土地利用" />
+  <Layer role="UpdatedParcel" name="" keywords="已更新,已改造,更新宗地" />
+  <Layer role="DEM" name="" keywords="DEM,高程,Elevation" />
+  <Layer role="Slope" name="" keywords="坡度,Slope" />
+  <Layer role="Population" name="" keywords="人口,人口密度,population" />
   <NetworkDataset featureDataset="roadNet" name="roadNet_ND" impedanceAttribute="Length" />
 </CityProfile>

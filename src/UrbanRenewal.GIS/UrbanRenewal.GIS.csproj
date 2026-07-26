@@ -92,6 +92,11 @@
       <Private>False</Private>
       <SpecificVersion>False</SpecificVersion>
     </Reference>
+    <Reference Include="ESRI.ArcGIS.Output">
+      <HintPath>$(ArcGisDotNetDir)\ESRI.ArcGIS.Output.dll</HintPath>
+      <Private>False</Private>
+      <SpecificVersion>False</SpecificVersion>
+    </Reference>
     <Reference Include="ESRI.ArcGIS.Geoprocessing">
       <HintPath>$(ArcGisDotNetDir)\ESRI.ArcGIS.Geoprocessing.dll</HintPath>
       <Private>False</Private>
@@ -127,16 +132,32 @@
     <Reference Include="System.Windows.Forms" />
   </ItemGroup>
   <ItemGroup>
+    <ProjectReference Include="..\UrbanRenewal.Model\UrbanRenewal.Model.csproj">
+      <Project>{A2222222-2222-2222-2222-222222222222}</Project>
+      <Name>UrbanRenewal.Model</Name>
+    </ProjectReference>
+  </ItemGroup>
+  <ItemGroup>
     <Compile Include="ArcEngineBootstrap.cs" />
     <Compile Include="BufferScoreRasterBuilder.cs" />
+    <Compile Include="FeatureLayerHelper.cs" />
+    <Compile Include="FeaturePreprocessBuilder.cs" />
     <Compile Include="FeatureProjectionHelper.cs" />
+    <Compile Include="FeasibilityRasterBuilder.cs" />
     <Compile Include="GeoprocessorHelper.cs" />
     <Compile Include="MapWorkspaceService.cs" />
+    <Compile Include="MapExportHelper.cs" />
     <Compile Include="NetworkDatasetHelper.cs" />
     <Compile Include="OutputGdbHelper.cs" />
+    <Compile Include="ParcelAnalyzer.cs" />
+    <Compile Include="ParcelSelectionHelper.cs" />
+    <Compile Include="ParcelZonalLinker.cs" />
+    <Compile Include="PotentialOverlayBuilder.cs" />
     <Compile Include="RasterLayerHelper.cs" />
+    <Compile Include="ResultsExporter.cs" />
     <Compile Include="RoadNetworkAccessibilityBuilder.cs" />
     <Compile Include="SpatialReferenceAudit.cs" />
+    <Compile Include="ValidationAnalyzer.cs" />
     <Compile Include="WorkspaceCatalog.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
   </ItemGroup>

@@ -156,11 +156,10 @@ namespace UrbanRenewal.Plugins.DataManage
                 return;
             }
 
-            _context.LogInfo("投影/裁剪预处理：待接 Geoprocessor（统一 CGCS2000 + 建成区 Clip）。");
-            _context.ShowMessage("预处理",
-                "当前输入 GDB:\r\n" + _context.GdbPath +
-                "\r\n\r\n全局输出 GDB:\r\n" + (_context.OutputGdbPath ?? "(未设置)") +
-                "\r\n\r\n下一步将调用投影统一与建成区 Clip（结果写入输出 GDB）。");
+            using (PreprocessForm form = new PreprocessForm(_context))
+            {
+                form.ShowDialog();
+            }
         }
     }
 }

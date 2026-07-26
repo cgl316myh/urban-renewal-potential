@@ -65,6 +65,60 @@ namespace UrbanRenewal.Host
             }
         }
 
+        public double MotivationWeight
+        {
+            get { return _settings != null ? _settings.MotivationWeight : 0.7; }
+            set
+            {
+                EnsureSettings();
+                _settings.MotivationWeight = value;
+            }
+        }
+
+        public double FeasibilityWeight
+        {
+            get { return _settings != null ? _settings.FeasibilityWeight : 0.3; }
+            set
+            {
+                EnsureSettings();
+                _settings.FeasibilityWeight = value;
+            }
+        }
+
+        public string SkinName
+        {
+            get { return _settings != null ? _settings.SkinName : "Office 2013"; }
+            set
+            {
+                EnsureSettings();
+                _settings.SkinName = value;
+            }
+        }
+
+        public void ApplySkin(string skinName)
+        {
+            if (string.IsNullOrEmpty(skinName))
+            {
+                return;
+            }
+            EnsureSettings();
+            _settings.SkinName = skinName;
+            try
+            {
+                DevExpress.LookAndFeel.UserLookAndFeel.Default.SetSkinStyle(skinName);
+                LogInfo("已切换皮肤: " + skinName);
+            }
+            catch (Exception ex)
+            {
+                LogWarn("切换皮肤失败: " + ex.Message);
+            }
+        }
+
+        public string GetLogText()
+        {
+            return _form != null ? _form.GetLogText() : string.Empty;
+        }
+
         public void SaveGlobalSettings()
         {
             EnsureSettings();
@@ -229,6 +283,21 @@ namespace UrbanRenewal.Host
             return RasterLayerHelper.AddRasterToMap(
                 (IMapControl3)_form.MapControl.Object,
                 rasterPath,
+                layerName,
+                out message);
+        }
+
+        public bool AddFeatureLayer(string featureClassPath, string layerName, out string message)
+        {
+            if (_form.MapControl == null || _form.MapControl.Object == null)
+            {
+                message = "地图控件未就绪。";
+                return false;
+            }
+
+            return FeatureLayerHelper.AddFeatureClassToMap(
+                (IMapControl3)_form.MapControl.Object,
+                featureClassPath,
                 layerName,
                 out message);
         }

@@ -99,6 +99,14 @@ namespace UrbanRenewal.GIS
                 sb.AppendLine(hasBuiltUp ? "[通过] 疑似建成区/城区范围图层" : "[警告] 未匹配到建成区/城区范围（必选）");
                 sb.AppendLine(hasParcel ? "[通过] 疑似宗地/地块图层" : "[警告] 未匹配到宗地/地块（必选）");
 
+                List<string> rasterNames = new List<string>();
+                CollectRasterDatasetNames(workspace, rasterNames);
+                sb.AppendLine("栅格数据集数量: " + rasterNames.Count);
+                bool hasDem = ContainsKeyword(rasterNames, new string[] { "DEM", "dem", "高程", "Elevation" });
+                bool hasPop = ContainsKeyword(rasterNames, new string[] { "人口", "人口密度", "population", "pop", "PopDensity" });
+                sb.AppendLine(hasDem ? "[通过] 疑似 DEM 高程栅格（可行度）" : "[警告] 未匹配到 DEM 高程栅格（可行度推荐）");
+                sb.AppendLine(hasPop ? "[通过] 疑似人口密度栅格（可行度）" : "[警告] 未匹配到人口密度栅格（可行度推荐）");
+
                 // 详细空间参考一致性（不一致图层逐条警告）
                 sb.Append(SpatialReferenceAudit.Audit(gdbPath).ToCheckReport());
 
@@ -178,6 +186,50 @@ namespace UrbanRenewal.GIS
                             while (child != null)
                             {
                                 if (child.Type == esriDatasetType.esriDTFeatureClass)
+                                {
+                                    names.Add(child.Name);
+                                }
+                                child = subsets.Next();
+                            }
+                        }
+                    }
+                    fd = enumFd.Next();
+                }
+            }
+        }
+
+        private static void CollectRasterDatasetNames(IWorkspace workspace, List<string> names)
+        {
+            IEnumDataset enumRs = workspace.get_Datasets(esriDatasetType.esriDTRasterDataset);
+            if (enumRs != null)
+            {
+                enumRs.Reset();
+                IDataset ds = enumRs.Next();
+                while (ds != null)
+                {
+                    names.Add(ds.Name);
+                    ds = enumRs.Next();
+                }
+            }
+
+            IEnumDataset enumFd = workspace.get_Datasets(esriDatasetType.esriDTFeatureDataset);
+            if (enumFd != null)
+            {
+                enumFd.Reset();
+                IDataset fd = enumFd.Next();
+                while (fd != null)
+                {
+                    IFeatureDataset featureDataset = fd as IFeatureDataset;
+                    if (featureDataset != null)
+                    {
+                        IEnumDataset subsets = featureDataset.Subsets;
+                        if (subsets != null)
+                        {
+                            subsets.Reset();
+                            IDataset child = subsets.Next();
+                            while (child != null)
+                            {
+                                if (child.Type == esriDatasetType.esriDTRasterDataset)
                                 {
                                     names.Add(child.Name);
                                 }

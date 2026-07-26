@@ -1,4 +1,5 @@
 using System;
+using System.Collections.Generic;
 using System.IO;
 using System.Runtime.InteropServices;
 using ESRI.ArcGIS.DataSourcesFile;
@@ -76,6 +77,144 @@ namespace UrbanRenewal.GIS
             // ArcObjects 投影：WGS84→CGCS2000 无地理变换时，按同经纬度桥接到目标地理坐标系再投影
             ProjectByArcObjects(inFeatures, outShp, src, targetSr);
             return outShp;
+        }
+
+        /// <summary>
+        /// 将要素类投影到目标坐标系并写入 File GDB（保留属性字段）。
+        /// </summary>
+        public static void ProjectFeatureClassToGdb(
+            string inFeatures,
+            string outGdb,
+            string outName,
+            ISpatialReference targetSr)
+        {
+            if (string.IsNullOrEmpty(inFeatures) || string.IsNullOrEmpty(outGdb) || string.IsNullOrEmpty(outName)
+                || targetSr == null)
+            {
+                throw new ArgumentException("投影参数无效。");
+            }
+
+            IFeatureClass inFc = OpenFeatureClass(inFeatures);
+            if (inFc == null)
+            {
+                throw new InvalidOperationException("无法打开要素类: " + inFeatures);
+            }
+
+            ISpatialReference srcSr = GetSpatialReference(inFeatures);
+            ISpatialReference bridgeGcs = GetGeographicFor(targetSr);
+            bool needDatumBridge = NeedsDatumBridge(srcSr, targetSr);
+
+            IWorkspaceFactory gwf = new FileGDBWorkspaceFactoryClass();
+            IFeatureWorkspace outWs = (IFeatureWorkspace)gwf.OpenFromFile(outGdb, 0);
+
+            try
+            {
+                IFeatureClass old = outWs.OpenFeatureClass(outName);
+                ((IDataset)old).Delete();
+            }
+            catch
+            {
+            }
+
+            IFields fields = CloneAllFields(inFc, targetSr);
+            UID clsid = new UIDClass();
+            clsid.Value = "esriGeodatabase.Feature";
+            IFeatureClass outFc;
+            try
+            {
+                outFc = outWs.CreateFeatureClass(
+                    outName, fields, clsid, null, esriFeatureType.esriFTSimple, inFc.ShapeFieldName, "");
+            }
+            catch (Exception exCreate)
+            {
+                throw new InvalidOperationException(
+                    "创建目标要素类失败 [" + outName + "]: " + exCreate.Message, exCreate);
+            }
+
+            int[] srcIdx;
+            int[] dstIdx;
+            BuildAttributeMap(inFc, outFc, out srcIdx, out dstIdx);
+
+            IFeatureCursor inCursor = inFc.Search(null, false);
+            IFeatureCursor outCursor = outFc.Insert(true);
+            int count = 0;
+            try
+            {
+                IFeature inFeat;
+                while ((inFeat = inCursor.NextFeature()) != null)
+                {
+                    if (inFeat.Shape == null || inFeat.Shape.IsEmpty)
+                    {
+                        continue;
+                    }
+
+                    IGeometry geom = inFeat.ShapeCopy;
+                    if (needDatumBridge && bridgeGcs != null)
+                    {
+                        geom.SpatialReference = bridgeGcs;
+                    }
+                    else if (srcSr != null)
+                    {
+                        geom.SpatialReference = srcSr;
+                    }
+                    try
+                    {
+                        geom.Project(targetSr);
+                    }
+                    catch (Exception exProj)
+                    {
+                        throw new InvalidOperationException(
+                            "几何投影失败: " + exProj.Message, exProj);
+                    }
+
+                    IFeatureBuffer buf = outFc.CreateFeatureBuffer();
+                    try
+                    {
+                        buf.Shape = geom;
+                    }
+                    catch (Exception exShape)
+                    {
+                        // Z/M 冲突时去掉 Z/M 再写
+                        IZAware zAware = geom as IZAware;
+                        if (zAware != null) zAware.ZAware = false;
+                        IMAware mAware = geom as IMAware;
+                        if (mAware != null) mAware.MAware = false;
+                        try
+                        {
+                            buf.Shape = geom;
+                        }
+                        catch
+                        {
+                            throw new InvalidOperationException(
+                                "写入几何失败: " + exShape.Message, exShape);
+                        }
+                    }
+                    for (int i = 0; i < srcIdx.Length; i++)
+                    {
+                        try
+                        {
+                            object v = inFeat.get_Value(srcIdx[i]);
+                            buf.set_Value(dstIdx[i], v);
+                        }
+                        catch
+                        {
+                        }
+                    }
+                    outCursor.InsertFeature(buf);
+                    count++;
+                }
+                outCursor.Flush();
+            }
+            finally
+            {
+                if (inCursor != null) Marshal.ReleaseComObject(inCursor);
+                if (outCursor != null) Marshal.ReleaseComObject(outCursor);
+            }
+
+            if (count == 0)
+            {
+                throw new InvalidOperationException("投影后无有效要素: " + inFeatures);
+            }
         }
 
         private static void ProjectByArcObjects(
@@ -187,6 +326,134 @@ namespace UrbanRenewal.GIS
                 }
             }
             return fields;
+        }
+
+        private static IFields CloneAllFields(IFeatureClass source, ISpatialReference outSr)
+        {
+            IObjectClassDescription ocDesc = new FeatureClassDescriptionClass();
+            IFields required = ocDesc.RequiredFields;
+            IFieldsEdit fieldsEdit = new FieldsClass();
+
+            for (int i = 0; i < required.FieldCount; i++)
+            {
+                IField f = required.get_Field(i);
+                if (f.Type == esriFieldType.esriFieldTypeOID)
+                {
+                    fieldsEdit.AddField(CloneField(f));
+                }
+            }
+
+            string shapeName = source.ShapeFieldName;
+            IField shapeField = source.Fields.get_Field(source.FindField(shapeName));
+            IFieldEdit shapeEdit = (IFieldEdit)CloneField(shapeField);
+            shapeEdit.Name_2 = shapeName;
+            IGeometryDefEdit geomEdit = new GeometryDefClass();
+            geomEdit.GeometryType_2 = source.ShapeType;
+            geomEdit.SpatialReference_2 = outSr;
+            geomEdit.HasZ_2 = false;
+            geomEdit.HasM_2 = false;
+            shapeEdit.Type_2 = esriFieldType.esriFieldTypeGeometry;
+            shapeEdit.GeometryDef_2 = geomEdit;
+            fieldsEdit.AddField(shapeEdit);
+
+            for (int i = 0; i < source.Fields.FieldCount; i++)
+            {
+                IField f = source.Fields.get_Field(i);
+                if (f.Type == esriFieldType.esriFieldTypeOID
+                    || f.Type == esriFieldType.esriFieldTypeGeometry
+                    || f.Type == esriFieldType.esriFieldTypeBlob
+                    || f.Type == esriFieldType.esriFieldTypeRaster)
+                {
+                    continue;
+                }
+                if (IsReservedFieldName(f.Name) || FieldExists(fieldsEdit, f.Name))
+                {
+                    continue;
+                }
+                fieldsEdit.AddField(CloneField(f));
+            }
+            return fieldsEdit;
+        }
+
+        private static bool IsReservedFieldName(string name)
+        {
+            if (string.IsNullOrEmpty(name))
+            {
+                return true;
+            }
+            return string.Equals(name, "Shape_Length", StringComparison.OrdinalIgnoreCase)
+                || string.Equals(name, "Shape_Area", StringComparison.OrdinalIgnoreCase)
+                || string.Equals(name, "SHAPE_Length", StringComparison.OrdinalIgnoreCase)
+                || string.Equals(name, "SHAPE_Area", StringComparison.OrdinalIgnoreCase)
+                || string.Equals(name, "OBJECTID", StringComparison.OrdinalIgnoreCase)
+                || string.Equals(name, "FID", StringComparison.OrdinalIgnoreCase);
+        }
+
+        private static bool FieldExists(IFields fields, string name)
+        {
+            if (fields == null || string.IsNullOrEmpty(name))
+            {
+                return false;
+            }
+            for (int i = 0; i < fields.FieldCount; i++)
+            {
+                if (string.Equals(fields.get_Field(i).Name, name, StringComparison.OrdinalIgnoreCase))
+                {
+                    return true;
+                }
+            }
+            return false;
+        }
+
+        private static IField CloneField(IField source)
+        {
+            IFieldEdit edit = new FieldClass();
+            edit.Name_2 = source.Name;
+            edit.AliasName_2 = source.AliasName;
+            edit.Type_2 = source.Type;
+            edit.Length_2 = source.Length;
+            edit.Precision_2 = source.Precision;
+            edit.Scale_2 = source.Scale;
+            edit.IsNullable_2 = source.IsNullable;
+            edit.Editable_2 = source.Editable;
+            edit.DefaultValue_2 = source.DefaultValue;
+            if (source.Type == esriFieldType.esriFieldTypeGeometry && source.GeometryDef != null)
+            {
+                IGeometryDefEdit g = new GeometryDefClass();
+                g.GeometryType_2 = source.GeometryDef.GeometryType;
+                g.SpatialReference_2 = source.GeometryDef.SpatialReference;
+                g.HasZ_2 = source.GeometryDef.HasZ;
+                g.HasM_2 = source.GeometryDef.HasM;
+                edit.GeometryDef_2 = g;
+            }
+            return edit;
+        }
+
+        private static void BuildAttributeMap(
+            IFeatureClass source,
+            IFeatureClass target,
+            out int[] srcIdx,
+            out int[] dstIdx)
+        {
+            List<int> s = new List<int>();
+            List<int> d = new List<int>();
+            for (int i = 0; i < source.Fields.FieldCount; i++)
+            {
+                IField f = source.Fields.get_Field(i);
+                if (f.Type == esriFieldType.esriFieldTypeOID
+                    || f.Type == esriFieldType.esriFieldTypeGeometry)
+                {
+                    continue;
+                }
+                int ti = target.FindField(f.Name);
+                if (ti >= 0 && target.Fields.get_Field(ti).Editable)
+                {
+                    s.Add(i);
+                    d.Add(ti);
+                }
+            }
+            srcIdx = s.ToArray();
+            dstIdx = d.ToArray();
         }
 
         private static ISpatialReference GetGeographicFor(ISpatialReference sr)
