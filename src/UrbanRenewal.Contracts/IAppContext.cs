@@ -22,11 +22,35 @@ namespace UrbanRenewal.Contracts
         /// <summary>当前城市配置 Id（全局）。</summary>
         string ActiveCityProfileId { get; set; }
 
+        /// <summary>全局基准坐标系来源路径（*.shp 或 *.gdb）。</summary>
+        string SpatialRefSourcePath { get; set; }
+
+        /// <summary>来源为 GDB 时的图层名。</summary>
+        string SpatialRefLayerName { get; set; }
+
+        /// <summary>已解析的基准坐标系名称。</summary>
+        string SpatialRefName { get; set; }
+
+        /// <summary>已解析的基准坐标系 FactoryCode（0=未知）。</summary>
+        int SpatialRefFactoryCode { get; set; }
+
+        /// <summary>当前工程 MXD 路径。</summary>
+        string ProjectMxdPath { get; set; }
+
         /// <summary>将当前全局设置写入 Config/app_settings.xml。</summary>
         void SaveGlobalSettings();
 
         /// <summary>从磁盘重新加载全局设置。</summary>
         void ReloadGlobalSettings();
+
+        /// <summary>新建工程：清空全局工作区配置与地图，并持久化。</summary>
+        bool NewProject(out string message);
+
+        /// <summary>保存工程：将当前地图写入本地 MXD，并记住路径以便下次启动加载。</summary>
+        bool SaveProject(out string message);
+
+        /// <summary>若存在已保存工程 MXD，则加载到地图。</summary>
+        bool TryLoadSavedProject(out string message);
 
         /// <summary>
         /// 由数据管理插件注册全局设置窗体；其它模块调用 <see cref="ShowGlobalSettings"/> 打开。

@@ -10,7 +10,7 @@ using UrbanRenewal.Model;
 namespace UrbanRenewal.Plugins.DataManage
 {
     /// <summary>
-    /// 投影/裁剪预处理：统一到分析范围坐标系，并按建成区裁剪，结果写入输出 GDB。
+    /// 投影/裁剪预处理：纠正坐标系/范围后，用正确图层替换输入 GDB 中的原图层。
     /// </summary>
     public partial class PreprocessForm : Form
     {
@@ -50,7 +50,9 @@ namespace UrbanRenewal.Plugins.DataManage
             }
 
             List<string> names = WorkspaceCatalog.ListFeatureClassNames(gdb);
-            SpatialReferenceAuditResult audit = SpatialReferenceAudit.Audit(gdb);
+            SpatialReferenceAuditResult audit = _context != null
+                ? SpatialReferenceAudit.Audit(gdb, null, _context.SpatialRefSourcePath, _context.SpatialRefLayerName)
+                : SpatialReferenceAudit.Audit(gdb);
 
             string study = WorkspaceCatalog.FindByKeywords(names, "中心城区", "分析范围", "建成区");
             CityProfile profile = CityProfileStore.ResolveActive(
@@ -122,7 +124,7 @@ namespace UrbanRenewal.Plugins.DataManage
                 this.cboClip.SelectedIndex = clipIndex;
             }
 
-            this.lblHint.Text = "默认勾选与分析范围坐标系不一致的图层；路网附属层已排除。"
+            this.lblHint.Text = "处理后替换输入GDB原图层；暂存库仅作中间结果。"
                 + (audit.Success && !string.IsNullOrEmpty(audit.ReferenceSpatialReferenceName)
                     ? " 基准: " + audit.ReferenceSpatialReferenceName
                     : string.Empty);
@@ -165,12 +167,12 @@ namespace UrbanRenewal.Plugins.DataManage
             string outGdb = this.txtOutGdb.Text != null ? this.txtOutGdb.Text.Trim() : string.Empty;
             if (string.IsNullOrEmpty(inGdb) || !System.IO.Directory.Exists(inGdb))
             {
-                MessageBox.Show(this, "请先打开输入 GDB。", "预处理", MessageBoxButtons.OK, MessageBoxIcon.Warning);
+                MessageBox.Show(this, "请先在「全局设置」中指定输入 GDB。", "预处理", MessageBoxButtons.OK, MessageBoxIcon.Warning);
                 return;
             }
             if (string.IsNullOrEmpty(outGdb) || !outGdb.EndsWith(".gdb", StringComparison.OrdinalIgnoreCase))
             {
-                MessageBox.Show(this, "请指定输出 File GDB（可在全局设置中配置）。", "预处理",
+                MessageBox.Show(this, "请指定暂存 File GDB（用于中间结果；可在全局设置中配置输出库）。", "预处理",
                     MessageBoxButtons.OK, MessageBoxIcon.Warning);
                 return;
             }
@@ -192,6 +194,7 @@ namespace UrbanRenewal.Plugins.DataManage
             job.OutputGdbPath = outGdb;
             job.DoProject = this.chkProject.Checked;
             job.DoClip = this.chkClip.Checked;
+            job.ReplaceInInputGdb = true;
             job.ClipLayerName = this.cboClip.SelectedItem != null ? this.cboClip.SelectedItem.ToString() : null;
 
             for (int i = 0; i < this.lstLayers.Items.Count; i++)
@@ -212,9 +215,31 @@ namespace UrbanRenewal.Plugins.DataManage
                 return;
             }
 
+            DialogResult confirm = MessageBox.Show(this,
+                "将对选中的 " + job.LayerNames.Count + " 个图层做投影/裁剪，\r\n"
+                + "并用正确结果覆盖输入 GDB 中的同名原图层。\r\n\r\n"
+                + "输入 GDB:\r\n" + inGdb + "\r\n\r\n"
+                + "此操作会删除并替换原图层，建议事先备份。是否继续？",
+                "预处理 — 替换输入库图层",
+                MessageBoxButtons.YesNo,
+                MessageBoxIcon.Warning);
+            if (confirm != DialogResult.Yes)
+            {
+                return;
+            }
+
             this.btnRun.Enabled = false;
             this.lblStatus.Text = "正在处理...";
             Application.DoEvents();
+
+            // 释放地图对输入库图层的占用，否则删除/替换可能失败
+            try
+            {
+                MapWorkspaceService.ClearLayersFromObject(_context.MapControl);
+            }
+            catch
+            {
+            }
 
             try
             {
@@ -230,7 +255,17 @@ namespace UrbanRenewal.Plugins.DataManage
                 {
                     _context.OutputGdbPath = job.OutputGdbPath;
                     _context.SaveGlobalSettings();
-                    this.lblStatus.Text = "完成";
+
+                    string openMsg;
+                    if (_context.OpenFileGdb(inGdb, out openMsg))
+                    {
+                        _context.ZoomToFullExtent();
+                        sb.AppendLine();
+                        sb.AppendLine(openMsg);
+                    }
+
+                    this.lblStatus.Text = "完成（已替换 " + result.ReplacedLayers.Count + " 个）";
+                    LoadLayers();
                     MessageBox.Show(this, sb.ToString(), "预处理完成", MessageBoxButtons.OK, MessageBoxIcon.Information);
                 }
                 else

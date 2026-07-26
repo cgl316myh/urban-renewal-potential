@@ -28,6 +28,13 @@ namespace UrbanRenewal.Plugins.DataManage
             this.btnOpenConfig = new System.Windows.Forms.Button();
             this.lblInput = new System.Windows.Forms.Label();
             this.txtInputGdb = new System.Windows.Forms.TextBox();
+            this.btnBrowseInput = new System.Windows.Forms.Button();
+            this.lblSpatialRef = new System.Windows.Forms.Label();
+            this.txtSpatialRefName = new System.Windows.Forms.TextBox();
+            this.btnSpatialRefShp = new System.Windows.Forms.Button();
+            this.btnSpatialRefGdb = new System.Windows.Forms.Button();
+            this.btnSpatialRefClear = new System.Windows.Forms.Button();
+            this.lblSpatialRefSrc = new System.Windows.Forms.Label();
             this.lblHint = new System.Windows.Forms.Label();
             this.btnSave = new System.Windows.Forms.Button();
             this.btnCancel = new System.Windows.Forms.Button();
@@ -46,9 +53,19 @@ namespace UrbanRenewal.Plugins.DataManage
             // 
             this.txtInputGdb.Location = new System.Drawing.Point(101, 16);
             this.txtInputGdb.Name = "txtInputGdb";
-            this.txtInputGdb.ReadOnly = true;
-            this.txtInputGdb.Size = new System.Drawing.Size(500, 21);
+            this.txtInputGdb.Size = new System.Drawing.Size(420, 21);
             this.txtInputGdb.TabIndex = 1;
+            this.txtInputGdb.ShortcutsEnabled = true;
+            // 
+            // btnBrowseInput
+            // 
+            this.btnBrowseInput.Location = new System.Drawing.Point(528, 14);
+            this.btnBrowseInput.Name = "btnBrowseInput";
+            this.btnBrowseInput.Size = new System.Drawing.Size(75, 25);
+            this.btnBrowseInput.TabIndex = 2;
+            this.btnBrowseInput.Text = "浏览...";
+            this.btnBrowseInput.UseVisualStyleBackColor = true;
+            this.btnBrowseInput.Click += new System.EventHandler(this.btnBrowseInput_Click);
             // 
             // lblOutGdb
             // 
@@ -56,7 +73,7 @@ namespace UrbanRenewal.Plugins.DataManage
             this.lblOutGdb.Location = new System.Drawing.Point(18, 55);
             this.lblOutGdb.Name = "lblOutGdb";
             this.lblOutGdb.Size = new System.Drawing.Size(77, 12);
-            this.lblOutGdb.TabIndex = 2;
+            this.lblOutGdb.TabIndex = 3;
             this.lblOutGdb.Text = "输出 GDB：";
             // 
             // txtOutGdb
@@ -64,14 +81,15 @@ namespace UrbanRenewal.Plugins.DataManage
             this.txtOutGdb.Location = new System.Drawing.Point(101, 51);
             this.txtOutGdb.Name = "txtOutGdb";
             this.txtOutGdb.Size = new System.Drawing.Size(340, 21);
-            this.txtOutGdb.TabIndex = 3;
+            this.txtOutGdb.TabIndex = 4;
+            this.txtOutGdb.ShortcutsEnabled = true;
             // 
             // btnBrowseOut
             // 
             this.btnBrowseOut.Location = new System.Drawing.Point(447, 49);
             this.btnBrowseOut.Name = "btnBrowseOut";
             this.btnBrowseOut.Size = new System.Drawing.Size(75, 25);
-            this.btnBrowseOut.TabIndex = 4;
+            this.btnBrowseOut.TabIndex = 5;
             this.btnBrowseOut.Text = "浏览...";
             this.btnBrowseOut.UseVisualStyleBackColor = true;
             this.btnBrowseOut.Click += new System.EventHandler(this.btnBrowseOut_Click);
@@ -81,73 +99,128 @@ namespace UrbanRenewal.Plugins.DataManage
             this.btnSuggestOut.Location = new System.Drawing.Point(528, 49);
             this.btnSuggestOut.Name = "btnSuggestOut";
             this.btnSuggestOut.Size = new System.Drawing.Size(75, 25);
-            this.btnSuggestOut.TabIndex = 5;
+            this.btnSuggestOut.TabIndex = 6;
             this.btnSuggestOut.Text = "默认";
             this.btnSuggestOut.UseVisualStyleBackColor = true;
             this.btnSuggestOut.Click += new System.EventHandler(this.btnSuggestOut_Click);
             // 
+            // lblSpatialRef
+            // 
+            this.lblSpatialRef.AutoSize = true;
+            this.lblSpatialRef.Location = new System.Drawing.Point(18, 90);
+            this.lblSpatialRef.Name = "lblSpatialRef";
+            this.lblSpatialRef.Size = new System.Drawing.Size(77, 12);
+            this.lblSpatialRef.TabIndex = 7;
+            this.lblSpatialRef.Text = "基准坐标系：";
+            // 
+            // txtSpatialRefName
+            // 
+            this.txtSpatialRefName.Location = new System.Drawing.Point(101, 86);
+            this.txtSpatialRefName.Name = "txtSpatialRefName";
+            this.txtSpatialRefName.ReadOnly = true;
+            this.txtSpatialRefName.Size = new System.Drawing.Size(250, 21);
+            this.txtSpatialRefName.TabIndex = 8;
+            // 
+            // btnSpatialRefShp
+            // 
+            this.btnSpatialRefShp.Location = new System.Drawing.Point(357, 84);
+            this.btnSpatialRefShp.Name = "btnSpatialRefShp";
+            this.btnSpatialRefShp.Size = new System.Drawing.Size(80, 25);
+            this.btnSpatialRefShp.TabIndex = 9;
+            this.btnSpatialRefShp.Text = "从Shp...";
+            this.btnSpatialRefShp.UseVisualStyleBackColor = true;
+            this.btnSpatialRefShp.Click += new System.EventHandler(this.btnSpatialRefShp_Click);
+            // 
+            // btnSpatialRefGdb
+            // 
+            this.btnSpatialRefGdb.Location = new System.Drawing.Point(443, 84);
+            this.btnSpatialRefGdb.Name = "btnSpatialRefGdb";
+            this.btnSpatialRefGdb.Size = new System.Drawing.Size(90, 25);
+            this.btnSpatialRefGdb.TabIndex = 10;
+            this.btnSpatialRefGdb.Text = "从GDB图层";
+            this.btnSpatialRefGdb.UseVisualStyleBackColor = true;
+            this.btnSpatialRefGdb.Click += new System.EventHandler(this.btnSpatialRefGdb_Click);
+            // 
+            // btnSpatialRefClear
+            // 
+            this.btnSpatialRefClear.Location = new System.Drawing.Point(539, 84);
+            this.btnSpatialRefClear.Name = "btnSpatialRefClear";
+            this.btnSpatialRefClear.Size = new System.Drawing.Size(64, 25);
+            this.btnSpatialRefClear.TabIndex = 11;
+            this.btnSpatialRefClear.Text = "清除";
+            this.btnSpatialRefClear.UseVisualStyleBackColor = true;
+            this.btnSpatialRefClear.Click += new System.EventHandler(this.btnSpatialRefClear_Click);
+            // 
+            // lblSpatialRefSrc
+            // 
+            this.lblSpatialRefSrc.Location = new System.Drawing.Point(101, 112);
+            this.lblSpatialRefSrc.Name = "lblSpatialRefSrc";
+            this.lblSpatialRefSrc.Size = new System.Drawing.Size(502, 20);
+            this.lblSpatialRefSrc.TabIndex = 12;
+            this.lblSpatialRefSrc.Text = "来源：（未配置，完整性检查将自动推断）";
+            // 
             // lblCity
             // 
             this.lblCity.AutoSize = true;
-            this.lblCity.Location = new System.Drawing.Point(18, 92);
+            this.lblCity.Location = new System.Drawing.Point(18, 145);
             this.lblCity.Name = "lblCity";
             this.lblCity.Size = new System.Drawing.Size(77, 12);
-            this.lblCity.TabIndex = 6;
+            this.lblCity.TabIndex = 13;
             this.lblCity.Text = "城市配置：";
             // 
             // cboCity
             // 
             this.cboCity.DropDownStyle = System.Windows.Forms.ComboBoxStyle.DropDownList;
             this.cboCity.FormattingEnabled = true;
-            this.cboCity.Location = new System.Drawing.Point(101, 88);
+            this.cboCity.Location = new System.Drawing.Point(101, 141);
             this.cboCity.Name = "cboCity";
             this.cboCity.Size = new System.Drawing.Size(220, 20);
-            this.cboCity.TabIndex = 7;
+            this.cboCity.TabIndex = 14;
             // 
             // btnDetect
             // 
-            this.btnDetect.Location = new System.Drawing.Point(330, 86);
+            this.btnDetect.Location = new System.Drawing.Point(330, 139);
             this.btnDetect.Name = "btnDetect";
             this.btnDetect.Size = new System.Drawing.Size(90, 25);
-            this.btnDetect.TabIndex = 8;
+            this.btnDetect.TabIndex = 15;
             this.btnDetect.Text = "检测匹配";
             this.btnDetect.UseVisualStyleBackColor = true;
             this.btnDetect.Click += new System.EventHandler(this.btnDetect_Click);
             // 
             // btnDraft
             // 
-            this.btnDraft.Location = new System.Drawing.Point(426, 86);
+            this.btnDraft.Location = new System.Drawing.Point(426, 139);
             this.btnDraft.Name = "btnDraft";
             this.btnDraft.Size = new System.Drawing.Size(100, 25);
-            this.btnDraft.TabIndex = 9;
+            this.btnDraft.TabIndex = 16;
             this.btnDraft.Text = "从GDB生成";
             this.btnDraft.UseVisualStyleBackColor = true;
             this.btnDraft.Click += new System.EventHandler(this.btnDraft_Click);
             // 
             // btnOpenConfig
             // 
-            this.btnOpenConfig.Location = new System.Drawing.Point(532, 86);
+            this.btnOpenConfig.Location = new System.Drawing.Point(532, 139);
             this.btnOpenConfig.Name = "btnOpenConfig";
             this.btnOpenConfig.Size = new System.Drawing.Size(75, 25);
-            this.btnOpenConfig.TabIndex = 10;
+            this.btnOpenConfig.TabIndex = 17;
             this.btnOpenConfig.Text = "配置目录";
             this.btnOpenConfig.UseVisualStyleBackColor = true;
             this.btnOpenConfig.Click += new System.EventHandler(this.btnOpenConfig_Click);
             // 
             // lblHint
             // 
-            this.lblHint.Location = new System.Drawing.Point(18, 130);
+            this.lblHint.Location = new System.Drawing.Point(18, 180);
             this.lblHint.Name = "lblHint";
-            this.lblHint.Size = new System.Drawing.Size(585, 55);
-            this.lblHint.TabIndex = 11;
-            this.lblHint.Text = "此处设置为全局有效：动力性及后续各分析模块的中间数据与结果均写入「输出 GDB」。城市配置决定图层角色映射。保存后立即生效。";
+            this.lblHint.Size = new System.Drawing.Size(585, 48);
+            this.lblHint.TabIndex = 18;
+            this.lblHint.Text = "基准坐标系(SpatialRef)可从 Shapefile 或输入 GDB 某一图层读取，保存后作为完整性检查与分析的统一基准；未配置时仍自动推断。";
             // 
             // btnSave
             // 
-            this.btnSave.Location = new System.Drawing.Point(426, 200);
+            this.btnSave.Location = new System.Drawing.Point(426, 240);
             this.btnSave.Name = "btnSave";
             this.btnSave.Size = new System.Drawing.Size(90, 30);
-            this.btnSave.TabIndex = 12;
+            this.btnSave.TabIndex = 19;
             this.btnSave.Text = "保存";
             this.btnSave.UseVisualStyleBackColor = true;
             this.btnSave.Click += new System.EventHandler(this.btnSave_Click);
@@ -155,10 +228,10 @@ namespace UrbanRenewal.Plugins.DataManage
             // btnCancel
             // 
             this.btnCancel.DialogResult = System.Windows.Forms.DialogResult.Cancel;
-            this.btnCancel.Location = new System.Drawing.Point(522, 200);
+            this.btnCancel.Location = new System.Drawing.Point(522, 240);
             this.btnCancel.Name = "btnCancel";
             this.btnCancel.Size = new System.Drawing.Size(86, 30);
-            this.btnCancel.TabIndex = 13;
+            this.btnCancel.TabIndex = 20;
             this.btnCancel.Text = "取消";
             this.btnCancel.UseVisualStyleBackColor = true;
             // 
@@ -168,7 +241,7 @@ namespace UrbanRenewal.Plugins.DataManage
             this.AutoScaleDimensions = new System.Drawing.SizeF(6F, 12F);
             this.AutoScaleMode = System.Windows.Forms.AutoScaleMode.Font;
             this.CancelButton = this.btnCancel;
-            this.ClientSize = new System.Drawing.Size(624, 250);
+            this.ClientSize = new System.Drawing.Size(624, 288);
             this.Controls.Add(this.btnCancel);
             this.Controls.Add(this.btnSave);
             this.Controls.Add(this.lblHint);
@@ -177,10 +250,17 @@ namespace UrbanRenewal.Plugins.DataManage
             this.Controls.Add(this.btnDetect);
             this.Controls.Add(this.cboCity);
             this.Controls.Add(this.lblCity);
+            this.Controls.Add(this.lblSpatialRefSrc);
+            this.Controls.Add(this.btnSpatialRefClear);
+            this.Controls.Add(this.btnSpatialRefGdb);
+            this.Controls.Add(this.btnSpatialRefShp);
+            this.Controls.Add(this.txtSpatialRefName);
+            this.Controls.Add(this.lblSpatialRef);
             this.Controls.Add(this.btnSuggestOut);
             this.Controls.Add(this.btnBrowseOut);
             this.Controls.Add(this.txtOutGdb);
             this.Controls.Add(this.lblOutGdb);
+            this.Controls.Add(this.btnBrowseInput);
             this.Controls.Add(this.txtInputGdb);
             this.Controls.Add(this.lblInput);
             this.FormBorderStyle = System.Windows.Forms.FormBorderStyle.FixedDialog;
@@ -206,6 +286,13 @@ namespace UrbanRenewal.Plugins.DataManage
         private System.Windows.Forms.Button btnOpenConfig;
         private System.Windows.Forms.Label lblInput;
         private System.Windows.Forms.TextBox txtInputGdb;
+        private System.Windows.Forms.Button btnBrowseInput;
+        private System.Windows.Forms.Label lblSpatialRef;
+        private System.Windows.Forms.TextBox txtSpatialRefName;
+        private System.Windows.Forms.Button btnSpatialRefShp;
+        private System.Windows.Forms.Button btnSpatialRefGdb;
+        private System.Windows.Forms.Button btnSpatialRefClear;
+        private System.Windows.Forms.Label lblSpatialRefSrc;
         private System.Windows.Forms.Label lblHint;
         private System.Windows.Forms.Button btnSave;
         private System.Windows.Forms.Button btnCancel;

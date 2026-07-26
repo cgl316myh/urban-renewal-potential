@@ -18,14 +18,23 @@ namespace UrbanRenewal.GIS
             LayerNames = new List<string>();
             DoProject = true;
             DoClip = true;
+            ReplaceInInputGdb = true;
         }
 
         public string InputGdbPath { get; set; }
+
+        /// <summary>中间暂存 File GDB（投影/裁剪中间结果）；最终可替换回输入库。</summary>
         public string OutputGdbPath { get; set; }
+
         public string ClipLayerName { get; set; }
         public List<string> LayerNames { get; private set; }
         public bool DoProject { get; set; }
         public bool DoClip { get; set; }
+
+        /// <summary>
+        /// true：处理成功后用正确图层替换输入 GDB 中的同名原图层（后期运算仍读输入库）。
+        /// </summary>
+        public bool ReplaceInInputGdb { get; set; }
     }
 
     /// <summary>
@@ -37,15 +46,20 @@ namespace UrbanRenewal.GIS
         {
             Messages = new List<string>();
             OutputLayers = new List<string>();
+            ReplacedLayers = new List<string>();
         }
 
         public bool Success { get; set; }
         public List<string> Messages { get; private set; }
         public List<string> OutputLayers { get; private set; }
+
+        /// <summary>已成功替换进输入 GDB 的图层名。</summary>
+        public List<string> ReplacedLayers { get; private set; }
     }
 
     /// <summary>
-    /// 批量投影到目标坐标系，并按建成区/分析范围裁剪，结果写入输出 File GDB。
+    /// 批量投影到目标坐标系，并按建成区/分析范围裁剪。
+    /// 默认：中间结果写入输出 GDB，再替换输入 GDB 中的错误图层（同名），供后期运算继续使用输入库。
     /// 不处理 Network Dataset（须在 ArcGIS 中预建）；跳过路网拓扑附属要素。
     /// </summary>
     public static class FeaturePreprocessBuilder
@@ -60,7 +74,15 @@ namespace UrbanRenewal.GIS
             }
             if (string.IsNullOrEmpty(job.OutputGdbPath) || !OutputGdbHelper.IsFileGdbPath(job.OutputGdbPath))
             {
-                result.Messages.Add("请指定输出 File GDB（*.gdb）。");
+                result.Messages.Add("请指定中间暂存 File GDB（*.gdb）。");
+                return result;
+            }
+            if (string.Equals(
+                System.IO.Path.GetFullPath(job.InputGdbPath).TrimEnd('\\', '/'),
+                System.IO.Path.GetFullPath(job.OutputGdbPath).TrimEnd('\\', '/'),
+                StringComparison.OrdinalIgnoreCase))
+            {
+                result.Messages.Add("中间暂存 GDB 不能与输入 GDB 相同，请另指定输出库作为暂存。");
                 return result;
             }
             if (!job.DoProject && !job.DoClip)
@@ -75,9 +97,17 @@ namespace UrbanRenewal.GIS
             }
 
             GeoprocessorHelper gp = new GeoprocessorHelper();
-            string outGdb = OutputGdbHelper.EnsureExists(gp, job.OutputGdbPath);
-            job.OutputGdbPath = outGdb;
-            result.Messages.Add("输出 GDB: " + outGdb);
+            string scratchGdb = OutputGdbHelper.EnsureExists(gp, job.OutputGdbPath);
+            job.OutputGdbPath = scratchGdb;
+            result.Messages.Add("中间暂存 GDB: " + scratchGdb);
+            if (job.ReplaceInInputGdb)
+            {
+                result.Messages.Add("模式: 处理成功后替换输入 GDB 中的原图层（后期运算仍读输入库）。");
+            }
+            else
+            {
+                result.Messages.Add("模式: 仅写入暂存 GDB，不替换输入库。");
+            }
 
             Report(progress, result, "准备裁剪范围...", 5);
             string clipSrc = null;
@@ -105,7 +135,7 @@ namespace UrbanRenewal.GIS
                     return result;
                 }
 
-                clipPrepared = PrepareClipLayer(gp, clipSrc, job.ClipLayerName, targetSr, outGdb, result);
+                clipPrepared = PrepareClipLayer(gp, clipSrc, job.ClipLayerName, targetSr, scratchGdb, result);
                 if (string.IsNullOrEmpty(clipPrepared))
                 {
                     return result;
@@ -114,7 +144,6 @@ namespace UrbanRenewal.GIS
             }
             else
             {
-                // 仅投影：目标坐标系取自裁剪层（若有）或首个已投影图层
                 if (!string.IsNullOrEmpty(job.ClipLayerName))
                 {
                     clipSrc = WorkspaceCatalog.ToFeatureClassPath(job.InputGdbPath, job.ClipLayerName);
@@ -132,7 +161,7 @@ namespace UrbanRenewal.GIS
                 result.Messages.Add("目标坐标系: " + targetSr.Name);
             }
 
-            gp.ConfigureAnalysis(outGdb, null, 0, targetSr);
+            gp.ConfigureAnalysis(scratchGdb, null, 0, targetSr);
 
             int total = job.LayerNames.Count;
             int done = 0;
@@ -154,11 +183,21 @@ namespace UrbanRenewal.GIS
                 {
                     string outPath = ProcessOneLayer(
                         gp, job.InputGdbPath, layerName, job.ClipLayerName, targetSr, clipPrepared,
-                        job.DoProject, job.DoClip, outGdb, result);
-                    if (!string.IsNullOrEmpty(outPath))
+                        job.DoProject, job.DoClip, scratchGdb, result);
+                    if (string.IsNullOrEmpty(outPath))
                     {
-                        result.OutputLayers.Add(outPath);
-                        okCount++;
+                        continue;
+                    }
+
+                    result.OutputLayers.Add(outPath);
+                    okCount++;
+
+                    if (job.ReplaceInInputGdb)
+                    {
+                        if (TryReplaceInInputGdb(gp, job.InputGdbPath, layerName, outPath, result))
+                        {
+                            result.ReplacedLayers.Add(layerName);
+                        }
                     }
                 }
                 catch (Exception ex)
@@ -168,9 +207,81 @@ namespace UrbanRenewal.GIS
             }
 
             result.Success = okCount > 0;
-            result.Messages.Add("完成: 成功 " + okCount + " / 选择 " + total + " 个图层。");
+            result.Messages.Add("完成: 成功处理 " + okCount + " / 选择 " + total + " 个图层"
+                + (job.ReplaceInInputGdb
+                    ? "；已替换输入库 " + result.ReplacedLayers.Count + " 个。"
+                    : "。"));
             Report(progress, result, "完成", 100);
             return result;
+        }
+
+        /// <summary>
+        /// 用暂存库中的正确图层替换输入 GDB 中的错误图层。
+        /// 优先写回原路径（含要素数据集内）；若因坐标系变更无法写回要素数据集，则落到 GDB 根目录同名要素类。
+        /// </summary>
+        private static bool TryReplaceInInputGdb(
+            GeoprocessorHelper gp,
+            string inputGdb,
+            string layerName,
+            string correctedPath,
+            FeaturePreprocessResult result)
+        {
+            if (gp == null || string.IsNullOrEmpty(inputGdb) || string.IsNullOrEmpty(layerName)
+                || string.IsNullOrEmpty(correctedPath))
+            {
+                return false;
+            }
+
+            string leafName = layerName;
+            int slash = Math.Max(layerName.LastIndexOf('\\'), layerName.LastIndexOf('/'));
+            if (slash >= 0 && slash < layerName.Length - 1)
+            {
+                leafName = layerName.Substring(slash + 1);
+            }
+
+            string originalPath = WorkspaceCatalog.ToFeatureClassPath(inputGdb, layerName);
+            string rootPath = WorkspaceCatalog.ToFeatureClassPath(inputGdb, leafName);
+
+            // 1) 优先覆盖原路径（后期数据配置中的图层名可保持不变）
+            try
+            {
+                OutputGdbHelper.TryDeleteDataset(gp, originalPath);
+                CopyTo(gp, correctedPath, originalPath, "Replace-" + leafName);
+                result.Messages.Add("[替换] 输入GDB ← " + layerName
+                    + "（错误图层已覆盖；后期运算仍读输入库）");
+                return true;
+            }
+            catch (Exception exInPlace)
+            {
+                // 2) 要素数据集内无法混入新坐标系时，改写到 GDB 根目录
+                if (slash >= 0
+                    && !string.Equals(originalPath, rootPath, StringComparison.OrdinalIgnoreCase))
+                {
+                    try
+                    {
+                        OutputGdbHelper.TryDeleteDataset(gp, originalPath);
+                        OutputGdbHelper.TryDeleteDataset(gp, rootPath);
+                        CopyTo(gp, correctedPath, rootPath, "ReplaceRoot-" + leafName);
+                        result.Messages.Add("[替换] 输入GDB ← " + leafName
+                            + "（原路径 " + layerName + " 因坐标系变更无法写回要素数据集，已放到 GDB 根目录；"
+                            + "请到「数据配置」确认该角色仍指向此图层）");
+                        return true;
+                    }
+                    catch (Exception exRoot)
+                    {
+                        result.Messages.Add("[替换失败] " + layerName + ": " + exRoot.Message
+                            + "（先尝试原路径失败: " + exInPlace.Message + "）。"
+                            + "正确结果仍在暂存库: " + correctedPath
+                            + "。若图层被占用，请关闭地图图层后重试。");
+                        return false;
+                    }
+                }
+
+                result.Messages.Add("[替换失败] " + layerName + ": " + exInPlace.Message
+                    + "。正确结果仍保留在暂存库: " + correctedPath
+                    + "（若图层正被地图占用，请关闭后重试）");
+                return false;
+            }
         }
 
         /// <summary>
@@ -210,7 +321,6 @@ namespace UrbanRenewal.GIS
             bool sameSr = FeatureProjectionHelper.IsSameSpatialReference(srcSr, targetSr);
 
             string workName = SanitizeFcName(layerName);
-            // 中间投影层用 ASCII 名，避免部分 File GDB 对中文临时名不稳定
             string prjWorkName = "p" + StableHash(layerName).ToString("0000");
             string finalPath = OutputGdbHelper.DatasetPath(outGdb, workName);
             OutputGdbHelper.TryDeleteDataset(gp, finalPath);
@@ -243,7 +353,6 @@ namespace UrbanRenewal.GIS
                 }
                 else
                 {
-                    // Clip 输出先写 ASCII 临时名，再复制为最终名（避免中文名导致 Clip 失败）
                     string clipTmpName = "c" + StableHash(layerName).ToString("0000");
                     string clipTmpPath = OutputGdbHelper.DatasetPath(outGdb, clipTmpName);
                     OutputGdbHelper.TryDeleteDataset(gp, clipTmpPath);
@@ -257,7 +366,6 @@ namespace UrbanRenewal.GIS
                         }
                         catch
                         {
-                            // 修复失败不阻断，继续尝试裁剪
                         }
 
                         ESRI.ArcGIS.AnalysisTools.Clip clip = new ESRI.ArcGIS.AnalysisTools.Clip();
@@ -342,7 +450,6 @@ namespace UrbanRenewal.GIS
             {
                 outName = "study_clip";
             }
-            // 固定名便于后续引用
             string clipOutName = "prep_clip";
             string clipOut = OutputGdbHelper.DatasetPath(outGdb, clipOutName);
             OutputGdbHelper.TryDeleteDataset(gp, clipOut);
@@ -427,7 +534,6 @@ namespace UrbanRenewal.GIS
             {
                 return "lyr";
             }
-            // 不能以数字开头
             if (s[0] >= '0' && s[0] <= '9')
             {
                 s = "f_" + s;

@@ -5,7 +5,7 @@ using UrbanRenewal.Contracts;
 namespace UrbanRenewal.Plugins.DataManage
 {
     /// <summary>
-    /// M1 数据管理插件：打开 GDB、完整性检查、全局设置、预处理入口。
+    /// M1 数据管理插件：新建/保存工程、全局设置、数据配置、完整性检查、预处理。
     /// </summary>
     public sealed class DataManagePlugin : IModulePlugin
     {
@@ -54,8 +54,10 @@ namespace UrbanRenewal.Plugins.DataManage
             object page = ribbonHost.AddPage("数据管理");
             object group = ribbonHost.AddGroup(page, "工作空间");
 
-            ribbonHost.AddButton(group, "打开 GDB", OnOpenGdb);
+            ribbonHost.AddButton(group, "新建工程", OnNewProject);
+            ribbonHost.AddButton(group, "保存工程", OnSaveProject);
             ribbonHost.AddButton(group, "全局设置", OnGlobalSettings);
+            ribbonHost.AddButton(group, "数据配置", OnDataConfig);
             ribbonHost.AddButton(group, "数据完整性检查", OnValidateData);
             ribbonHost.AddButton(group, "投影/裁剪预处理", OnPreprocess);
         }
@@ -69,49 +71,72 @@ namespace UrbanRenewal.Plugins.DataManage
             _context = null;
         }
 
-        private void OnOpenGdb(object sender, EventArgs e)
+        private void OnNewProject(object sender, EventArgs e)
         {
             if (_context == null)
             {
                 return;
             }
 
-            using (FolderBrowserDialog dlg = new FolderBrowserDialog())
+            DialogResult dr = MessageBox.Show(
+                "新建工程将清空全局设置中的工作区配置（输入/输出 GDB、城市、基准坐标系等），\r\n"
+                + "并清空当前地图。此操作会写入本地配置文件。\r\n\r\n是否继续？",
+                "新建工程",
+                MessageBoxButtons.YesNo,
+                MessageBoxIcon.Warning);
+            if (dr != DialogResult.Yes)
             {
-                dlg.Description = "选择 File Geodatabase 文件夹（*.gdb）";
-                if (!string.IsNullOrEmpty(_context.GdbPath))
-                {
-                    dlg.SelectedPath = _context.GdbPath;
-                }
+                return;
+            }
 
-                if (dlg.ShowDialog() != DialogResult.OK)
-                {
-                    return;
-                }
+            string message;
+            if (_context.NewProject(out message))
+            {
+                _context.ShowMessage("新建工程", message);
+            }
+            else
+            {
+                _context.ShowMessage("新建工程", message ?? "新建失败。");
+            }
+        }
 
-                string path = dlg.SelectedPath;
-                _context.ShowProgress("加载 GDB", 10);
-                string message;
-                bool ok = _context.OpenFileGdb(path, out message);
-                _context.HideProgress();
+        private void OnSaveProject(object sender, EventArgs e)
+        {
+            if (_context == null)
+            {
+                return;
+            }
 
-                if (ok)
-                {
-                    _context.LogInfo(message);
-                    _context.ZoomToFullExtent();
-                    string tip = message;
-                    tip += "\r\n\r\n全局输出 GDB:\r\n"
-                        + (string.IsNullOrEmpty(_context.OutputGdbPath)
-                            ? "(未设置 — 请打开「全局设置」指定；后续所有分析结果均写入该库)"
-                            : _context.OutputGdbPath);
-                    tip += "\r\n城市配置: " + (_context.ActiveCityProfileId ?? "(未设置)");
-                    _context.ShowMessage("打开 GDB", tip);
-                }
-                else
-                {
-                    _context.LogError(message);
-                    _context.ShowMessage("打开 GDB", message);
-                }
+            // 确保内存中的全局设置已落盘
+            _context.SaveGlobalSettings();
+
+            string message;
+            if (_context.SaveProject(out message))
+            {
+                _context.ShowMessage("保存工程", message);
+            }
+            else
+            {
+                _context.ShowMessage("保存工程", message ?? "保存失败。");
+            }
+        }
+
+        private void OnDataConfig(object sender, EventArgs e)
+        {
+            if (_context == null)
+            {
+                return;
+            }
+
+            if (string.IsNullOrEmpty(_context.GdbPath) || !System.IO.Directory.Exists(_context.GdbPath))
+            {
+                _context.ShowMessage("数据配置", "请先在「全局设置」中指定并打开输入 GDB，再进行图层角色映射。");
+                return;
+            }
+
+            using (DataConfigForm form = new DataConfigForm(_context))
+            {
+                form.ShowDialog();
             }
         }
 
@@ -133,14 +158,15 @@ namespace UrbanRenewal.Plugins.DataManage
 
             if (string.IsNullOrEmpty(_context.GdbPath))
             {
-                _context.ShowMessage("数据完整性检查", "请先打开 GDB 工作空间。");
+                _context.ShowMessage("数据完整性检查", "请先在「全局设置」中指定输入 GDB。");
                 return;
             }
 
             _context.LogInfo("开始数据完整性检查: " + _context.GdbPath);
-            string report = _context.CheckDataIntegrity();
-            _context.LogInfo(report.Replace("\r\n", " | "));
-            _context.ShowMessage("数据完整性检查", report);
+            using (DataIntegrityForm form = new DataIntegrityForm(_context))
+            {
+                form.ShowDialog();
+            }
         }
 
         private void OnPreprocess(object sender, EventArgs e)
@@ -152,7 +178,7 @@ namespace UrbanRenewal.Plugins.DataManage
 
             if (string.IsNullOrEmpty(_context.GdbPath))
             {
-                _context.ShowMessage("预处理", "请先打开 GDB 工作空间。");
+                _context.ShowMessage("预处理", "请先在「全局设置」中指定输入 GDB。");
                 return;
             }
 

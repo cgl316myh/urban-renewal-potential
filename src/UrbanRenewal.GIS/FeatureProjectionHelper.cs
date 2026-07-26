@@ -27,6 +27,100 @@ namespace UrbanRenewal.GIS
             return gds != null ? gds.SpatialReference : null;
         }
 
+        /// <summary>
+        /// 从 Shapefile 或 File GDB 图层读取空间参考。
+        /// sourcePath：*.shp 或 *.gdb；layerName：GDB 内要素类名（shp 可空）。
+        /// </summary>
+        public static bool TryReadSpatialReference(
+            string sourcePath,
+            string layerName,
+            out ISpatialReference spatialReference,
+            out string spatialReferenceName,
+            out int factoryCode,
+            out string message)
+        {
+            spatialReference = null;
+            spatialReferenceName = null;
+            factoryCode = 0;
+            message = null;
+
+            if (string.IsNullOrEmpty(sourcePath))
+            {
+                message = "未指定坐标系来源路径。";
+                return false;
+            }
+
+            try
+            {
+                string path = sourcePath.Trim().Trim('"');
+                if (path.EndsWith(".shp", StringComparison.OrdinalIgnoreCase))
+                {
+                    if (!File.Exists(path))
+                    {
+                        message = "Shapefile 不存在: " + path;
+                        return false;
+                    }
+                    spatialReference = GetSpatialReference(path);
+                }
+                else if (path.EndsWith(".gdb", StringComparison.OrdinalIgnoreCase))
+                {
+                    if (!Directory.Exists(path))
+                    {
+                        message = "GDB 不存在: " + path;
+                        return false;
+                    }
+                    if (string.IsNullOrEmpty(layerName))
+                    {
+                        message = "从 GDB 读取坐标系时请指定图层名。";
+                        return false;
+                    }
+                    IWorkspaceFactory gwf = new FileGDBWorkspaceFactoryClass();
+                    IFeatureWorkspace gws = (IFeatureWorkspace)gwf.OpenFromFile(path, 0);
+                    IFeatureClass fc = gws.OpenFeatureClass(layerName.Trim());
+                    IGeoDataset gds = fc as IGeoDataset;
+                    spatialReference = gds != null ? gds.SpatialReference : null;
+                }
+                else
+                {
+                    message = "来源须为 Shapefile（*.shp）或 File GDB（*.gdb）。";
+                    return false;
+                }
+
+                if (spatialReference == null)
+                {
+                    message = "无法读取空间参考（图层可能无坐标系定义）。";
+                    return false;
+                }
+
+                spatialReferenceName = spatialReference.Name;
+                try { factoryCode = spatialReference.FactoryCode; }
+                catch { factoryCode = 0; }
+                message = spatialReferenceName
+                    + (factoryCode > 0 ? " [WKID=" + factoryCode + "]" : string.Empty);
+                return true;
+            }
+            catch (Exception ex)
+            {
+                message = "读取空间参考失败: " + ex.Message;
+                return false;
+            }
+        }
+
+        /// <summary>
+        /// 仅读取名称/WKID（供 UI 插件使用，无需直接引用 Geometry 程序集）。
+        /// </summary>
+        public static bool TryReadSpatialReferenceInfo(
+            string sourcePath,
+            string layerName,
+            out string spatialReferenceName,
+            out int factoryCode,
+            out string message)
+        {
+            ISpatialReference sr;
+            return TryReadSpatialReference(
+                sourcePath, layerName, out sr, out spatialReferenceName, out factoryCode, out message);
+        }
+
         public static bool IsSameSpatialReference(ISpatialReference a, ISpatialReference b)
         {
             if (a == null || b == null)

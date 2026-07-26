@@ -143,18 +143,29 @@ namespace UrbanRenewal.GIS
     public static class SpatialReferenceAudit
     {
         /// <summary>
-        /// 审计 GDB 内全部要素类。基准优先：中心城区/分析范围 → 首个投影坐标系 → 首个可读坐标系。
+        /// 审计 GDB 内全部要素类。基准优先：全局配置 → 中心城区/分析范围 → 首个投影坐标系 → 首个可读坐标系。
         /// </summary>
         public static SpatialReferenceAuditResult Audit(string gdbPath)
         {
-            return Audit(gdbPath, null);
+            return Audit(gdbPath, null, null, null);
         }
 
         /// <summary>
         /// 审计指定要素类；onlyLayerNames 为空则审计全部。
-        /// 动力性分析应只传入本次将用到的图层，避免未用图层（如宗地）阻断运行。
         /// </summary>
         public static SpatialReferenceAuditResult Audit(string gdbPath, IList<string> onlyLayerNames)
+        {
+            return Audit(gdbPath, onlyLayerNames, null, null);
+        }
+
+        /// <summary>
+        /// 审计指定要素类，并优先使用全局配置的基准坐标系（来自 Shapefile 或 GDB 图层）。
+        /// </summary>
+        public static SpatialReferenceAuditResult Audit(
+            string gdbPath,
+            IList<string> onlyLayerNames,
+            string preferredSourcePath,
+            string preferredLayerName)
         {
             SpatialReferenceAuditResult result = new SpatialReferenceAuditResult();
             if (string.IsNullOrEmpty(gdbPath) || !System.IO.Directory.Exists(gdbPath))
@@ -174,14 +185,46 @@ namespace UrbanRenewal.GIS
                 ISpatialReference referenceSr = null;
                 string referenceLayer = null;
 
-                // 1) 优先分析范围
-                string preferred = WorkspaceCatalog.FindByKeywords(names, "中心城区", "分析范围");
-                if (!string.IsNullOrEmpty(preferred))
+                // 0) 全局配置的基准坐标系
+                if (!string.IsNullOrEmpty(preferredSourcePath))
                 {
-                    TryOpenSr(fws, preferred, out referenceSr);
-                    if (referenceSr != null)
+                    ISpatialReference cfgSr;
+                    string cfgName;
+                    int cfgCode;
+                    string cfgMsg;
+                    if (FeatureProjectionHelper.TryReadSpatialReference(
+                        preferredSourcePath, preferredLayerName,
+                        out cfgSr, out cfgName, out cfgCode, out cfgMsg)
+                        && cfgSr != null)
                     {
-                        referenceLayer = preferred;
+                        referenceSr = cfgSr;
+                        if (!string.IsNullOrEmpty(preferredLayerName)
+                            && preferredSourcePath.EndsWith(".gdb", StringComparison.OrdinalIgnoreCase))
+                        {
+                            referenceLayer = "配置:" + preferredLayerName;
+                        }
+                        else if (preferredSourcePath.EndsWith(".shp", StringComparison.OrdinalIgnoreCase))
+                        {
+                            referenceLayer = "配置:" + System.IO.Path.GetFileName(preferredSourcePath);
+                        }
+                        else
+                        {
+                            referenceLayer = "配置基准";
+                        }
+                    }
+                }
+
+                // 1) 优先分析范围
+                if (referenceSr == null)
+                {
+                    string preferred = WorkspaceCatalog.FindByKeywords(names, "中心城区", "分析范围");
+                    if (!string.IsNullOrEmpty(preferred))
+                    {
+                        TryOpenSr(fws, preferred, out referenceSr);
+                        if (referenceSr != null)
+                        {
+                            referenceLayer = preferred;
+                        }
                     }
                 }
 

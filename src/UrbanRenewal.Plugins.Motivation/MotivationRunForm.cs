@@ -121,7 +121,7 @@ namespace UrbanRenewal.Plugins.Motivation
 
             if (string.IsNullOrEmpty(gdb) || !System.IO.Directory.Exists(gdb))
             {
-                MessageBox.Show(this, "请先在「数据管理 → 打开 GDB」中指定输入工作空间。",
+                MessageBox.Show(this, "请先在「数据管理 → 全局设置」中指定输入 GDB。",
                     "动力性分析", MessageBoxButtons.OK, MessageBoxIcon.Warning);
                 return;
             }
@@ -159,8 +159,8 @@ namespace UrbanRenewal.Plugins.Motivation
 
             List<string> usedLayers = SpatialReferenceAudit.CollectMotivationLayerNames(job.LayerHints, names);
             SpatialReferenceAuditResult srAudit = usedLayers.Count > 0
-                ? SpatialReferenceAudit.Audit(gdb, usedLayers)
-                : SpatialReferenceAudit.Audit(gdb);
+                ? SpatialReferenceAudit.Audit(gdb, usedLayers, _context.SpatialRefSourcePath, _context.SpatialRefLayerName)
+                : SpatialReferenceAudit.Audit(gdb, null, _context.SpatialRefSourcePath, _context.SpatialRefLayerName);
             if (!srAudit.Success || !srAudit.IsUnified)
             {
                 string block = srAudit.ToBlockMessage();

@@ -39,6 +39,7 @@
     <Compile Include="CityProfile.cs" />
     <Compile Include="FeasibilityJob.cs" />
     <Compile Include="GlobalAppSettings.cs" />
+    <Compile Include="LayerRoleCatalog.cs" />
     <Compile Include="MotivationJob.cs" />
     <Compile Include="OutputJob.cs" />
     <Compile Include="OverlayJob.cs" />

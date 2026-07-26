@@ -146,6 +146,7 @@
     <Compile Include="FeasibilityRasterBuilder.cs" />
     <Compile Include="GeoprocessorHelper.cs" />
     <Compile Include="MapWorkspaceService.cs" />
+    <Compile Include="MapDocumentHelper.cs" />
     <Compile Include="MapExportHelper.cs" />
     <Compile Include="NetworkDatasetHelper.cs" />
     <Compile Include="OutputGdbHelper.cs" />

@@ -59,7 +59,7 @@ namespace UrbanRenewal.Plugins.DataManage
             this.lblOut.Name = "lblOut";
             this.lblOut.Size = new System.Drawing.Size(65, 12);
             this.lblOut.TabIndex = 2;
-            this.lblOut.Text = "输出 GDB：";
+            this.lblOut.Text = "暂存 GDB：";
             // 
             // txtOutGdb
             // 
@@ -155,7 +155,7 @@ namespace UrbanRenewal.Plugins.DataManage
             this.lblHint.Name = "lblHint";
             this.lblHint.Size = new System.Drawing.Size(324, 28);
             this.lblHint.TabIndex = 12;
-            this.lblHint.Text = "默认勾选坐标系不一致图层";
+            this.lblHint.Text = "勾选不正确图层 → 投影/裁剪后覆盖写回输入GDB";
             // 
             // lblStatus
             // 

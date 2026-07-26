@@ -114,6 +114,13 @@ namespace UrbanRenewal.Host
             {
                 AppendLog("WARN", "未加载到业务插件。请生成整个解决方案，确认 Plugins 下有 UrbanRenewal.Plugins.*.dll");
             }
+
+            // 启动时自动加载上次保存的工程 MXD
+            string mxdMsg;
+            if (_appContext.TryLoadSavedProject(out mxdMsg) && !string.IsNullOrEmpty(mxdMsg))
+            {
+                AppendLog("INFO", mxdMsg);
+            }
         }
 
         internal void AppendLog(string level, string message)

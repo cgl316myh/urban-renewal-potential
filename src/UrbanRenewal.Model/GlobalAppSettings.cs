@@ -32,9 +32,42 @@ namespace UrbanRenewal.Model
         /// <summary>当前城市配置 Id。</summary>
         public string ActiveCityProfileId { get; set; }
 
+        /// <summary>
+        /// 全局基准坐标系来源：Shapefile 完整路径（*.shp）或输入 File GDB 路径（*.gdb）。
+        /// 为空则完整性检查仍按 GDB 内自动推断基准。
+        /// </summary>
+        public string SpatialRefSourcePath { get; set; }
+
+        /// <summary>
+        /// 当来源为 GDB 时的要素类名；来源为 Shapefile 时可为空。
+        /// </summary>
+        public string SpatialRefLayerName { get; set; }
+
+        /// <summary>解析得到的坐标系名称（展示与持久化缓存）。</summary>
+        public string SpatialRefName { get; set; }
+
+        /// <summary>解析得到的 FactoryCode（0 表示未知）。</summary>
+        public int SpatialRefFactoryCode { get; set; }
+
+        /// <summary>当前工程地图文档（*.mxd）；启动时自动加载。</summary>
+        public string ProjectMxdPath { get; set; }
+
         public double MotivationWeight { get; set; }
 
         public double FeasibilityWeight { get; set; }
+
+        /// <summary>清空工作区相关设置（新建工程）；保留皮肤等界面偏好。</summary>
+        public void ClearWorkspaceSettings()
+        {
+            InputGdbPath = null;
+            OutputGdbPath = null;
+            ActiveCityProfileId = null;
+            SpatialRefSourcePath = null;
+            SpatialRefLayerName = null;
+            SpatialRefName = null;
+            SpatialRefFactoryCode = 0;
+            ProjectMxdPath = null;
+        }
     }
 
     /// <summary>

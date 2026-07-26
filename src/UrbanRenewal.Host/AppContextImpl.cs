@@ -1,4 +1,5 @@
 using System;
+using System.IO;
 using System.Text;
 using System.Windows.Forms;
 using ESRI.ArcGIS.Controls;
@@ -62,6 +63,56 @@ namespace UrbanRenewal.Host
             {
                 EnsureSettings();
                 _settings.ActiveCityProfileId = value;
+            }
+        }
+
+        public string SpatialRefSourcePath
+        {
+            get { return _settings != null ? _settings.SpatialRefSourcePath : null; }
+            set
+            {
+                EnsureSettings();
+                _settings.SpatialRefSourcePath = value;
+            }
+        }
+
+        public string SpatialRefLayerName
+        {
+            get { return _settings != null ? _settings.SpatialRefLayerName : null; }
+            set
+            {
+                EnsureSettings();
+                _settings.SpatialRefLayerName = value;
+            }
+        }
+
+        public string SpatialRefName
+        {
+            get { return _settings != null ? _settings.SpatialRefName : null; }
+            set
+            {
+                EnsureSettings();
+                _settings.SpatialRefName = value;
+            }
+        }
+
+        public int SpatialRefFactoryCode
+        {
+            get { return _settings != null ? _settings.SpatialRefFactoryCode : 0; }
+            set
+            {
+                EnsureSettings();
+                _settings.SpatialRefFactoryCode = value;
+            }
+        }
+
+        public string ProjectMxdPath
+        {
+            get { return _settings != null ? _settings.ProjectMxdPath : null; }
+            set
+            {
+                EnsureSettings();
+                _settings.ProjectMxdPath = value;
             }
         }
 
@@ -132,7 +183,9 @@ namespace UrbanRenewal.Host
                 CityProfileStore.RememberId(_settings.ActiveCityProfileId);
             }
             LogInfo("全局设置已保存: 输出GDB=" + (_settings.OutputGdbPath ?? "(空)")
-                + "；城市=" + (_settings.ActiveCityProfileId ?? "(空)"));
+                + "；城市=" + (_settings.ActiveCityProfileId ?? "(空)")
+                + "；SpatialRef=" + (_settings.SpatialRefName ?? "(自动)")
+                + "；工程MXD=" + (_settings.ProjectMxdPath ?? "(未保存)"));
             RefreshStatusBar();
         }
 
@@ -140,6 +193,137 @@ namespace UrbanRenewal.Host
         {
             _settings = GlobalAppSettingsStore.Load() ?? new GlobalAppSettings();
             RefreshStatusBar();
+        }
+
+        public bool NewProject(out string message)
+        {
+            EnsureSettings();
+            string oldMxd = _settings.ProjectMxdPath;
+
+            MapWorkspaceService.ClearLayersFromObject(_form.MapControl);
+
+            _settings.ClearWorkspaceSettings();
+            GlobalAppSettingsStore.Save(_settings);
+
+            // 清除活动城市记忆文件，避免 ResolveActive 仍读到旧城市
+            try
+            {
+                string activeFile = Path.Combine(CityProfileStore.GetCitiesDirectory(), "_active_city.txt");
+                if (System.IO.File.Exists(activeFile))
+                {
+                    System.IO.File.Delete(activeFile);
+                }
+            }
+            catch
+            {
+            }
+
+            if (!string.IsNullOrEmpty(oldMxd))
+            {
+                MapDocumentHelper.TryDeleteMxd(oldMxd);
+            }
+            MapDocumentHelper.TryDeleteMxd(MapDocumentHelper.GetDefaultProjectMxdPath());
+
+            message = "已新建工程。\r\n"
+                + "全局工作区配置已清空并写入：\r\n"
+                + GlobalAppSettingsStore.GetSettingsFilePath()
+                + "\r\n地图已清空，工程 MXD 已删除。";
+            LogInfo(message);
+            RefreshStatusBar();
+            return true;
+        }
+
+        public bool SaveProject(out string message)
+        {
+            EnsureSettings();
+            if (_form.MapControl == null)
+            {
+                message = "地图控件未就绪，无法保存工程。";
+                return false;
+            }
+
+            // 先持久化当前全局配置
+            GlobalAppSettingsStore.Save(_settings);
+
+            string mxdPath = _settings.ProjectMxdPath;
+            if (string.IsNullOrEmpty(mxdPath))
+            {
+                mxdPath = MapDocumentHelper.GetDefaultProjectMxdPath();
+            }
+
+            // 传入 AxMapControl，便于解析 IMxdContents
+            string mxdMsg;
+            if (!MapDocumentHelper.SaveMapToMxd(_form.MapControl, mxdPath, out mxdMsg))
+            {
+                message = mxdMsg;
+                LogError(mxdMsg);
+                return false;
+            }
+
+            _settings.ProjectMxdPath = mxdPath;
+            GlobalAppSettingsStore.Save(_settings);
+
+            message = "工程已保存（已持久化到本地）。\r\n"
+                + "全局配置: " + GlobalAppSettingsStore.GetSettingsFilePath()
+                + "\r\n地图文档: " + mxdPath
+                + "\r\n下次启动将自动加载该 MXD。";
+            LogInfo(mxdMsg);
+            RefreshStatusBar();
+            return true;
+        }
+
+        public bool TryLoadSavedProject(out string message)
+        {
+            EnsureSettings();
+            string mxdPath = _settings.ProjectMxdPath;
+            if (string.IsNullOrEmpty(mxdPath) || !System.IO.File.Exists(mxdPath))
+            {
+                // 兼容：仅有默认 MXD 时也尝试加载
+                string def = MapDocumentHelper.GetDefaultProjectMxdPath();
+                if (System.IO.File.Exists(def))
+                {
+                    mxdPath = def;
+                    _settings.ProjectMxdPath = def;
+                    GlobalAppSettingsStore.Save(_settings);
+                }
+                else
+                {
+                    message = null;
+                    return false;
+                }
+            }
+            if (_form.MapControl == null)
+            {
+                message = "地图控件未就绪，无法加载工程 MXD。";
+                return false;
+            }
+
+            bool ok = MapDocumentHelper.LoadMxdToMap(_form.MapControl, mxdPath, out message);
+            if (ok)
+            {
+                LogInfo(message);
+                try
+                {
+                    if (_form.TocControl != null && _form.TocControl.Object != null)
+                    {
+                        ESRI.ArcGIS.Controls.ITOCControl2 toc =
+                            _form.TocControl.Object as ESRI.ArcGIS.Controls.ITOCControl2;
+                        if (toc != null)
+                        {
+                            toc.Update();
+                        }
+                    }
+                }
+                catch
+                {
+                }
+                RefreshStatusBar();
+            }
+            else
+            {
+                LogWarn(message);
+            }
+            return ok;
         }
 
         public void RegisterGlobalSettingsUI(Action showDialog)
@@ -229,7 +413,8 @@ namespace UrbanRenewal.Host
 
                 if (!string.IsNullOrEmpty(profile.PreferredCrsName))
                 {
-                    SpatialReferenceAuditResult audit = SpatialReferenceAudit.Audit(GdbPath);
+                    SpatialReferenceAuditResult audit = SpatialReferenceAudit.Audit(
+                        GdbPath, null, SpatialRefSourcePath, SpatialRefLayerName);
                     if (audit.Success && !string.IsNullOrEmpty(audit.ReferenceSpatialReferenceName)
                         && audit.ReferenceSpatialReferenceName.IndexOf(profile.PreferredCrsName, StringComparison.OrdinalIgnoreCase) < 0
                         && profile.PreferredCrsName.IndexOf(audit.ReferenceSpatialReferenceName, StringComparison.OrdinalIgnoreCase) < 0)

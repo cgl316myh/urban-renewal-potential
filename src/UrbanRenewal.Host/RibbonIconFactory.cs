@@ -30,10 +30,22 @@ namespace UrbanRenewal.Host
             {
                 return GetLarge("map_zoomin");
             }
-                    if (caption.IndexOf("全局设置", StringComparison.Ordinal) >= 0)
-                    {
-                        return GetLarge("global_settings");
-                    }
+            if (caption.IndexOf("新建工程", StringComparison.Ordinal) >= 0)
+            {
+                return GetLarge("new_project");
+            }
+            if (caption.IndexOf("保存工程", StringComparison.Ordinal) >= 0)
+            {
+                return GetLarge("save_project");
+            }
+            if (caption.IndexOf("数据配置", StringComparison.Ordinal) >= 0)
+            {
+                return GetLarge("data_config");
+            }
+            if (caption.IndexOf("全局设置", StringComparison.Ordinal) >= 0)
+            {
+                return GetLarge("global_settings");
+            }
                     if (caption.IndexOf("打开 GDB", StringComparison.Ordinal) >= 0 || caption.IndexOf("打开GDB", StringComparison.Ordinal) >= 0)
             {
                 return GetLarge("open_gdb");
@@ -154,6 +166,37 @@ namespace UrbanRenewal.Host
                             g.DrawLine(p, 16, 22, 16, 26);
                             g.DrawLine(p, 6, 16, 10, 16);
                             g.DrawLine(p, 22, 16, 26, 16);
+                        }
+                        break;
+                    case "new_project":
+                        DrawRoundRect(g, bounds, Color.FromArgb(70, 120, 70), Color.FromArgb(110, 160, 110));
+                        using (Pen p = new Pen(Color.White, 2f))
+                        {
+                            g.DrawRectangle(p, 8, 8, 16, 16);
+                            g.DrawLine(p, 16, 11, 16, 21);
+                            g.DrawLine(p, 11, 16, 21, 16);
+                        }
+                        break;
+                    case "save_project":
+                        DrawRoundRect(g, bounds, Color.FromArgb(50, 90, 140), Color.FromArgb(90, 130, 180));
+                        using (Brush b = new SolidBrush(Color.White))
+                        {
+                            g.FillRectangle(b, 8, 8, 16, 16);
+                        }
+                        using (Brush b2 = new SolidBrush(Color.FromArgb(50, 90, 140)))
+                        {
+                            g.FillRectangle(b2, 11, 8, 10, 6);
+                            g.FillRectangle(b2, 10, 16, 12, 6);
+                        }
+                        break;
+                    case "data_config":
+                        DrawRoundRect(g, bounds, Color.FromArgb(50, 110, 100), Color.FromArgb(90, 150, 140));
+                        using (Pen p = new Pen(Color.White, 2f))
+                        {
+                            g.DrawRectangle(p, 7, 8, 18, 16);
+                            g.DrawLine(p, 7, 13, 25, 13);
+                            g.DrawLine(p, 7, 18, 25, 18);
+                            g.DrawLine(p, 14, 8, 14, 24);
                         }
                         break;
                     case "open_gdb":

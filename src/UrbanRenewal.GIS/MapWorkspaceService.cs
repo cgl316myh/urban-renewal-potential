@@ -31,7 +31,7 @@ namespace UrbanRenewal.GIS
 
             try
             {
-                mapControl.ClearLayers();
+                ClearLayers(mapControl);
 
                 IWorkspaceFactory factory = new FileGDBWorkspaceFactoryClass();
                 IWorkspace workspace = factory.OpenFromFile(gdbPath, 0);
@@ -74,6 +74,49 @@ namespace UrbanRenewal.GIS
                 message = "打开 GDB 失败: " + ex.Message;
                 return 0;
             }
+        }
+
+        /// <summary>清空地图图层，释放对 File GDB 要素类的占用（替换图层前建议调用）。</summary>
+        public static void ClearLayers(IMapControl3 mapControl)
+        {
+            if (mapControl == null)
+            {
+                return;
+            }
+            try
+            {
+                mapControl.ClearLayers();
+                mapControl.Refresh();
+            }
+            catch
+            {
+            }
+        }
+
+        /// <summary>支持传入 AxMapControl 或 IMapControl3。</summary>
+        public static void ClearLayersFromObject(object mapControlOrAx)
+        {
+            if (mapControlOrAx == null)
+            {
+                return;
+            }
+            IMapControl3 map = mapControlOrAx as IMapControl3;
+            if (map == null)
+            {
+                try
+                {
+                    System.Reflection.PropertyInfo pi = mapControlOrAx.GetType().GetProperty("Object");
+                    if (pi != null)
+                    {
+                        map = pi.GetValue(mapControlOrAx, null) as IMapControl3;
+                    }
+                }
+                catch
+                {
+                    map = null;
+                }
+            }
+            ClearLayers(map);
         }
 
         public static string CheckIntegrity(string gdbPath)

@@ -1,8 +1,8 @@
 <?xml version="1.0" encoding="utf-8"?>
 <!--
-  全局设置（输出 GDB / 城市配置）。
-  也可在程序「数据管理 → 全局设置」中修改，会自动覆盖本文件。
-  设置一次后，动力性及后续分析模块均写入 OutputGdbPath。
+  全局设置（输出 GDB / 城市配置 / SpatialRef / 工程 MXD）。
+  程序「数据管理 → 全局设置」保存后会覆盖本文件。
+  「保存工程」会写入 CurrentProject.mxd，并把路径记入 ProjectMxdPath；启动时自动加载。
 -->
 <GlobalAppSettings xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xmlns:xsd="http://www.w3.org/2001/XMLSchema">
   <SkinName>Office 2013</SkinName>
@@ -10,6 +10,11 @@
   <InputGdbPath></InputGdbPath>
   <OutputGdbPath></OutputGdbPath>
   <ActiveCityProfileId>Suzhou</ActiveCityProfileId>
+  <SpatialRefSourcePath></SpatialRefSourcePath>
+  <SpatialRefLayerName></SpatialRefLayerName>
+  <SpatialRefName></SpatialRefName>
+  <SpatialRefFactoryCode>0</SpatialRefFactoryCode>
+  <ProjectMxdPath></ProjectMxdPath>
   <MotivationWeight>0.7</MotivationWeight>
   <FeasibilityWeight>0.3</FeasibilityWeight>
 </GlobalAppSettings>
