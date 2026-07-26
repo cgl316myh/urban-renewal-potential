@@ -99,6 +99,10 @@ namespace UrbanRenewal.Plugins.Validation
 
             this.btnRun.Enabled = false;
             this.lblStatus.Text = "正在验证...";
+            if (_context != null)
+            {
+                _context.LogInfo("======== 开始验证校核 ========");
+            }
             Application.DoEvents();
             try
             {
@@ -108,8 +112,10 @@ namespace UrbanRenewal.Plugins.Validation
                 for (int i = 0; i < result.Messages.Count; i++)
                 {
                     sb.AppendLine(result.Messages[i]);
-                    _context.LogInfo(result.Messages[i]);
                 }
+                _context.LogInfo(result.Success
+                    ? "======== 验证校核完成 ========"
+                    : "======== 验证校核失败 ========");
                 if (result.Success && !string.IsNullOrEmpty(result.DiffFeatureClassPath))
                 {
                     string msg;

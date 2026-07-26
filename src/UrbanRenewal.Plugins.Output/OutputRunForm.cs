@@ -69,6 +69,10 @@ namespace UrbanRenewal.Plugins.Output
             job.ExportCsv = this.chkCsv.Checked;
 
             this.btnRun.Enabled = false;
+            if (_context != null)
+            {
+                _context.LogInfo("======== 开始成果输出 ========");
+            }
             try
             {
                 OutputExportEngine engine = new OutputExportEngine();
@@ -83,8 +87,10 @@ namespace UrbanRenewal.Plugins.Output
                 for (int i = 0; i < result.Messages.Count; i++)
                 {
                     sb.AppendLine(result.Messages[i]);
-                    _context.LogInfo(result.Messages[i]);
                 }
+                _context.LogInfo(result.Success
+                    ? "======== 成果输出完成 ========"
+                    : "======== 成果输出失败 ========");
                 if (!string.IsNullOrEmpty(result.ExportFolder) && Directory.Exists(result.ExportFolder))
                 {
                     try

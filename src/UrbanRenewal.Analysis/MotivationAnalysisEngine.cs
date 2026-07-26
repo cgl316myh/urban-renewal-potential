@@ -16,13 +16,17 @@ namespace UrbanRenewal.Analysis
         private ISpatialReference _targetSr;
         private string _extentPath;
         private readonly Dictionary<string, string> _preparedPaths = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
+        private Action<string, int> _progress;
+        private int _progressPercent;
 
         public MotivationResult Run(MotivationJob job, Action<string, int> progress)
         {
+            _progress = progress;
+            _progressPercent = 0;
             MotivationResult result = new MotivationResult();
             if (job == null || string.IsNullOrEmpty(job.GdbPath))
             {
-                result.Messages.Add("作业参数无效：缺少 GDB 路径。");
+                Note(result, "作业参数无效：缺少 GDB 路径。");
                 return result;
             }
 
@@ -35,12 +39,12 @@ namespace UrbanRenewal.Analysis
             }
             if (string.IsNullOrEmpty(job.OutputGdbPath))
             {
-                result.Messages.Add("作业参数无效：请指定输出 File GDB（*.gdb）。");
+                Note(result, "作业参数无效：请指定输出 File GDB（*.gdb）。");
                 return result;
             }
             if (!OutputGdbHelper.IsFileGdbPath(job.OutputGdbPath))
             {
-                result.Messages.Add("输出路径必须是 File GDB（以 .gdb 结尾的文件夹）: " + job.OutputGdbPath);
+                Note(result, "输出路径必须是 File GDB（以 .gdb 结尾的文件夹）: " + job.OutputGdbPath);
                 return result;
             }
 
@@ -50,7 +54,7 @@ namespace UrbanRenewal.Analysis
 
             Report(progress, result, "枚举 GDB 图层...", 5);
             List<string> names = WorkspaceCatalog.ListFeatureClassNames(job.GdbPath);
-            result.Messages.Add("GDB 要素类数量: " + names.Count);
+            Note(result, "GDB 要素类数量: " + names.Count);
 
             // 空间参考：仅校验本次分析用到的图层（避免未用宗地等阻断）
             Report(progress, result, "检查空间参考一致性...", 8);
@@ -61,12 +65,12 @@ namespace UrbanRenewal.Analysis
             if (!srAudit.Success || !srAudit.IsUnified)
             {
                 string block = srAudit.ToBlockMessage();
-                result.Messages.Add(block);
+                Note(result, block);
                 result.Success = false;
                 Report(progress, result, "空间参考不统一，已取消", 100);
                 return result;
             }
-            result.Messages.Add("空间参考一致: " + srAudit.ReferenceSpatialReferenceName
+            Note(result, "空间参考一致: " + srAudit.ReferenceSpatialReferenceName
                 + "（校验 " + srAudit.Layers.Count + " 个分析图层"
                 + (usedLayers.Count > 0 ? "，未用图层已忽略" : string.Empty) + "）");
 
@@ -76,7 +80,7 @@ namespace UrbanRenewal.Analysis
             job.OutputGdbPath = outGdb;
             job.WorkDirectory = outGdb;
             result.OutputGdbPath = outGdb;
-            result.Messages.Add("输出 GDB: " + outGdb);
+            Note(result, "输出 GDB: " + outGdb);
             // 全局路径记忆由宿主 SaveGlobalSettings 统一负责
 
             string studyLayer = Resolve(job, names, "StudyArea", "中心城区", "分析范围");
@@ -85,7 +89,7 @@ namespace UrbanRenewal.Analysis
             {
                 extentPath = WorkspaceCatalog.ToFeatureClassPath(job.GdbPath, studyLayer);
                 _targetSr = FeatureProjectionHelper.GetSpatialReference(extentPath);
-                result.Messages.Add("分析范围: " + studyLayer + (_targetSr != null ? " [" + _targetSr.Name + "]" : string.Empty));
+                Note(result, "分析范围: " + studyLayer + (_targetSr != null ? " [" + _targetSr.Name + "]" : string.Empty));
             }
             if (_targetSr == null)
             {
@@ -99,7 +103,7 @@ namespace UrbanRenewal.Analysis
                     {
                         extentPath = fbPath;
                     }
-                    result.Messages.Add("目标坐标系取自: " + fallback + (_targetSr != null ? " [" + _targetSr.Name + "]" : string.Empty));
+                    Note(result, "目标坐标系取自: " + fallback + (_targetSr != null ? " [" + _targetSr.Name + "]" : string.Empty));
                 }
             }
 
@@ -160,7 +164,7 @@ namespace UrbanRenewal.Analysis
 
             if (criterionRasters.Count == 0)
             {
-                result.Messages.Add("未生成任何准则层栅格，请检查 GDB 是否包含可匹配的动力性图层。");
+                Note(result, "未生成任何准则层栅格，请检查 GDB 是否包含可匹配的动力性图层。");
                 Report(progress, result, "失败", 100);
                 return result;
             }
@@ -181,7 +185,7 @@ namespace UrbanRenewal.Analysis
                 string n100 = BufferScoreRasterBuilder.NormalizeTo100(
                     _gp, criterionRasters[i], scoreMaxes[i], OutGdb, prefix);
                 normalized.Add(n100);
-                result.Messages.Add("准则「" + label + "」标准化 0–100（理论满分="
+                Note(result, "准则「" + label + "」标准化 0–100（理论满分="
                     + scoreMaxes[i].ToString(System.Globalization.CultureInfo.InvariantCulture)
                     + "）: " + n100);
             }
@@ -192,7 +196,7 @@ namespace UrbanRenewal.Analysis
             result.MotivationRasterPath = outRaster;
             result.OutputGdbPath = job.OutputGdbPath;
             result.Success = true;
-            result.Messages.Add("动力性栅格已生成（0–100 标准化）: " + outRaster);
+            Note(result, "动力性栅格已生成（0–100 标准化）: " + outRaster);
             Report(progress, result, "完成", 100);
             return result;
         }
@@ -232,7 +236,7 @@ namespace UrbanRenewal.Analysis
 
             if (!string.IsNullOrEmpty(metroMulti))
             {
-                result.Messages.Add("多线地铁: " + metroMulti);
+                Note(result, "多线地铁: " + metroMulti);
                 parts.Add(BufferScoreRasterBuilder.BuildMultiRingMax(
                     _gp, Prepared(metroMulti, result),
                     new double[] { 300, 600, 1000 },
@@ -242,7 +246,7 @@ namespace UrbanRenewal.Analysis
 
             if (!string.IsNullOrEmpty(metro) && !string.Equals(metro, metroMulti, StringComparison.OrdinalIgnoreCase))
             {
-                result.Messages.Add("地铁站点: " + metro);
+                Note(result, "地铁站点: " + metro);
                 parts.Add(BufferScoreRasterBuilder.BuildMultiRingMax(
                     _gp, Prepared(metro, result),
                     new double[] { 300, 600, 1000 },
@@ -259,19 +263,19 @@ namespace UrbanRenewal.Analysis
 
             if (!string.IsNullOrEmpty(cbd))
             {
-                result.Messages.Add("CBD: " + cbd);
+                Note(result, "CBD: " + cbd);
                 parts.Add(BufferScoreRasterBuilder.BuildSingle(_gp, Prepared(cbd, result), 1000, 3, OutGdb, "cbd", cell));
             }
 
             if (!string.IsNullOrEmpty(trafficFac))
             {
-                result.Messages.Add("交通设施: " + trafficFac);
+                Note(result, "交通设施: " + trafficFac);
                 parts.Add(BufferScoreRasterBuilder.BuildSingle(_gp, Prepared(trafficFac, result), 300, 1, OutGdb, "traf_fac", cell));
             }
 
             if (parts.Count == 0)
             {
-                result.Messages.Add("交通准则：未匹配到可用图层，已跳过。");
+                Note(result, "交通准则：未匹配到可用图层，已跳过。");
                 return null;
             }
 
@@ -299,7 +303,7 @@ namespace UrbanRenewal.Analysis
             }
             if (string.IsNullOrEmpty(facilityLayer))
             {
-                result.Messages.Add("路网可达性：无 CBD/分析范围/地铁作为中心设施，已跳过。");
+                Note(result, "路网可达性：无 CBD/分析范围/地铁作为中心设施，已跳过。");
                 return null;
             }
 
@@ -307,7 +311,7 @@ namespace UrbanRenewal.Analysis
             string ndName = ResolveHint(job, "RoadNetwork") ?? NetworkDatasetHelper.DefaultNetworkName;
             string impedance = ResolveHint(job, "RoadImpedance") ?? NetworkDatasetHelper.DefaultImpedance;
 
-            result.Messages.Add("路网可达性：中心设施=" + facilityLayer
+            Note(result, "路网可达性：中心设施=" + facilityLayer
                 + "；网络=" + fdName + "\\" + ndName + "（须预先构建）");
 
             return RoadNetworkAccessibilityBuilder.Build(
@@ -347,26 +351,26 @@ namespace UrbanRenewal.Analysis
 
             if (!string.IsNullOrEmpty(eco))
             {
-                result.Messages.Add("生态廊道: " + eco);
+                Note(result, "生态廊道: " + eco);
                 parts.Add(BufferScoreRasterBuilder.BuildSingle(
                     _gp, Prepared(eco, result), 500, 2, OutGdb, "eco", cell));
             }
             if (!string.IsNullOrEmpty(openSpace))
             {
-                result.Messages.Add("开敞空间: " + openSpace);
+                Note(result, "开敞空间: " + openSpace);
                 parts.Add(BufferScoreRasterBuilder.BuildSingle(
                     _gp, Prepared(openSpace, result), 500, 2, OutGdb, "open", cell));
             }
             if (!string.IsNullOrEmpty(green) && !string.Equals(green, openSpace, StringComparison.OrdinalIgnoreCase))
             {
-                result.Messages.Add("现状绿地: " + green);
+                Note(result, "现状绿地: " + green);
                 parts.Add(BufferScoreRasterBuilder.BuildSingle(
                     _gp, Prepared(green, result), 300, 1, OutGdb, "green", cell));
             }
 
             if (parts.Count == 0)
             {
-                result.Messages.Add("环境准则：未匹配到可用图层，已跳过。");
+                Note(result, "环境准则：未匹配到可用图层，已跳过。");
                 return null;
             }
             return BufferScoreRasterBuilder.MaxCombine(_gp, parts, OutGdb, "environment");
@@ -383,26 +387,26 @@ namespace UrbanRenewal.Analysis
 
             if (!string.IsNullOrEmpty(pub))
             {
-                result.Messages.Add("市级公服: " + pub);
+                Note(result, "市级公服: " + pub);
                 parts.Add(BufferScoreRasterBuilder.BuildSingle(
                     _gp, Prepared(pub, result), 1000, 2, OutGdb, "pub", cell));
             }
             if (!string.IsNullOrEmpty(conv))
             {
-                result.Messages.Add("便民设施: " + conv);
+                Note(result, "便民设施: " + conv);
                 parts.Add(BufferScoreRasterBuilder.BuildSingle(
                     _gp, Prepared(conv, result), 300, 1, OutGdb, "conv", cell));
             }
             if (!string.IsNullOrEmpty(shop))
             {
-                result.Messages.Add("商业设施: " + shop);
+                Note(result, "商业设施: " + shop);
                 parts.Add(BufferScoreRasterBuilder.BuildSingle(
                     _gp, Prepared(shop, result), 1000, 1, OutGdb, "shop", cell));
             }
 
             if (parts.Count == 0)
             {
-                result.Messages.Add("设施准则：未匹配到可用图层，已跳过。");
+                Note(result, "设施准则：未匹配到可用图层，已跳过。");
                 return null;
             }
             return BufferScoreRasterBuilder.MaxCombine(_gp, parts, OutGdb, "facility");
@@ -419,26 +423,26 @@ namespace UrbanRenewal.Analysis
 
             if (!string.IsNullOrEmpty(belt))
             {
-                result.Messages.Add("发展圈带: " + belt);
+                Note(result, "发展圈带: " + belt);
                 parts.Add(BufferScoreRasterBuilder.BuildPolygonScore(
                     _gp, Prepared(belt, result), 1, OutGdb, "belt", cell));
             }
             if (!string.IsNullOrEmpty(strategy))
             {
-                result.Messages.Add("战略片区: " + strategy);
+                Note(result, "战略片区: " + strategy);
                 parts.Add(BufferScoreRasterBuilder.BuildPolygonScore(
                     _gp, Prepared(strategy, result), 1, OutGdb, "strategy", cell));
             }
             if (!string.IsNullOrEmpty(key))
             {
-                result.Messages.Add("近期重点区: " + key);
+                Note(result, "近期重点区: " + key);
                 parts.Add(BufferScoreRasterBuilder.BuildPolygonScore(
                     _gp, Prepared(key, result), 2, OutGdb, "keyzone", cell));
             }
 
             if (parts.Count == 0)
             {
-                result.Messages.Add("政策准则：未匹配到可用图层，已跳过。");
+                Note(result, "政策准则：未匹配到可用图层，已跳过。");
                 return null;
             }
             return BufferScoreRasterBuilder.MaxCombine(_gp, parts, OutGdb, "policy");
@@ -457,13 +461,22 @@ namespace UrbanRenewal.Analysis
             return WorkspaceCatalog.FindByKeywords(names, keywords);
         }
 
-        private static void Report(Action<string, int> progress, MotivationResult result, string text, int percent)
+        private void Note(MotivationResult result, string text)
         {
-            result.Messages.Add(text);
-            if (progress != null)
+            if (result != null)
             {
-                progress(text, percent);
+                result.Messages.Add(text);
             }
+            if (_progress != null)
+            {
+                _progress(text, _progressPercent);
+            }
+        }
+
+        private void Report(Action<string, int> progress, MotivationResult result, string text, int percent)
+        {
+            _progressPercent = percent;
+            Note(result, text);
         }
     }
 }

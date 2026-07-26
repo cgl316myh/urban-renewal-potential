@@ -46,6 +46,7 @@ namespace UrbanRenewal.Host
             RibbonHostImpl.ApplyLargeImage(this.btnMapFit, this.btnMapFit.Caption);
             RibbonHostImpl.ApplyLargeImage(this.btnMapPan, this.btnMapPan.Caption);
             RibbonHostImpl.ApplyLargeImage(this.btnMapZoomIn, this.btnMapZoomIn.Caption);
+            RibbonHostImpl.ApplyLargeImage(this.btnToggleLog, this.btnToggleLog.Caption);
         }
 
         internal AxMapControl MapControl
@@ -128,11 +129,39 @@ namespace UrbanRenewal.Host
             string line = DateTime.Now.ToString("HH:mm:ss") + " [" + level + "] " + message;
             if (InvokeRequired)
             {
-                BeginInvoke(new Action(delegate { this.listBoxLog.Items.Insert(0, line); }));
+                BeginInvoke(new Action(delegate { InsertLogLine(line); }));
             }
             else
             {
+                InsertLogLine(line);
+            }
+        }
+
+        private void InsertLogLine(string line)
+        {
+            this.listBoxLog.BeginUpdate();
+            try
+            {
                 this.listBoxLog.Items.Insert(0, line);
+                // 防止日志无限增长
+                while (this.listBoxLog.Items.Count > 2000)
+                {
+                    this.listBoxLog.Items.RemoveAt(this.listBoxLog.Items.Count - 1);
+                }
+            }
+            finally
+            {
+                this.listBoxLog.EndUpdate();
+            }
+            this.listBoxLog.Refresh();
+        }
+
+        /// <summary>分析运行时若日志面板被隐藏，自动展开以便查看逐步日志。</summary>
+        internal void EnsureLogPanelVisible()
+        {
+            if (this.splitWorkspace != null && this.splitWorkspace.Panel2Collapsed)
+            {
+                SetLogPanelVisible(true);
             }
         }
 
@@ -193,6 +222,28 @@ namespace UrbanRenewal.Host
             }
             MapWorkspaceService.ActivateZoomIn((IMapControl3)_axMapControl.Object);
             AppendLog("INFO", "当前工具: 放大");
+        }
+
+        private void btnToggleLog_ItemClick(object sender, ItemClickEventArgs e)
+        {
+            ToggleLogPanel();
+        }
+
+        private void btnHideLog_Click(object sender, EventArgs e)
+        {
+            SetLogPanelVisible(false);
+        }
+
+        private void ToggleLogPanel()
+        {
+            SetLogPanelVisible(this.splitWorkspace.Panel2Collapsed);
+        }
+
+        private void SetLogPanelVisible(bool visible)
+        {
+            this.splitWorkspace.Panel2Collapsed = !visible;
+            this.btnToggleLog.Caption = visible ? "隐藏日志" : "显示日志";
+            RibbonHostImpl.ApplyLargeImage(this.btnToggleLog, this.btnToggleLog.Caption);
         }
     }
 }

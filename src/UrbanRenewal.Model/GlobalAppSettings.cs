@@ -71,17 +71,32 @@ namespace UrbanRenewal.Model
     }
 
     /// <summary>
-    /// 读写 Config/app_settings.xml。
+    /// 读写全局设置。优先使用用户目录，避免 VS 编译覆盖 bin\Config 中的配置。
     /// </summary>
     public static class GlobalAppSettingsStore
     {
+        private const string AppFolderName = "UrbanRenewal";
+
         public static string GetSettingsFilePath()
         {
-            string dir = GetConfigDirectory();
-            return Path.Combine(dir, "app_settings.xml");
+            return Path.Combine(GetConfigDirectory(), "app_settings.xml");
         }
 
+        /// <summary>
+        /// 稳定可写配置目录：%LocalAppData%\UrbanRenewal\Config
+        /// （不随 bin\Debug 清理/编译 CopyToOutput 而丢失）。
+        /// </summary>
         public static string GetConfigDirectory()
+        {
+            string userRoot = Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData);
+            string dir = Path.Combine(userRoot, AppFolderName, "Config");
+            Directory.CreateDirectory(dir);
+            EnsureSeeded(dir);
+            return dir;
+        }
+
+        /// <summary>安装/开发目录下的模板 Config（只读种子）。</summary>
+        public static string GetInstallConfigDirectory()
         {
             string baseDir = AppDomain.CurrentDomain.BaseDirectory;
             string dir = Path.Combine(baseDir, "Config");
@@ -103,7 +118,6 @@ namespace UrbanRenewal.Model
             string path = GetSettingsFilePath();
             if (!File.Exists(path))
             {
-                // 兼容旧分散记忆文件
                 GlobalAppSettings migrated = new GlobalAppSettings();
                 TryMigrateLegacy(migrated);
                 return migrated;
@@ -132,10 +146,149 @@ namespace UrbanRenewal.Model
             string dir = GetConfigDirectory();
             Directory.CreateDirectory(dir);
             string path = GetSettingsFilePath();
+
+            // 先写临时文件再替换，避免写一半进程退出导致文件损坏
+            string temp = path + ".tmp";
             XmlSerializer xs = new XmlSerializer(typeof(GlobalAppSettings));
-            using (FileStream fs = File.Create(path))
+            using (FileStream fs = File.Create(temp))
             {
                 xs.Serialize(fs, settings);
+            }
+            if (File.Exists(path))
+            {
+                File.Delete(path);
+            }
+            File.Move(temp, path);
+        }
+
+        /// <summary>
+        /// 首次使用：从安装目录 / 旧 bin\Config 迁移模板与已有配置。
+        /// </summary>
+        private static void EnsureSeeded(string userConfigDir)
+        {
+            try
+            {
+                string userSettings = Path.Combine(userConfigDir, "app_settings.xml");
+                string userCities = Path.Combine(userConfigDir, "Cities");
+                Directory.CreateDirectory(userCities);
+
+                // 1) 若用户配置尚不存在，优先迁移旧运行目录配置（含用户已填路径）
+                if (!File.Exists(userSettings))
+                {
+                    string legacyBin = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "Config", "app_settings.xml");
+                    if (File.Exists(legacyBin) && HasUsefulWorkspaceSettings(legacyBin))
+                    {
+                        File.Copy(legacyBin, userSettings, false);
+                    }
+                    else
+                    {
+                        string installDir = GetInstallConfigDirectory();
+                        string installSettings = Path.Combine(installDir, "app_settings.xml");
+                        string installTemplate = Path.Combine(installDir, "app_settings.template.xml");
+                        if (File.Exists(installSettings))
+                        {
+                            File.Copy(installSettings, userSettings, false);
+                        }
+                        else if (File.Exists(installTemplate))
+                        {
+                            File.Copy(installTemplate, userSettings, false);
+                        }
+                    }
+                }
+
+                // 2) 城市模板：用户 Cities 为空时从安装目录复制
+                if (Directory.GetFiles(userCities, "*.xml").Length == 0)
+                {
+                    CopyCityTemplates(GetInstallConfigDirectory(), userCities);
+                    string legacyCities = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "Config", "Cities");
+                    if (Directory.Exists(legacyCities) && Directory.GetFiles(userCities, "*.xml").Length == 0)
+                    {
+                        CopyCityTemplates(Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "Config"), userCities);
+                    }
+                }
+
+                // 3) 迁移旧工程 MXD（若用户配置中已指向旧路径且文件仍在，保留；否则尝试复制默认 mxd）
+                string legacyMxd = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "Config", "CurrentProject.mxd");
+                string userMxd = Path.Combine(userConfigDir, "CurrentProject.mxd");
+                if (File.Exists(legacyMxd) && !File.Exists(userMxd))
+                {
+                    try { File.Copy(legacyMxd, userMxd, false); }
+                    catch { }
+                }
+            }
+            catch
+            {
+                // 种子失败不阻断启动
+            }
+        }
+
+        private static bool HasUsefulWorkspaceSettings(string settingsPath)
+        {
+            try
+            {
+                string text = File.ReadAllText(settingsPath, Encoding.UTF8);
+                if (string.IsNullOrEmpty(text))
+                {
+                    return false;
+                }
+                // 粗略判断：是否写过输入/输出 GDB 或工程 MXD
+                if (text.IndexOf("<InputGdbPath>", StringComparison.OrdinalIgnoreCase) >= 0
+                    && text.IndexOf("<InputGdbPath />", StringComparison.OrdinalIgnoreCase) < 0
+                    && text.IndexOf("<InputGdbPath/>", StringComparison.OrdinalIgnoreCase) < 0)
+                {
+                    // 有开标签且不是自闭合，再排除空内容
+                    int a = text.IndexOf("<InputGdbPath>", StringComparison.OrdinalIgnoreCase);
+                    int b = text.IndexOf("</InputGdbPath>", StringComparison.OrdinalIgnoreCase);
+                    if (a >= 0 && b > a + "<InputGdbPath>".Length)
+                    {
+                        string inner = text.Substring(a + "<InputGdbPath>".Length, b - a - "<InputGdbPath>".Length).Trim();
+                        if (inner.Length > 0)
+                        {
+                            return true;
+                        }
+                    }
+                }
+                if (text.IndexOf("ProjectMxdPath>", StringComparison.OrdinalIgnoreCase) >= 0
+                    && text.IndexOf(".mxd", StringComparison.OrdinalIgnoreCase) >= 0)
+                {
+                    return true;
+                }
+                if (text.IndexOf("OutputGdbPath>", StringComparison.OrdinalIgnoreCase) >= 0
+                    && text.IndexOf(".gdb", StringComparison.OrdinalIgnoreCase) >= 0)
+                {
+                    return true;
+                }
+            }
+            catch
+            {
+            }
+            return false;
+        }
+
+        private static void CopyCityTemplates(string installConfigDir, string userCities)
+        {
+            string srcCities = Path.Combine(installConfigDir, "Cities");
+            if (!Directory.Exists(srcCities))
+            {
+                return;
+            }
+            string[] files = Directory.GetFiles(srcCities, "*.xml");
+            for (int i = 0; i < files.Length; i++)
+            {
+                string name = Path.GetFileName(files[i]);
+                string dest = Path.Combine(userCities, name);
+                if (!File.Exists(dest))
+                {
+                    try { File.Copy(files[i], dest, false); }
+                    catch { }
+                }
+            }
+            string readme = Path.Combine(srcCities, "README.txt");
+            string readmeDest = Path.Combine(userCities, "README.txt");
+            if (File.Exists(readme) && !File.Exists(readmeDest))
+            {
+                try { File.Copy(readme, readmeDest, false); }
+                catch { }
             }
         }
 

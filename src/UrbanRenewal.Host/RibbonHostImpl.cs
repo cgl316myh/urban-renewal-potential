@@ -20,6 +20,22 @@ namespace UrbanRenewal.Host
 
         public object AddPage(string pageName)
         {
+            if (string.IsNullOrEmpty(pageName))
+            {
+                throw new ArgumentException("pageName 不能为空", "pageName");
+            }
+
+            // 同名页签复用，便于多插件挂到同一业务页（如「潜力分析」）
+            for (int i = 0; i < _ribbon.Pages.Count; i++)
+            {
+                RibbonPage existing = _ribbon.Pages[i];
+                if (existing != null
+                    && string.Equals(existing.Text, pageName, StringComparison.Ordinal))
+                {
+                    return existing;
+                }
+            }
+
             RibbonPage page = new RibbonPage(pageName);
             _ribbon.Pages.Add(page);
             return page;
@@ -31,6 +47,18 @@ namespace UrbanRenewal.Host
             if (ribbonPage == null)
             {
                 throw new ArgumentException("page 必须为 RibbonPage", "page");
+            }
+
+            if (!string.IsNullOrEmpty(groupName))
+            {
+                for (int i = 0; i < ribbonPage.Groups.Count; i++)
+                {
+                    RibbonPageGroup g = ribbonPage.Groups[i];
+                    if (g != null && string.Equals(g.Text, groupName, StringComparison.Ordinal))
+                    {
+                        return g;
+                    }
+                }
             }
 
             RibbonPageGroup group = new RibbonPageGroup(groupName);

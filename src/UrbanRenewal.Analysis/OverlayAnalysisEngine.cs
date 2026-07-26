@@ -13,17 +13,22 @@ namespace UrbanRenewal.Analysis
     /// </summary>
     public class OverlayAnalysisEngine
     {
+        private Action<string, int> _progress;
+        private int _progressPercent;
+
         public OverlayResult Run(OverlayJob job, Action<string, int> progress)
         {
+            _progress = progress;
+            _progressPercent = 0;
             OverlayResult result = new OverlayResult();
             if (job == null || string.IsNullOrEmpty(job.OutputGdbPath))
             {
-                result.Messages.Add("作业参数无效：请指定输出 File GDB。");
+                Note(result, "作业参数无效：请指定输出 File GDB。");
                 return result;
             }
             if (!OutputGdbHelper.IsFileGdbPath(job.OutputGdbPath))
             {
-                result.Messages.Add("输出路径必须是 File GDB（*.gdb）: " + job.OutputGdbPath);
+                Note(result, "输出路径必须是 File GDB（*.gdb）: " + job.OutputGdbPath);
                 return result;
             }
 
@@ -45,7 +50,7 @@ namespace UrbanRenewal.Analysis
                 {
                     studyPath = WorkspaceCatalog.ToFeatureClassPath(job.GdbPath, study);
                     targetSr = FeatureProjectionHelper.GetSpatialReference(studyPath);
-                    result.Messages.Add("分析范围: " + study);
+                    Note(result, "分析范围: " + study);
                 }
             }
 
@@ -60,19 +65,19 @@ namespace UrbanRenewal.Analysis
             string feaRaster = ResolveRasterPath(outGdb, job.GdbPath, job.FeasibilityRasterName, "fea_score");
             if (string.IsNullOrEmpty(motRaster) || !RasterExists(motRaster))
             {
-                result.Messages.Add("未找到动力性栅格 mot_score，请先运行动力性分析。");
+                Note(result, "未找到动力性栅格 mot_score，请先运行动力性分析。");
                 Report(progress, result, "失败", 100);
                 return result;
             }
             if (string.IsNullOrEmpty(feaRaster) || !RasterExists(feaRaster))
             {
-                result.Messages.Add("未找到可行度栅格 fea_score，请先运行可行度分析。");
+                Note(result, "未找到可行度栅格 fea_score，请先运行可行度分析。");
                 Report(progress, result, "失败", 100);
                 return result;
             }
-            result.Messages.Add("动力性栅格: " + motRaster);
-            result.Messages.Add("可行度栅格: " + feaRaster);
-            result.Messages.Add("权重: 动力=" + job.MotivationWeight.ToString("0.###")
+            Note(result, "动力性栅格: " + motRaster);
+            Note(result, "可行度栅格: " + feaRaster);
+            Note(result, "权重: 动力=" + job.MotivationWeight.ToString("0.###")
                 + "，可行=" + job.FeasibilityWeight.ToString("0.###"));
 
             Report(progress, result, "加权叠置综合潜力...", 45);
@@ -89,7 +94,7 @@ namespace UrbanRenewal.Analysis
             {
                 result.PotentialRasterPath = rawPath;
             }
-            result.Messages.Add("综合潜力栅格: " + result.PotentialRasterPath);
+            Note(result, "综合潜力栅格: " + result.PotentialRasterPath);
 
             Report(progress, result, "五级分类...", 70);
             string levelTmp = PotentialOverlayBuilder.ClassifyLevels(gp, result.PotentialRasterPath, outGdb, "lvl");
@@ -102,7 +107,7 @@ namespace UrbanRenewal.Analysis
             {
                 result.LevelRasterPath = levelTmp;
             }
-            result.Messages.Add("潜力等级栅格: " + result.LevelRasterPath + "（1偏低～5极高）");
+            Note(result, "潜力等级栅格: " + result.LevelRasterPath + "（1偏低～5极高）");
 
             Report(progress, result, "统计各等级面积...", 88);
             result.LevelAreas = PotentialOverlayBuilder.ComputeLevelAreas(
@@ -111,7 +116,7 @@ namespace UrbanRenewal.Analysis
             {
                 LevelAreaStat st = result.LevelAreas[i];
                 double ha = st.AreaSqMeters / 10000.0;
-                result.Messages.Add("等级[" + st.LevelName + "] 像元=" + st.CellCount
+                Note(result, "等级[" + st.LevelName + "] 像元=" + st.CellCount
                     + " 面积≈" + ha.ToString("0.###") + " ha 占比=" + st.Percent.ToString("0.##") + "%");
             }
 
@@ -205,13 +210,22 @@ namespace UrbanRenewal.Analysis
             return WorkspaceCatalog.FindByKeywords(names, keywords);
         }
 
-        private static void Report(Action<string, int> progress, OverlayResult result, string text, int percent)
+        private void Note(OverlayResult result, string text)
         {
-            result.Messages.Add(text);
-            if (progress != null)
+            if (result != null)
             {
-                progress(text, percent);
+                result.Messages.Add(text);
             }
+            if (_progress != null)
+            {
+                _progress(text, _progressPercent);
+            }
+        }
+
+        private void Report(Action<string, int> progress, OverlayResult result, string text, int percent)
+        {
+            _progressPercent = percent;
+            Note(result, text);
         }
     }
 }

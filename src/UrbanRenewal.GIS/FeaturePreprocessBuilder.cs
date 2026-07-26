@@ -64,17 +64,22 @@ namespace UrbanRenewal.GIS
     /// </summary>
     public static class FeaturePreprocessBuilder
     {
+        private static Action<string, int> _progress;
+        private static int _progressPercent;
+
         public static FeaturePreprocessResult Run(FeaturePreprocessJob job, Action<string, int> progress)
         {
+            _progress = progress;
+            _progressPercent = 0;
             FeaturePreprocessResult result = new FeaturePreprocessResult();
             if (job == null || string.IsNullOrEmpty(job.InputGdbPath) || !Directory.Exists(job.InputGdbPath))
             {
-                result.Messages.Add("输入 GDB 无效。");
+                Note(result, "输入 GDB 无效。");
                 return result;
             }
             if (string.IsNullOrEmpty(job.OutputGdbPath) || !OutputGdbHelper.IsFileGdbPath(job.OutputGdbPath))
             {
-                result.Messages.Add("请指定中间暂存 File GDB（*.gdb）。");
+                Note(result, "请指定中间暂存 File GDB（*.gdb）。");
                 return result;
             }
             if (string.Equals(
@@ -82,31 +87,31 @@ namespace UrbanRenewal.GIS
                 System.IO.Path.GetFullPath(job.OutputGdbPath).TrimEnd('\\', '/'),
                 StringComparison.OrdinalIgnoreCase))
             {
-                result.Messages.Add("中间暂存 GDB 不能与输入 GDB 相同，请另指定输出库作为暂存。");
+                Note(result, "中间暂存 GDB 不能与输入 GDB 相同，请另指定输出库作为暂存。");
                 return result;
             }
             if (!job.DoProject && !job.DoClip)
             {
-                result.Messages.Add("请至少勾选「投影」或「裁剪」。");
+                Note(result, "请至少勾选「投影」或「裁剪」。");
                 return result;
             }
             if (job.LayerNames == null || job.LayerNames.Count == 0)
             {
-                result.Messages.Add("未选择任何图层。");
+                Note(result, "未选择任何图层。");
                 return result;
             }
 
             GeoprocessorHelper gp = new GeoprocessorHelper();
             string scratchGdb = OutputGdbHelper.EnsureExists(gp, job.OutputGdbPath);
             job.OutputGdbPath = scratchGdb;
-            result.Messages.Add("中间暂存 GDB: " + scratchGdb);
+            Note(result, "中间暂存 GDB: " + scratchGdb);
             if (job.ReplaceInInputGdb)
             {
-                result.Messages.Add("模式: 处理成功后替换输入 GDB 中的原图层（后期运算仍读输入库）。");
+                Note(result, "模式: 处理成功后替换输入 GDB 中的原图层（后期运算仍读输入库）。");
             }
             else
             {
-                result.Messages.Add("模式: 仅写入暂存 GDB，不替换输入库。");
+                Note(result, "模式: 仅写入暂存 GDB，不替换输入库。");
             }
 
             Report(progress, result, "准备裁剪范围...", 5);
@@ -118,19 +123,19 @@ namespace UrbanRenewal.GIS
             {
                 if (string.IsNullOrEmpty(job.ClipLayerName))
                 {
-                    result.Messages.Add("裁剪需要指定建成区/分析范围图层。");
+                    Note(result, "裁剪需要指定建成区/分析范围图层。");
                     return result;
                 }
                 clipSrc = WorkspaceCatalog.ToFeatureClassPath(job.InputGdbPath, job.ClipLayerName);
                 targetSr = FeatureProjectionHelper.GetSpatialReference(clipSrc);
                 if (targetSr == null)
                 {
-                    result.Messages.Add("无法读取裁剪图层空间参考: " + job.ClipLayerName);
+                    Note(result, "无法读取裁剪图层空间参考: " + job.ClipLayerName);
                     return result;
                 }
                 if (!(targetSr is IProjectedCoordinateSystem))
                 {
-                    result.Messages.Add("裁剪图层应为投影坐标系（当前: "
+                    Note(result, "裁剪图层应为投影坐标系（当前: "
                         + (targetSr.Name ?? "未知") + "）。请先将分析范围投影到 CGCS2000 等平面坐标系。");
                     return result;
                 }
@@ -140,7 +145,7 @@ namespace UrbanRenewal.GIS
                 {
                     return result;
                 }
-                result.Messages.Add("裁剪范围: " + job.ClipLayerName + " [" + targetSr.Name + "]");
+                Note(result, "裁剪范围: " + job.ClipLayerName + " [" + targetSr.Name + "]");
             }
             else
             {
@@ -155,10 +160,10 @@ namespace UrbanRenewal.GIS
                 }
                 if (targetSr == null)
                 {
-                    result.Messages.Add("无法确定目标投影坐标系。请指定分析范围图层，或确保 GDB 中已有投影坐标系图层。");
+                    Note(result, "无法确定目标投影坐标系。请指定分析范围图层，或确保 GDB 中已有投影坐标系图层。");
                     return result;
                 }
-                result.Messages.Add("目标坐标系: " + targetSr.Name);
+                Note(result, "目标坐标系: " + targetSr.Name);
             }
 
             gp.ConfigureAnalysis(scratchGdb, null, 0, targetSr);
@@ -175,7 +180,7 @@ namespace UrbanRenewal.GIS
 
                 if (IsNetworkArtifact(layerName))
                 {
-                    result.Messages.Add("[跳过] " + layerName + "（路网拓扑/网络附属，请在 ArcGIS 中维护 Network Dataset）");
+                    Note(result, "[跳过] " + layerName + "（路网拓扑/网络附属，请在 ArcGIS 中维护 Network Dataset）");
                     continue;
                 }
 
@@ -202,12 +207,12 @@ namespace UrbanRenewal.GIS
                 }
                 catch (Exception ex)
                 {
-                    result.Messages.Add("[失败] " + layerName + ": " + ex.Message);
+                    Note(result, "[失败] " + layerName + ": " + ex.Message);
                 }
             }
 
             result.Success = okCount > 0;
-            result.Messages.Add("完成: 成功处理 " + okCount + " / 选择 " + total + " 个图层"
+            Note(result, "完成: 成功处理 " + okCount + " / 选择 " + total + " 个图层"
                 + (job.ReplaceInInputGdb
                     ? "；已替换输入库 " + result.ReplacedLayers.Count + " 个。"
                     : "。"));
@@ -247,7 +252,7 @@ namespace UrbanRenewal.GIS
             {
                 OutputGdbHelper.TryDeleteDataset(gp, originalPath);
                 CopyTo(gp, correctedPath, originalPath, "Replace-" + leafName);
-                result.Messages.Add("[替换] 输入GDB ← " + layerName
+                Note(result, "[替换] 输入GDB ← " + layerName
                     + "（错误图层已覆盖；后期运算仍读输入库）");
                 return true;
             }
@@ -262,14 +267,14 @@ namespace UrbanRenewal.GIS
                         OutputGdbHelper.TryDeleteDataset(gp, originalPath);
                         OutputGdbHelper.TryDeleteDataset(gp, rootPath);
                         CopyTo(gp, correctedPath, rootPath, "ReplaceRoot-" + leafName);
-                        result.Messages.Add("[替换] 输入GDB ← " + leafName
+                        Note(result, "[替换] 输入GDB ← " + leafName
                             + "（原路径 " + layerName + " 因坐标系变更无法写回要素数据集，已放到 GDB 根目录；"
                             + "请到「数据配置」确认该角色仍指向此图层）");
                         return true;
                     }
                     catch (Exception exRoot)
                     {
-                        result.Messages.Add("[替换失败] " + layerName + ": " + exRoot.Message
+                        Note(result, "[替换失败] " + layerName + ": " + exRoot.Message
                             + "（先尝试原路径失败: " + exInPlace.Message + "）。"
                             + "正确结果仍在暂存库: " + correctedPath
                             + "。若图层被占用，请关闭地图图层后重试。");
@@ -277,7 +282,7 @@ namespace UrbanRenewal.GIS
                     }
                 }
 
-                result.Messages.Add("[替换失败] " + layerName + ": " + exInPlace.Message
+                Note(result, "[替换失败] " + layerName + ": " + exInPlace.Message
                     + "。正确结果仍保留在暂存库: " + correctedPath
                     + "（若图层正被地图占用，请关闭后重试）");
                 return false;
@@ -335,12 +340,12 @@ namespace UrbanRenewal.GIS
                 FeatureProjectionHelper.ProjectFeatureClassToGdb(inPath, outGdb, prjWorkName, targetSr);
                 current = prjPath;
                 projected = true;
-                result.Messages.Add("[投影] " + layerName + " → " + (srcSr != null ? srcSr.Name : "?")
+                Note(result, "[投影] " + layerName + " → " + (srcSr != null ? srcSr.Name : "?")
                     + " ⇒ " + targetSr.Name);
             }
             else if (doProject && sameSr)
             {
-                result.Messages.Add("[投影] " + layerName + " 已与目标坐标系一致，跳过投影。");
+                Note(result, "[投影] " + layerName + " 已与目标坐标系一致，跳过投影。");
             }
 
             if (doClip && !string.IsNullOrEmpty(clipFeatures))
@@ -349,7 +354,7 @@ namespace UrbanRenewal.GIS
                     && string.Equals(layerName, clipLayerName, StringComparison.OrdinalIgnoreCase))
                 {
                     CopyTo(gp, clipFeatures, finalPath, "Copy-clip-self-" + workName);
-                    result.Messages.Add("[裁剪] " + layerName + " 为分析范围本身，已输出。");
+                    Note(result, "[裁剪] " + layerName + " 为分析范围本身，已输出。");
                 }
                 else
                 {
@@ -376,11 +381,11 @@ namespace UrbanRenewal.GIS
                         CopyTo(gp, clipTmpPath, finalPath, "Copy-clip-" + workName);
                         try { OutputGdbHelper.TryDeleteDataset(gp, clipTmpPath); }
                         catch { }
-                        result.Messages.Add("[裁剪] " + layerName + " → " + workName);
+                        Note(result, "[裁剪] " + layerName + " → " + workName);
                     }
                     catch (Exception exClip)
                     {
-                        result.Messages.Add("[裁剪失败] " + layerName + ": " + exClip.Message
+                        Note(result, "[裁剪失败] " + layerName + ": " + exClip.Message
                             + "；已输出投影结果（未裁剪）。");
                         if (!string.Equals(current, finalPath, StringComparison.OrdinalIgnoreCase))
                         {
@@ -402,7 +407,7 @@ namespace UrbanRenewal.GIS
                 else
                 {
                     CopyTo(gp, inPath, finalPath, "Copy-" + workName);
-                    result.Messages.Add("[复制] " + layerName + "（坐标系已一致）");
+                    Note(result, "[复制] " + layerName + "（坐标系已一致）");
                 }
             }
 
@@ -457,7 +462,7 @@ namespace UrbanRenewal.GIS
             if (!FeatureProjectionHelper.IsSameSpatialReference(src, targetSr))
             {
                 FeatureProjectionHelper.ProjectFeatureClassToGdb(clipSrc, outGdb, clipOutName, targetSr);
-                result.Messages.Add("[投影] 裁剪范围 " + clipLayerName);
+                Note(result, "[投影] 裁剪范围 " + clipLayerName);
             }
             else
             {
@@ -541,12 +546,22 @@ namespace UrbanRenewal.GIS
             return s;
         }
 
+        private static void Note(FeaturePreprocessResult result, string text)
+        {
+            if (result != null)
+            {
+                result.Messages.Add(text);
+            }
+            if (_progress != null)
+            {
+                _progress(text, _progressPercent);
+            }
+        }
+
         private static void Report(Action<string, int> progress, FeaturePreprocessResult result, string text, int percent)
         {
-            if (progress != null)
-            {
-                progress(text, percent);
-            }
+            _progressPercent = percent;
+            Note(result, text);
         }
     }
 }

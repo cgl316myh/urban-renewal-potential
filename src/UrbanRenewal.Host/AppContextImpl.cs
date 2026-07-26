@@ -182,7 +182,9 @@ namespace UrbanRenewal.Host
             {
                 CityProfileStore.RememberId(_settings.ActiveCityProfileId);
             }
-            LogInfo("全局设置已保存: 输出GDB=" + (_settings.OutputGdbPath ?? "(空)")
+            LogInfo("全局设置已保存: " + GlobalAppSettingsStore.GetSettingsFilePath()
+                + "；输出GDB=" + (_settings.OutputGdbPath ?? "(空)")
+                + "；输入GDB=" + (_settings.InputGdbPath ?? "(空)")
                 + "；城市=" + (_settings.ActiveCityProfileId ?? "(空)")
                 + "；SpatialRef=" + (_settings.SpatialRefName ?? "(自动)")
                 + "；工程MXD=" + (_settings.ProjectMxdPath ?? "(未保存)"));
@@ -504,7 +506,10 @@ namespace UrbanRenewal.Host
 
         public void ShowProgress(string caption, int percent)
         {
-            _form.SetStatus(caption + " " + percent + "%");
+            string line = "[" + percent + "%] " + (caption ?? string.Empty);
+            _form.SetStatus(line);
+            _form.AppendLog("INFO", line);
+            _form.EnsureLogPanelVisible();
         }
 
         public void HideProgress()

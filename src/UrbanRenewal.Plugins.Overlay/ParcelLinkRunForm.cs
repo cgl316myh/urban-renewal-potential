@@ -111,6 +111,10 @@ namespace UrbanRenewal.Plugins.Overlay
 
             this.btnRun.Enabled = false;
             this.lblStatus.Text = "正在关联...";
+            if (_context != null)
+            {
+                _context.LogInfo("======== 开始宗地关联 ========");
+            }
             Application.DoEvents();
 
             try
@@ -128,12 +132,15 @@ namespace UrbanRenewal.Plugins.Overlay
                 for (int i = 0; i < applyMsgs.Count; i++)
                 {
                     sb.AppendLine(applyMsgs[i]);
+                    _context.LogInfo(applyMsgs[i]);
                 }
                 for (int i = 0; i < result.Messages.Count; i++)
                 {
                     sb.AppendLine(result.Messages[i]);
-                    _context.LogInfo(result.Messages[i]);
                 }
+                _context.LogInfo(result.Success
+                    ? "======== 宗地关联完成 ========"
+                    : "======== 宗地关联失败 ========");
 
                 if (result.Success && !string.IsNullOrEmpty(result.ParcelFeatureClassPath))
                 {

@@ -230,6 +230,10 @@ namespace UrbanRenewal.Plugins.DataManage
 
             this.btnRun.Enabled = false;
             this.lblStatus.Text = "正在处理...";
+            if (_context != null)
+            {
+                _context.LogInfo("======== 开始投影/裁剪预处理 ========");
+            }
             Application.DoEvents();
 
             // 释放地图对输入库图层的占用，否则删除/替换可能失败
@@ -248,8 +252,10 @@ namespace UrbanRenewal.Plugins.DataManage
                 for (int i = 0; i < result.Messages.Count; i++)
                 {
                     sb.AppendLine(result.Messages[i]);
-                    _context.LogInfo(result.Messages[i]);
                 }
+                _context.LogInfo(result.Success
+                    ? "======== 预处理完成 ========"
+                    : "======== 预处理失败 ========");
 
                 if (result.Success)
                 {
@@ -289,6 +295,10 @@ namespace UrbanRenewal.Plugins.DataManage
         private void OnProgress(string text, int percent)
         {
             this.lblStatus.Text = percent + "% " + text;
+            if (_context != null)
+            {
+                _context.ShowProgress(text, percent);
+            }
             Application.DoEvents();
         }
 

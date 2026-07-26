@@ -133,7 +133,7 @@
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
     </None>
     <None Include="..\Config\app_settings.xml">
-      <Link>Config\app_settings.xml</Link>
+      <Link>Config\app_settings.template.xml</Link>
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
     </None>
   </ItemGroup>

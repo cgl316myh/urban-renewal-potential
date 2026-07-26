@@ -469,19 +469,8 @@ namespace UrbanRenewal.Model
     {
         public static string GetCitiesDirectory()
         {
-            string baseDir = AppDomain.CurrentDomain.BaseDirectory;
-            string dir = Path.Combine(baseDir, "Config", "Cities");
-            if (Directory.Exists(dir))
-            {
-                return dir;
-            }
-            // 开发时：从 Host 输出目录向上找解决方案 Config
-            string alt = Path.Combine(baseDir, "..", "..", "..", "Config", "Cities");
-            alt = Path.GetFullPath(alt);
-            if (Directory.Exists(alt))
-            {
-                return alt;
-            }
+            string dir = Path.Combine(GlobalAppSettingsStore.GetConfigDirectory(), "Cities");
+            Directory.CreateDirectory(dir);
             return dir;
         }
 

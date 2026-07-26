@@ -5,7 +5,7 @@ using UrbanRenewal.Contracts;
 namespace UrbanRenewal.Plugins.Overlay
 {
     /// <summary>
-    /// M4 叠置评价 + M5 宗地关联（P4）。
+    /// M4 叠置评价 + M5 宗地关联（潜力分析流程第 3–4 步）。
     /// </summary>
     public sealed class OverlayPlugin : IModulePlugin
     {
@@ -18,7 +18,7 @@ namespace UrbanRenewal.Plugins.Overlay
 
         public string Name
         {
-            get { return "叠置与宗地关联"; }
+            get { return "潜力分析-叠置宗地"; }
         }
 
         public int Order
@@ -42,14 +42,11 @@ namespace UrbanRenewal.Plugins.Overlay
                 return;
             }
 
-            object pageOverlay = ribbonHost.AddPage("叠置评价");
-            object groupOverlay = ribbonHost.AddGroup(pageOverlay, "综合潜力");
-            ribbonHost.AddButton(groupOverlay, "运行综合潜力叠置", OnRunOverlay);
-
-            object pageParcel = ribbonHost.AddPage("宗地关联");
-            object groupParcel = ribbonHost.AddGroup(pageParcel, "赋值");
-            ribbonHost.AddButton(groupParcel, "运行宗地关联", OnRunParcelLink);
-            ribbonHost.AddButton(groupParcel, "查看选中宗地详情", OnShowParcelDetail);
+            object page = ribbonHost.AddPage("潜力分析");
+            object group = ribbonHost.AddGroup(page, "分析流程");
+            ribbonHost.AddButton(group, "运行综合潜力叠置", OnRunOverlay);
+            ribbonHost.AddButton(group, "运行宗地关联", OnRunParcelLink);
+            ribbonHost.AddButton(group, "查看选中宗地详情", OnShowParcelDetail);
         }
 
         public void Shutdown()

@@ -139,6 +139,10 @@ namespace UrbanRenewal.Plugins.Feasibility
 
             this.btnRun.Enabled = false;
             this.lblStatus.Text = "正在分析...";
+            if (_context != null)
+            {
+                _context.LogInfo("======== 开始可行度分析 ========");
+            }
             Application.DoEvents();
 
             try
@@ -161,12 +165,16 @@ namespace UrbanRenewal.Plugins.Feasibility
                 for (int i = 0; i < applyMsgs.Count; i++)
                 {
                     sb.AppendLine(applyMsgs[i]);
+                    _context.LogInfo(applyMsgs[i]);
                 }
+                // 步骤已由 ShowProgress 实时写入日志
                 for (int i = 0; i < result.Messages.Count; i++)
                 {
                     sb.AppendLine(result.Messages[i]);
-                    _context.LogInfo(result.Messages[i]);
                 }
+                _context.LogInfo(result.Success
+                    ? "======== 可行度分析完成 ========"
+                    : "======== 可行度分析失败 ========");
 
                 if (result.Success && !string.IsNullOrEmpty(result.FeasibilityRasterPath))
                 {

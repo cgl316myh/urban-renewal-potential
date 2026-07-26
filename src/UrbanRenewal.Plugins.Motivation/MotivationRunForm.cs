@@ -172,6 +172,10 @@ namespace UrbanRenewal.Plugins.Motivation
 
             this.btnRun.Enabled = false;
             this.lblStatus.Text = "正在分析...";
+            if (_context != null)
+            {
+                _context.LogInfo("======== 开始动力性分析 ========");
+            }
             Application.DoEvents();
 
             try
@@ -195,12 +199,16 @@ namespace UrbanRenewal.Plugins.Motivation
                 for (int i = 0; i < applyMsgs.Count; i++)
                 {
                     sb.AppendLine(applyMsgs[i]);
+                    _context.LogInfo(applyMsgs[i]);
                 }
+                // 进度步骤已在 ShowProgress 中实时写入日志；此处补充未走进度回调的明细
                 for (int i = 0; i < result.Messages.Count; i++)
                 {
                     sb.AppendLine(result.Messages[i]);
-                    _context.LogInfo(result.Messages[i]);
                 }
+                _context.LogInfo(result.Success
+                    ? "======== 动力性分析完成 ========"
+                    : "======== 动力性分析失败 ========");
 
                 if (result.Success && !string.IsNullOrEmpty(result.MotivationRasterPath))
                 {
@@ -245,6 +253,7 @@ namespace UrbanRenewal.Plugins.Motivation
             this.lblStatus.Text = text + "  " + percent + "%";
             if (_context != null)
             {
+                // ShowProgress 内会写入主窗体日志窗口
                 _context.ShowProgress(text, percent);
             }
             Application.DoEvents();

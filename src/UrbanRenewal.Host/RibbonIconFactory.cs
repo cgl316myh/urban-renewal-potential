@@ -58,6 +58,12 @@ namespace UrbanRenewal.Host
             {
                 return GetLarge("preprocess");
             }
+            if (caption.IndexOf("隐藏日志", StringComparison.Ordinal) >= 0
+                || caption.IndexOf("显示日志", StringComparison.Ordinal) >= 0
+                || (caption.IndexOf("日志", StringComparison.Ordinal) >= 0 && caption.IndexOf("窗口", StringComparison.Ordinal) < 0))
+            {
+                return GetLarge("toggle_log");
+            }
             if (caption.IndexOf("验证", StringComparison.Ordinal) >= 0)
             {
                 return GetLarge("run_validation");
@@ -67,10 +73,6 @@ namespace UrbanRenewal.Host
                 return GetLarge("run_output");
             }
             if (caption.IndexOf("皮肤", StringComparison.Ordinal) >= 0 || caption.IndexOf("权重", StringComparison.Ordinal) >= 0 || caption.IndexOf("配置", StringComparison.Ordinal) >= 0)
-            {
-                return GetLarge("run_config");
-            }
-            if (caption.IndexOf("日志", StringComparison.Ordinal) >= 0)
             {
                 return GetLarge("run_config");
             }
@@ -187,6 +189,16 @@ namespace UrbanRenewal.Host
                         {
                             g.FillRectangle(b2, 11, 8, 10, 6);
                             g.FillRectangle(b2, 10, 16, 12, 6);
+                        }
+                        break;
+                    case "toggle_log":
+                        DrawRoundRect(g, bounds, Color.FromArgb(90, 90, 100), Color.FromArgb(130, 130, 140));
+                        using (Pen p = new Pen(Color.White, 2f))
+                        {
+                            g.DrawRectangle(p, 8, 6, 16, 20);
+                            g.DrawLine(p, 11, 11, 21, 11);
+                            g.DrawLine(p, 11, 16, 21, 16);
+                            g.DrawLine(p, 11, 21, 18, 21);
                         }
                         break;
                     case "data_config":

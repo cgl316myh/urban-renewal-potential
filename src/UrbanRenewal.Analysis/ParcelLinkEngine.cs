@@ -11,22 +11,27 @@ namespace UrbanRenewal.Analysis
     /// </summary>
     public class ParcelLinkEngine
     {
+        private Action<string, int> _progress;
+        private int _progressPercent;
+
         public ParcelLinkResult Run(ParcelLinkJob job, Action<string, int> progress)
         {
+            _progress = progress;
+            _progressPercent = 0;
             ParcelLinkResult result = new ParcelLinkResult();
             if (job == null || string.IsNullOrEmpty(job.GdbPath) || string.IsNullOrEmpty(job.OutputGdbPath))
             {
-                result.Messages.Add("作业参数无效：需要输入 GDB 与输出 File GDB。");
+                Note(result, "作业参数无效：需要输入 GDB 与输出 File GDB。");
                 return result;
             }
             if (!Directory.Exists(job.GdbPath))
             {
-                result.Messages.Add("输入 GDB 不存在: " + job.GdbPath);
+                Note(result, "输入 GDB 不存在: " + job.GdbPath);
                 return result;
             }
             if (!OutputGdbHelper.IsFileGdbPath(job.OutputGdbPath))
             {
-                result.Messages.Add("输出路径必须是 File GDB（*.gdb）: " + job.OutputGdbPath);
+                Note(result, "输出路径必须是 File GDB（*.gdb）: " + job.OutputGdbPath);
                 return result;
             }
 
@@ -42,12 +47,12 @@ namespace UrbanRenewal.Analysis
             string parcel = ResolveFeature(job, names, "Parcel", "宗地", "地块", "土地利用", "LandParcel", "parcel");
             if (string.IsNullOrEmpty(parcel))
             {
-                result.Messages.Add("未匹配到宗地/土地利用斑块图层。");
+                Note(result, "未匹配到宗地/土地利用斑块图层。");
                 Report(progress, result, "失败", 100);
                 return result;
             }
             string parcelPath = WorkspaceCatalog.ToFeatureClassPath(job.GdbPath, parcel);
-            result.Messages.Add("宗地图层: " + parcel);
+            Note(result, "宗地图层: " + parcel);
 
             Report(progress, result, "解析评价栅格...", 30);
             string pot = ResolveRaster(outGdb, job.GdbPath, job.PotentialRasterName, "pot_score");
@@ -55,28 +60,28 @@ namespace UrbanRenewal.Analysis
             string fea = ResolveRaster(outGdb, job.GdbPath, job.FeasibilityRasterName, "fea_score");
             if (string.IsNullOrEmpty(pot) || !RasterExists(pot))
             {
-                result.Messages.Add("未找到综合潜力栅格 pot_score，请先运行叠置评价。");
+                Note(result, "未找到综合潜力栅格 pot_score，请先运行叠置评价。");
                 Report(progress, result, "失败", 100);
                 return result;
             }
-            result.Messages.Add("潜力栅格: " + pot);
+            Note(result, "潜力栅格: " + pot);
             if (!string.IsNullOrEmpty(mot) && RasterExists(mot))
             {
-                result.Messages.Add("动力栅格: " + mot);
+                Note(result, "动力栅格: " + mot);
             }
             else
             {
                 mot = null;
-                result.Messages.Add("动力栅格缺失，MOTIV_SCORE 将写 0。");
+                Note(result, "动力栅格缺失，MOTIV_SCORE 将写 0。");
             }
             if (!string.IsNullOrEmpty(fea) && RasterExists(fea))
             {
-                result.Messages.Add("可行栅格: " + fea);
+                Note(result, "可行栅格: " + fea);
             }
             else
             {
                 fea = null;
-                result.Messages.Add("可行栅格缺失，FEASIB_SCORE 将写 0。");
+                Note(result, "可行栅格缺失，FEASIB_SCORE 将写 0。");
             }
 
             Report(progress, result, "区统计并写入宗地字段...", 55);
@@ -96,7 +101,7 @@ namespace UrbanRenewal.Analysis
             result.ParcelFeatureClassPath = outFc;
             result.ParcelCount = count;
             result.Success = true;
-            result.Messages.Add("宗地关联完成: " + outFc);
+            Note(result, "宗地关联完成: " + outFc);
             Report(progress, result, "完成", 100);
             return result;
         }
@@ -180,13 +185,22 @@ namespace UrbanRenewal.Analysis
             return false;
         }
 
-        private static void Report(Action<string, int> progress, ParcelLinkResult result, string text, int percent)
+        private void Note(ParcelLinkResult result, string text)
         {
-            result.Messages.Add(text);
-            if (progress != null)
+            if (result != null)
             {
-                progress(text, percent);
+                result.Messages.Add(text);
             }
+            if (_progress != null)
+            {
+                _progress(text, _progressPercent);
+            }
+        }
+
+        private void Report(Action<string, int> progress, ParcelLinkResult result, string text, int percent)
+        {
+            _progressPercent = percent;
+            Note(result, text);
         }
     }
 }

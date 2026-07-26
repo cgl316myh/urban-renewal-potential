@@ -538,7 +538,8 @@ namespace UrbanRenewal.Plugins.DataManage
                 + "\r\n输出: " + outGdb
                 + "\r\n城市: " + (profile != null ? profile.DisplayName : "(未选择)")
                 + "\r\nSpatialRef: " + (string.IsNullOrEmpty(_spatialRefName) ? "(自动推断)" : _spatialRefName)
-                + "\r\n\r\n提示：若需下次启动自动恢复当前地图，请再单击「数据管理 → 保存工程」。",
+                + "\r\n\r\n提示：配置已写入用户目录，重启/重新编译后仍会保留。"
+                + "\r\n若需下次启动自动恢复当前地图，请再单击「数据管理 → 保存工程」。",
                 "全局设置", MessageBoxButtons.OK, MessageBoxIcon.Information);
 
             this.DialogResult = DialogResult.OK;

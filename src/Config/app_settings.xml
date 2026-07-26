@@ -1,8 +1,8 @@
 <?xml version="1.0" encoding="utf-8"?>
 <!--
-  全局设置（输出 GDB / 城市配置 / SpatialRef / 工程 MXD）。
-  程序「数据管理 → 全局设置」保存后会覆盖本文件。
-  「保存工程」会写入 CurrentProject.mxd，并把路径记入 ProjectMxdPath；启动时自动加载。
+  全局设置模板（仅作首次种子）。
+  程序实际读写位置：%LocalAppData%\UrbanRenewal\Config\app_settings.xml
+  「数据管理 → 全局设置」保存后写入用户目录，不会被重新编译覆盖。
 -->
 <GlobalAppSettings xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xmlns:xsd="http://www.w3.org/2001/XMLSchema">
   <SkinName>Office 2013</SkinName>

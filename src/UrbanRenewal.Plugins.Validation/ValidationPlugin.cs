@@ -4,12 +4,15 @@ using UrbanRenewal.Contracts;
 
 namespace UrbanRenewal.Plugins.Validation
 {
+    /// <summary>
+    /// M6 验证校核（潜力分析流程第 5 步）。
+    /// </summary>
     public sealed class ValidationPlugin : IModulePlugin
     {
         private IAppContext _context;
 
         public string Id { get { return "Validation"; } }
-        public string Name { get { return "验证校核"; } }
+        public string Name { get { return "潜力分析-验证校核"; } }
         public int Order { get { return 50; } }
 
         public void Initialize(IAppContext context)
@@ -27,9 +30,9 @@ namespace UrbanRenewal.Plugins.Validation
             {
                 return;
             }
-            object page = ribbonHost.AddPage("验证校核");
-            object group = ribbonHost.AddGroup(page, "对标");
-            ribbonHost.AddButton(group, "运行验证校核", OnRun);
+            object page = ribbonHost.AddPage("潜力分析");
+            object group = ribbonHost.AddGroup(page, "分析流程");
+            ribbonHost.AddButton(group, "运行验证校准", OnRun);
         }
 
         public void Shutdown()

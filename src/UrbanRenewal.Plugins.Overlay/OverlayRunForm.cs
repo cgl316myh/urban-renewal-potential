@@ -116,6 +116,10 @@ namespace UrbanRenewal.Plugins.Overlay
 
             this.btnRun.Enabled = false;
             this.lblStatus.Text = "正在叠置...";
+            if (_context != null)
+            {
+                _context.LogInfo("======== 开始叠置评价 ========");
+            }
             Application.DoEvents();
 
             try
@@ -135,8 +139,10 @@ namespace UrbanRenewal.Plugins.Overlay
                 for (int i = 0; i < result.Messages.Count; i++)
                 {
                     sb.AppendLine(result.Messages[i]);
-                    _context.LogInfo(result.Messages[i]);
                 }
+                _context.LogInfo(result.Success
+                    ? "======== 叠置评价完成 ========"
+                    : "======== 叠置评价失败 ========");
 
                 if (result.Success)
                 {

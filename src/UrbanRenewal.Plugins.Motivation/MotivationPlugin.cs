@@ -5,7 +5,7 @@ using UrbanRenewal.Contracts;
 namespace UrbanRenewal.Plugins.Motivation
 {
     /// <summary>
-    /// M2 动力性分析插件。
+    /// M2 动力性分析（潜力分析流程第 1 步）。
     /// </summary>
     public sealed class MotivationPlugin : IModulePlugin
     {
@@ -18,7 +18,7 @@ namespace UrbanRenewal.Plugins.Motivation
 
         public string Name
         {
-            get { return "动力性分析"; }
+            get { return "潜力分析-动力性"; }
         }
 
         public int Order
@@ -42,8 +42,8 @@ namespace UrbanRenewal.Plugins.Motivation
                 return;
             }
 
-            object page = ribbonHost.AddPage("动力性分析");
-            object group = ribbonHost.AddGroup(page, "评价");
+            object page = ribbonHost.AddPage("潜力分析");
+            object group = ribbonHost.AddGroup(page, "分析流程");
             ribbonHost.AddButton(group, "运行动力性分析", OnRun);
         }
 

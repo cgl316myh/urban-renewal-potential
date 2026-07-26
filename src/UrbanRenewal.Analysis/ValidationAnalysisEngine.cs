@@ -11,12 +11,17 @@ namespace UrbanRenewal.Analysis
     /// </summary>
     public class ValidationAnalysisEngine
     {
+        private Action<string, int> _progress;
+        private int _progressPercent;
+
         public ValidationResult Run(ValidationJob job, Action<string, int> progress)
         {
+            _progress = progress;
+            _progressPercent = 0;
             ValidationResult result = new ValidationResult();
             if (job == null || string.IsNullOrEmpty(job.GdbPath) || string.IsNullOrEmpty(job.OutputGdbPath))
             {
-                result.Messages.Add("作业参数无效：需要输入 GDB 与输出 File GDB。");
+                Note(result, "作业参数无效：需要输入 GDB 与输出 File GDB。");
                 return result;
             }
 
@@ -33,12 +38,12 @@ namespace UrbanRenewal.Analysis
                 "已更新", "已改造", "更新宗地", "更新地块", "UpdatedParcel");
             if (string.IsNullOrEmpty(updated))
             {
-                result.Messages.Add("未匹配到「已更新宗地」图层。请在城市配置中设置 UpdatedParcel，或确保图层名含「已更新」。");
+                Note(result, "未匹配到「已更新宗地」图层。请在城市配置中设置 UpdatedParcel，或确保图层名含「已更新」。");
                 Report(progress, result, "失败", 100);
                 return result;
             }
             string updatedPath = WorkspaceCatalog.ToFeatureClassPath(job.GdbPath, updated);
-            result.Messages.Add("已更新宗地: " + updated);
+            Note(result, "已更新宗地: " + updated);
 
             Report(progress, result, "解析评价宗地...", 35);
             string scoredName = string.IsNullOrEmpty(job.ScoredParcelName) ? "parcel_pot" : job.ScoredParcelName;
@@ -50,18 +55,18 @@ namespace UrbanRenewal.Analysis
                 if (!string.IsNullOrEmpty(parcel))
                 {
                     scoredPath = WorkspaceCatalog.ToFeatureClassPath(job.GdbPath, parcel);
-                    result.Messages.Add("输出库无 parcel_pot，改用输入宗地: " + parcel);
+                    Note(result, "输出库无 parcel_pot，改用输入宗地: " + parcel);
                 }
                 else
                 {
-                    result.Messages.Add("未找到评价宗地 parcel_pot，请先运行宗地关联。");
+                    Note(result, "未找到评价宗地 parcel_pot，请先运行宗地关联。");
                     Report(progress, result, "失败", 100);
                     return result;
                 }
             }
             else
             {
-                result.Messages.Add("评价宗地: " + scoredPath);
+                Note(result, "评价宗地: " + scoredPath);
             }
 
             Report(progress, result, "对标统计与报告...", 55);
@@ -136,13 +141,22 @@ namespace UrbanRenewal.Analysis
             return false;
         }
 
-        private static void Report(Action<string, int> progress, ValidationResult result, string text, int percent)
+        private void Note(ValidationResult result, string text)
         {
-            result.Messages.Add(text);
-            if (progress != null)
+            if (result != null)
             {
-                progress(text, percent);
+                result.Messages.Add(text);
             }
+            if (_progress != null)
+            {
+                _progress(text, _progressPercent);
+            }
+        }
+
+        private void Report(Action<string, int> progress, ValidationResult result, string text, int percent)
+        {
+            _progressPercent = percent;
+            Note(result, text);
         }
     }
 }

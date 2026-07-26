@@ -5,7 +5,7 @@ using UrbanRenewal.Contracts;
 namespace UrbanRenewal.Plugins.Feasibility
 {
     /// <summary>
-    /// M3 可行度分析插件。
+    /// M3 可行度分析（潜力分析流程第 2 步）。
     /// </summary>
     public sealed class FeasibilityPlugin : IModulePlugin
     {
@@ -18,7 +18,7 @@ namespace UrbanRenewal.Plugins.Feasibility
 
         public string Name
         {
-            get { return "可行度分析"; }
+            get { return "潜力分析-可行度"; }
         }
 
         public int Order
@@ -42,8 +42,8 @@ namespace UrbanRenewal.Plugins.Feasibility
                 return;
             }
 
-            object page = ribbonHost.AddPage("可行度分析");
-            object group = ribbonHost.AddGroup(page, "评价");
+            object page = ribbonHost.AddPage("潜力分析");
+            object group = ribbonHost.AddGroup(page, "分析流程");
             ribbonHost.AddButton(group, "运行可行度分析", OnRun);
         }
 
