@@ -36,6 +36,7 @@ namespace UrbanRenewal.Analysis
             Report(progress, result, "准备输出 GDB...", 5);
 
             GeoprocessorHelper gp = new GeoprocessorHelper();
+            gp.BindToProgress(_progress, delegate { return _progressPercent; });
             string outGdb = OutputGdbHelper.EnsureExists(gp, job.OutputGdbPath);
             job.OutputGdbPath = outGdb;
             result.OutputGdbPath = outGdb;
@@ -84,7 +85,9 @@ namespace UrbanRenewal.Analysis
             string rawPath = OutputGdbHelper.DatasetPath(outGdb, "pot_raw");
             PotentialOverlayBuilder.WeightedOverlay(
                 gp, motRaster, feaRaster, job.MotivationWeight, job.FeasibilityWeight, rawPath);
+            Note(result, "加权叠置完成 → pot_raw");
 
+            Report(progress, result, "保存综合潜力栅格 pot_score...", 55);
             string finalPath = OutputGdbHelper.DatasetPath(outGdb, "pot_score");
             try
             {
@@ -98,6 +101,8 @@ namespace UrbanRenewal.Analysis
 
             Report(progress, result, "五级分类...", 70);
             string levelTmp = PotentialOverlayBuilder.ClassifyLevels(gp, result.PotentialRasterPath, outGdb, "lvl");
+            Note(result, "五级分类临时栅格完成");
+            Report(progress, result, "保存潜力等级栅格 pot_level...", 78);
             string levelFinal = OutputGdbHelper.DatasetPath(outGdb, "pot_level");
             try
             {
@@ -111,7 +116,7 @@ namespace UrbanRenewal.Analysis
 
             Report(progress, result, "统计各等级面积...", 88);
             result.LevelAreas = PotentialOverlayBuilder.ComputeLevelAreas(
-                gp, result.LevelRasterPath, job.CellSize, result.Messages);
+                gp, result.LevelRasterPath, job.CellSize, LiveMsgs(result));
             for (int i = 0; i < result.LevelAreas.Count; i++)
             {
                 LevelAreaStat st = result.LevelAreas[i];
@@ -220,6 +225,17 @@ namespace UrbanRenewal.Analysis
             {
                 _progress(text, _progressPercent);
             }
+        }
+
+        private IList<string> LiveMsgs(OverlayResult result)
+        {
+            return new LiveMessageList(result.Messages, delegate(string t)
+            {
+                if (_progress != null)
+                {
+                    _progress(t, _progressPercent);
+                }
+            });
         }
 
         private void Report(Action<string, int> progress, OverlayResult result, string text, int percent)

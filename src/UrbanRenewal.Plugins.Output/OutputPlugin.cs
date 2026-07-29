@@ -7,6 +7,7 @@ namespace UrbanRenewal.Plugins.Output
     public sealed class OutputPlugin : IModulePlugin
     {
         private IAppContext _context;
+        private OutputRunForm _openForm;
 
         public string Id { get { return "Output"; } }
         public string Name { get { return "成果输出"; } }
@@ -41,10 +42,11 @@ namespace UrbanRenewal.Plugins.Output
 
         private void OnExportData(object sender, EventArgs e)
         {
-            using (OutputRunForm form = new OutputRunForm(_context))
-            {
-                form.ShowDialog();
-            }
+            IWin32Window owner = _context != null ? _context.MainWindow as IWin32Window : null;
+            ModelessFormHelper.ShowOrActivate(
+                ref _openForm,
+                delegate { return new OutputRunForm(_context); },
+                owner);
         }
 
         private void OnExportPdf(object sender, EventArgs e)

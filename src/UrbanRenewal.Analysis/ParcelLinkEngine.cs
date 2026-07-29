@@ -37,6 +37,7 @@ namespace UrbanRenewal.Analysis
 
             Report(progress, result, "准备输出 GDB...", 5);
             GeoprocessorHelper gp = new GeoprocessorHelper();
+            gp.BindToProgress(_progress, delegate { return _progressPercent; });
             string outGdb = OutputGdbHelper.EnsureExists(gp, job.OutputGdbPath);
             job.OutputGdbPath = outGdb;
             result.OutputGdbPath = outGdb;
@@ -95,7 +96,7 @@ namespace UrbanRenewal.Analysis
                 mot,
                 fea,
                 job.StatisticType,
-                result.Messages,
+                LiveMsgs(result),
                 out count);
 
             result.ParcelFeatureClassPath = outFc;
@@ -195,6 +196,17 @@ namespace UrbanRenewal.Analysis
             {
                 _progress(text, _progressPercent);
             }
+        }
+
+        private IList<string> LiveMsgs(ParcelLinkResult result)
+        {
+            return new LiveMessageList(result.Messages, delegate(string t)
+            {
+                if (_progress != null)
+                {
+                    _progress(t, _progressPercent);
+                }
+            });
         }
 
         private void Report(Action<string, int> progress, ParcelLinkResult result, string text, int percent)

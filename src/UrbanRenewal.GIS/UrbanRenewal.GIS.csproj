@@ -145,6 +145,7 @@
     <Compile Include="FeatureProjectionHelper.cs" />
     <Compile Include="FeasibilityRasterBuilder.cs" />
     <Compile Include="GeoprocessorHelper.cs" />
+    <Compile Include="LiveMessageList.cs" />
     <Compile Include="MapWorkspaceService.cs" />
     <Compile Include="MapDocumentHelper.cs" />
     <Compile Include="MapExportHelper.cs" />

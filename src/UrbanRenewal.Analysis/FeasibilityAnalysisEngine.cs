@@ -70,6 +70,7 @@ namespace UrbanRenewal.Analysis
                 + "（校验 " + srAudit.Layers.Count + " 个分析图层）");
 
             _gp = new GeoprocessorHelper();
+            _gp.BindToProgress(_progress, delegate { return _progressPercent; });
             Report(progress, result, "准备输出 GDB...", 10);
             string outGdb = OutputGdbHelper.EnsureExists(_gp, job.OutputGdbPath);
             job.OutputGdbPath = outGdb;
@@ -95,9 +96,9 @@ namespace UrbanRenewal.Analysis
             }
 
             List<string> parts = new List<string>();
+            IList<string> live = LiveMsgs(result);
 
             // 轨道 A · 宗地
-            Report(progress, result, "宗地破碎度 / 形状指数...", 25);
             string parcel = ResolveFeature(job, featureNames, "Parcel",
                 "宗地", "地块", "土地利用", "LandParcel", "parcel");
             if (!string.IsNullOrEmpty(parcel))
@@ -106,13 +107,15 @@ namespace UrbanRenewal.Analysis
                 Note(result, "宗地斑块: " + parcel);
                 try
                 {
+                    Report(progress, result, "宗地·斑块破碎度 PD...", 22);
                     string pdRaster = ParcelAnalyzer.BuildFragmentationScoreRaster(
-                        _gp, parcelPath, outGdb, "pd", job.CellSize, result.Messages);
+                        _gp, parcelPath, outGdb, "pd", job.CellSize, live);
                     parts.Add(pdRaster);
                     result.FactorRasters["斑块破碎度PD"] = pdRaster;
 
+                    Report(progress, result, "宗地·形状指数 SI...", 35);
                     string siRaster = ParcelAnalyzer.BuildSiScoreRaster(
-                        _gp, parcelPath, outGdb, "si", job.CellSize, result.Messages);
+                        _gp, parcelPath, outGdb, "si", job.CellSize, live);
                     parts.Add(siRaster);
                     result.FactorRasters["形状指数SI"] = siRaster;
                 }
@@ -127,7 +130,6 @@ namespace UrbanRenewal.Analysis
             }
 
             // 轨道 B · 地形
-            Report(progress, result, "DEM 高程 / 坡度重分类...", 50);
             string dem = ResolveRaster(job, rasterNames, "DEM", "DEM", "dem", "高程", "Elevation");
             if (!string.IsNullOrEmpty(dem))
             {
@@ -135,6 +137,7 @@ namespace UrbanRenewal.Analysis
                 Note(result, "DEM: " + dem);
                 try
                 {
+                    Report(progress, result, "地形·高程阈值重分类...", 48);
                     double elevThr = job.ElevationThreshold > 0 ? job.ElevationThreshold : 50;
                     string elevScore = FeasibilityRasterBuilder.ReclassifyAboveThreshold(
                         _gp, demPath, elevThr, -1, 0, outGdb, "elev");
@@ -151,10 +154,12 @@ namespace UrbanRenewal.Analysis
                     }
                     else
                     {
+                        Report(progress, result, "地形·由 DEM 生成坡度...", 55);
                         slopeRaster = FeasibilityRasterBuilder.BuildSlope(_gp, demPath, outGdb, "slp");
                         Note(result, "已由 DEM 生成坡度栅格。");
                     }
 
+                    Report(progress, result, "地形·坡度阈值重分类...", 60);
                     double slopeThr = job.SlopeThresholdDegrees > 0 ? job.SlopeThresholdDegrees : 15;
                     string slopeScore = FeasibilityRasterBuilder.ReclassifyAboveThreshold(
                         _gp, slopeRaster, slopeThr, -1, 0, outGdb, "slps");
@@ -173,7 +178,6 @@ namespace UrbanRenewal.Analysis
             }
 
             // 轨道 C · 人口
-            Report(progress, result, "人口密度重分类...", 70);
             string pop = ResolveRaster(job, rasterNames, "Population",
                 "人口", "人口密度", "population", "pop", "PopDensity");
             if (!string.IsNullOrEmpty(pop))
@@ -182,6 +186,7 @@ namespace UrbanRenewal.Analysis
                 Note(result, "人口栅格: " + pop);
                 try
                 {
+                    Report(progress, result, "人口·读取值域并重分类...", 70);
                     double minV, maxV;
                     if (!WorkspaceCatalog.TryGetRasterMinMax(popPath, out minV, out maxV))
                     {
@@ -316,6 +321,17 @@ namespace UrbanRenewal.Analysis
             {
                 _progress(text, _progressPercent);
             }
+        }
+
+        private IList<string> LiveMsgs(FeasibilityResult result)
+        {
+            return new LiveMessageList(result.Messages, delegate(string t)
+            {
+                if (_progress != null)
+                {
+                    _progress(t, _progressPercent);
+                }
+            });
         }
 
         private void Report(Action<string, int> progress, FeasibilityResult result, string text, int percent)

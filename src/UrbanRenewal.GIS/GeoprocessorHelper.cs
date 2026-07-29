@@ -2,6 +2,7 @@ using System;
 using System.Globalization;
 using System.IO;
 using System.Text;
+using ESRI.ArcGIS.Geodatabase;
 using ESRI.ArcGIS.Geometry;
 using ESRI.ArcGIS.Geoprocessing;
 using ESRI.ArcGIS.Geoprocessor;
@@ -11,16 +12,63 @@ namespace UrbanRenewal.GIS
 {
     /// <summary>
     /// Geoprocessor 封装（ArcEngine 10.2）。
+    /// 订阅 MessagesCreated，将 GP 过程消息回传到分析日志。
     /// </summary>
     public sealed class GeoprocessorHelper
     {
         private readonly Geoprocessor _gp;
+        private Action<string, string> _messageSink;
+        private string _currentStep;
+        private int _loggedMessageCount;
+        private bool _receivedMessageEvents;
 
         public GeoprocessorHelper()
+            : this(null)
         {
+        }
+
+        public GeoprocessorHelper(Action<string, string> messageSink)
+        {
+            _messageSink = messageSink;
             _gp = new Geoprocessor();
             _gp.OverwriteOutput = true;
             _gp.AddOutputsToMap = false;
+            _gp.MessagesCreated += OnMessagesCreated;
+        }
+
+        /// <summary>
+        /// 设置消息接收器。level 为「信息/警告/错误/…」，text 为 Description。
+        /// </summary>
+        public void SetMessageSink(Action<string, string> messageSink)
+        {
+            _messageSink = messageSink;
+        }
+
+        /// <summary>
+        /// 将 GP 消息接到分析进度回调（写入主窗体日志）。
+        /// </summary>
+        public void BindToProgress(Action<string, int> progress, Func<int> currentPercent)
+        {
+            _messageSink = delegate(string level, string text)
+            {
+                if (progress == null || string.IsNullOrEmpty(text))
+                {
+                    return;
+                }
+                int pct = 0;
+                if (currentPercent != null)
+                {
+                    try
+                    {
+                        pct = currentPercent();
+                    }
+                    catch
+                    {
+                        pct = 0;
+                    }
+                }
+                progress("GP[" + level + "] " + text, pct);
+            };
         }
 
         /// <summary>
@@ -135,24 +183,163 @@ namespace UrbanRenewal.GIS
 
         public void Execute(IGPProcess process, string stepName)
         {
+            _currentStep = stepName ?? string.Empty;
+            _loggedMessageCount = 0;
+            _receivedMessageEvents = false;
+            Emit("执行", string.IsNullOrEmpty(_currentStep) ? "开始 GP…" : ("开始 " + _currentStep));
+
             try
             {
                 _gp.Execute(process, null);
             }
             catch (Exception ex)
             {
+                // 失败时尽量把已产生的 GP 消息一并抛出
+                FlushRemainingGpMessages();
+                Emit("错误", (stepName ?? "GP") + " 异常: " + ex.Message);
                 throw new InvalidOperationException(stepName + " 失败: " + ex.Message + "\r\n" + GetMessages(), ex);
             }
+
+            FlushRemainingGpMessages();
 
             if (_gp.MessageCount > 0)
             {
                 for (int i = 0; i < _gp.MessageCount; i++)
                 {
-                    if (_gp.GetMessage(i).Contains("ERROR") || _gp.GetMessage(i).Contains("Error"))
+                    string m = _gp.GetMessage(i);
+                    if (m != null && (m.Contains("ERROR") || m.Contains("Error")))
                     {
                         throw new InvalidOperationException(stepName + " 报错: " + GetMessages());
                     }
                 }
+            }
+
+            Emit("结束", string.IsNullOrEmpty(_currentStep) ? "GP 完成" : (_currentStep + " 完成"));
+        }
+
+        private void OnMessagesCreated(object sender, MessagesCreatedEventArgs e)
+        {
+            _receivedMessageEvents = true;
+            if (e == null)
+            {
+                return;
+            }
+            IGPMessages gpMsgs = e.GPMessages;
+            EmitGpMessages(gpMsgs);
+        }
+
+        /// <summary>若未触发 MessagesCreated，回退扫描字符串消息。</summary>
+        private void FlushRemainingGpMessages()
+        {
+            if (_receivedMessageEvents)
+            {
+                return;
+            }
+            try
+            {
+                for (int i = 0; i < _gp.MessageCount; i++)
+                {
+                    string m = _gp.GetMessage(i);
+                    if (!string.IsNullOrEmpty(m))
+                    {
+                        Emit("信息", m);
+                    }
+                }
+            }
+            catch
+            {
+            }
+        }
+
+        private void EmitGpMessages(IGPMessages gpMsgs)
+        {
+            if (gpMsgs == null)
+            {
+                return;
+            }
+            int count = 0;
+            try
+            {
+                count = gpMsgs.Count;
+            }
+            catch
+            {
+                return;
+            }
+
+            for (int i = _loggedMessageCount; i < count; i++)
+            {
+                IGPMessage msg = null;
+                try
+                {
+                    msg = gpMsgs.GetMessage(i);
+                }
+                catch
+                {
+                    continue;
+                }
+                if (msg == null)
+                {
+                    continue;
+                }
+
+                string level = ClassifyGpMessage(msg.Type);
+                string desc = null;
+                try
+                {
+                    desc = msg.Description;
+                }
+                catch
+                {
+                }
+                if (string.IsNullOrEmpty(desc))
+                {
+                    continue;
+                }
+                Emit(level, desc);
+            }
+            _loggedMessageCount = count;
+        }
+
+        private static string ClassifyGpMessage(esriGPMessageType type)
+        {
+            switch (type)
+            {
+                case esriGPMessageType.esriGPMessageTypeAbort:
+                    return "警告";
+                case esriGPMessageType.esriGPMessageTypeEmpty:
+                    return "信息";
+                case esriGPMessageType.esriGPMessageTypeError:
+                    return "错误";
+                case esriGPMessageType.esriGPMessageTypeGDBError:
+                    return "错误GDB";
+                case esriGPMessageType.esriGPMessageTypeInformative:
+                    return "信息";
+                case esriGPMessageType.esriGPMessageTypeProcessDefinition:
+                    return "执行";
+                case esriGPMessageType.esriGPMessageTypeProcessStart:
+                    return "开始";
+                case esriGPMessageType.esriGPMessageTypeProcessStop:
+                    return "结束";
+                case esriGPMessageType.esriGPMessageTypeWarning:
+                    return "警告";
+                default:
+                    return "信息";
+            }
+        }
+
+        private void Emit(string level, string text)
+        {
+            if (_messageSink == null || string.IsNullOrEmpty(text))
+            {
+                return;
+            }
+            try
+            {
+                _messageSink(level, text);
+            }
+            catch
+            {
             }
         }
 

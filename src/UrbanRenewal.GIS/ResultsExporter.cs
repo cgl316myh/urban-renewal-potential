@@ -45,6 +45,10 @@ namespace UrbanRenewal.GIS
 
             if (job.ExportTiff)
             {
+                if (messages != null)
+                {
+                    messages.Add("导出 TIFF：综合潜力 / 潜力等级...");
+                }
                 TryExportRasterTiff(gp, job.OutputGdbPath, job.PotentialRasterName,
                     Path.Combine(folder, "pot_score_" + stamp + ".tif"), result, messages);
                 TryExportRasterTiff(gp, job.OutputGdbPath, job.LevelRasterName,
@@ -53,11 +57,19 @@ namespace UrbanRenewal.GIS
 
             if (job.ExportShp)
             {
+                if (messages != null)
+                {
+                    messages.Add("导出 SHP：宗地潜力...");
+                }
                 TryExportShapefile(gp, job.OutputGdbPath, job.ParcelFeatureName, folder, result, messages);
             }
 
             if (job.ExportCsv)
             {
+                if (messages != null)
+                {
+                    messages.Add("导出 CSV：宗地报表...");
+                }
                 string csv = Path.Combine(folder, "parcel_potential_" + stamp + ".csv");
                 if (TryExportParcelCsv(job.OutputGdbPath, job.ParcelFeatureName, csv, messages))
                 {

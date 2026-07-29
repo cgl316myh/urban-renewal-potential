@@ -103,6 +103,10 @@ namespace UrbanRenewal.GIS
 
             try
             {
+                if (messages != null)
+                {
+                    messages.Add("构建潜力等级栅格属性表并统计面积...");
+                }
                 BuildRasterAttributeTable build = new BuildRasterAttributeTable();
                 build.in_raster = levelRaster;
                 build.overwrite = "OVERWRITE";

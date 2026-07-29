@@ -75,6 +75,7 @@ namespace UrbanRenewal.Analysis
                 + (usedLayers.Count > 0 ? "，未用图层已忽略" : string.Empty) + "）");
 
             _gp = new GeoprocessorHelper();
+            _gp.BindToProgress(_progress, delegate { return _progressPercent; });
             Report(progress, result, "准备输出 GDB...", 10);
             string outGdb = OutputGdbHelper.EnsureExists(_gp, job.OutputGdbPath);
             job.OutputGdbPath = outGdb;
@@ -236,41 +237,53 @@ namespace UrbanRenewal.Analysis
 
             if (!string.IsNullOrEmpty(metroMulti))
             {
+                Report(_progress, result, "交通·多线地铁多环缓冲(300/600/1000m)...", 21);
                 Note(result, "多线地铁: " + metroMulti);
                 parts.Add(BufferScoreRasterBuilder.BuildMultiRingMax(
                     _gp, Prepared(metroMulti, result),
                     new double[] { 300, 600, 1000 },
                     new int[] { 4, 3, 2 },
-                    OutGdb, "metro_multi", cell));
+                    OutGdb, "metro_multi", cell,
+                    delegate(string t) { Note(result, "  · " + t); }));
+                Note(result, "交通·多线地铁缓冲完成");
             }
 
             if (!string.IsNullOrEmpty(metro) && !string.Equals(metro, metroMulti, StringComparison.OrdinalIgnoreCase))
             {
+                Report(_progress, result, "交通·一线地铁多环缓冲(300/600/1000m)...", 24);
                 Note(result, "地铁站点: " + metro);
                 parts.Add(BufferScoreRasterBuilder.BuildMultiRingMax(
                     _gp, Prepared(metro, result),
                     new double[] { 300, 600, 1000 },
                     new int[] { 3, 2, 1 },
-                    OutGdb, "metro", cell));
+                    OutGdb, "metro", cell,
+                    delegate(string t) { Note(result, "  · " + t); }));
+                Note(result, "交通·一线地铁缓冲完成");
             }
 
             // 路网可达性（须预先构建 Network Dataset，如 roadNet\roadNet_ND）
+            Report(_progress, result, "交通·路网可达性（服务区求解）...", 27);
             string roadAccess = BuildRoadAccessibility(job, cbd, study, metro, result);
             if (!string.IsNullOrEmpty(roadAccess))
             {
                 parts.Add(roadAccess);
+                Note(result, "交通·路网可达性完成");
             }
 
             if (!string.IsNullOrEmpty(cbd))
             {
+                Report(_progress, result, "交通·CBD 缓冲(1000m)...", 33);
                 Note(result, "CBD: " + cbd);
                 parts.Add(BufferScoreRasterBuilder.BuildSingle(_gp, Prepared(cbd, result), 1000, 3, OutGdb, "cbd", cell));
+                Note(result, "交通·CBD 缓冲完成");
             }
 
             if (!string.IsNullOrEmpty(trafficFac))
             {
+                Report(_progress, result, "交通·交通设施缓冲(300m)...", 35);
                 Note(result, "交通设施: " + trafficFac);
                 parts.Add(BufferScoreRasterBuilder.BuildSingle(_gp, Prepared(trafficFac, result), 300, 1, OutGdb, "traf_fac", cell));
+                Note(result, "交通·交通设施缓冲完成");
             }
 
             if (parts.Count == 0)
@@ -279,6 +292,7 @@ namespace UrbanRenewal.Analysis
                 return null;
             }
 
+            Report(_progress, result, "交通·准则层 MAX 合并...", 37);
             return BufferScoreRasterBuilder.MaxCombine(_gp, parts, OutGdb, "traffic");
         }
 
@@ -314,6 +328,15 @@ namespace UrbanRenewal.Analysis
             Note(result, "路网可达性：中心设施=" + facilityLayer
                 + "；网络=" + fdName + "\\" + ndName + "（须预先构建）");
 
+            // AddMsg 已写入 Messages；此处仅推进度，避免重复入列表
+            Action<string> live = delegate(string t)
+            {
+                if (_progress != null)
+                {
+                    _progress(t, _progressPercent);
+                }
+            };
+
             return RoadNetworkAccessibilityBuilder.Build(
                 _gp,
                 job.GdbPath,
@@ -323,7 +346,8 @@ namespace UrbanRenewal.Analysis
                 ndName,
                 impedance,
                 job.CellSize,
-                result.Messages);
+                result.Messages,
+                live);
         }
 
         private static string ResolveHint(MotivationJob job, string hintKey)
@@ -351,18 +375,21 @@ namespace UrbanRenewal.Analysis
 
             if (!string.IsNullOrEmpty(eco))
             {
+                Report(_progress, result, "环境·生态廊道缓冲(500m)...", 42);
                 Note(result, "生态廊道: " + eco);
                 parts.Add(BufferScoreRasterBuilder.BuildSingle(
                     _gp, Prepared(eco, result), 500, 2, OutGdb, "eco", cell));
             }
             if (!string.IsNullOrEmpty(openSpace))
             {
+                Report(_progress, result, "环境·开敞空间缓冲(500m)...", 45);
                 Note(result, "开敞空间: " + openSpace);
                 parts.Add(BufferScoreRasterBuilder.BuildSingle(
                     _gp, Prepared(openSpace, result), 500, 2, OutGdb, "open", cell));
             }
             if (!string.IsNullOrEmpty(green) && !string.Equals(green, openSpace, StringComparison.OrdinalIgnoreCase))
             {
+                Report(_progress, result, "环境·现状绿地缓冲(300m)...", 48);
                 Note(result, "现状绿地: " + green);
                 parts.Add(BufferScoreRasterBuilder.BuildSingle(
                     _gp, Prepared(green, result), 300, 1, OutGdb, "green", cell));
@@ -373,6 +400,7 @@ namespace UrbanRenewal.Analysis
                 Note(result, "环境准则：未匹配到可用图层，已跳过。");
                 return null;
             }
+            Report(_progress, result, "环境·准则层 MAX 合并...", 50);
             return BufferScoreRasterBuilder.MaxCombine(_gp, parts, OutGdb, "environment");
         }
 
@@ -387,18 +415,21 @@ namespace UrbanRenewal.Analysis
 
             if (!string.IsNullOrEmpty(pub))
             {
+                Report(_progress, result, "设施·市级公服缓冲(1000m)...", 62);
                 Note(result, "市级公服: " + pub);
                 parts.Add(BufferScoreRasterBuilder.BuildSingle(
                     _gp, Prepared(pub, result), 1000, 2, OutGdb, "pub", cell));
             }
             if (!string.IsNullOrEmpty(conv))
             {
+                Report(_progress, result, "设施·便民设施缓冲(300m)...", 66);
                 Note(result, "便民设施: " + conv);
                 parts.Add(BufferScoreRasterBuilder.BuildSingle(
                     _gp, Prepared(conv, result), 300, 1, OutGdb, "conv", cell));
             }
             if (!string.IsNullOrEmpty(shop))
             {
+                Report(_progress, result, "设施·商业设施缓冲(1000m)...", 70);
                 Note(result, "商业设施: " + shop);
                 parts.Add(BufferScoreRasterBuilder.BuildSingle(
                     _gp, Prepared(shop, result), 1000, 1, OutGdb, "shop", cell));
@@ -409,6 +440,7 @@ namespace UrbanRenewal.Analysis
                 Note(result, "设施准则：未匹配到可用图层，已跳过。");
                 return null;
             }
+            Report(_progress, result, "设施·准则层 MAX 合并...", 72);
             return BufferScoreRasterBuilder.MaxCombine(_gp, parts, OutGdb, "facility");
         }
 
@@ -423,18 +455,21 @@ namespace UrbanRenewal.Analysis
 
             if (!string.IsNullOrEmpty(belt))
             {
+                Report(_progress, result, "政策·发展圈带栅格化...", 76);
                 Note(result, "发展圈带: " + belt);
                 parts.Add(BufferScoreRasterBuilder.BuildPolygonScore(
                     _gp, Prepared(belt, result), 1, OutGdb, "belt", cell));
             }
             if (!string.IsNullOrEmpty(strategy))
             {
+                Report(_progress, result, "政策·战略片区栅格化...", 79);
                 Note(result, "战略片区: " + strategy);
                 parts.Add(BufferScoreRasterBuilder.BuildPolygonScore(
                     _gp, Prepared(strategy, result), 1, OutGdb, "strategy", cell));
             }
             if (!string.IsNullOrEmpty(key))
             {
+                Report(_progress, result, "政策·近期重点区栅格化...", 82);
                 Note(result, "近期重点区: " + key);
                 parts.Add(BufferScoreRasterBuilder.BuildPolygonScore(
                     _gp, Prepared(key, result), 2, OutGdb, "keyzone", cell));
@@ -445,6 +480,7 @@ namespace UrbanRenewal.Analysis
                 Note(result, "政策准则：未匹配到可用图层，已跳过。");
                 return null;
             }
+            Report(_progress, result, "政策·准则层 MAX 合并...", 84);
             return BufferScoreRasterBuilder.MaxCombine(_gp, parts, OutGdb, "policy");
         }
 

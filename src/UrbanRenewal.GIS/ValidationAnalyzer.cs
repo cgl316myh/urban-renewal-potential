@@ -44,6 +44,10 @@ namespace UrbanRenewal.GIS
 
             try
             {
+                if (messages != null)
+                {
+                    messages.Add("正在空间连接：已更新宗地 ∩ 评价宗地（可能较久）...");
+                }
                 SpatialJoin sj = new SpatialJoin();
                 sj.target_features = updatedParcelFc;
                 sj.join_features = scoredParcelFc;
@@ -64,6 +68,11 @@ namespace UrbanRenewal.GIS
                     messages.Add("空间连接失败: " + ex.Message);
                 }
                 return result;
+            }
+
+            if (messages != null)
+            {
+                messages.Add("统计已更新宗地得分分布...");
             }
 
             Dictionary<string, int> levelCounts = new Dictionary<string, int>();
@@ -178,6 +187,10 @@ namespace UrbanRenewal.GIS
                 OutputGdbHelper.TryDeleteDataset(gp, diff);
                 if (lowOids.Count > 0)
                 {
+                    if (messages != null)
+                    {
+                        messages.Add("生成偏低已更新宗地差异图层...");
+                    }
                     string where = BuildOidWhere(fcOidField(joined), lowOids);
                     Select select = new Select();
                     select.in_features = joined;
@@ -206,6 +219,10 @@ namespace UrbanRenewal.GIS
             string reportDir = Path.Combine(Path.GetDirectoryName(outputGdb) ?? outputGdb, "Reports");
             Directory.CreateDirectory(reportDir);
             string reportPath = Path.Combine(reportDir, "validation_report_" + DateTime.Now.ToString("yyyyMMdd_HHmmss") + ".html");
+            if (messages != null)
+            {
+                messages.Add("写入验证报告 HTML...");
+            }
             File.WriteAllText(reportPath, BuildHtmlReport(result, reviewComment, highThreshold, passRatio), Encoding.UTF8);
             result.ReportPath = reportPath;
             if (messages != null)

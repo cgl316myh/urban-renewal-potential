@@ -27,6 +27,7 @@ namespace UrbanRenewal.Analysis
 
             Report(progress, result, "准备...", 5);
             GeoprocessorHelper gp = new GeoprocessorHelper();
+            gp.BindToProgress(_progress, delegate { return _progressPercent; });
             string outGdb = OutputGdbHelper.EnsureExists(gp, job.OutputGdbPath);
             job.OutputGdbPath = outGdb;
             result.OutputGdbPath = outGdb;
@@ -79,7 +80,7 @@ namespace UrbanRenewal.Analysis
                 job.HighLevelThreshold > 0 ? job.HighLevelThreshold : 60,
                 job.PassHighRatio > 0 ? job.PassHighRatio : 0.6,
                 job.ReviewComment,
-                result.Messages);
+                LiveMsgs(result));
 
             result.Success = core.Success;
             result.Passed = core.Passed;
@@ -151,6 +152,17 @@ namespace UrbanRenewal.Analysis
             {
                 _progress(text, _progressPercent);
             }
+        }
+
+        private IList<string> LiveMsgs(ValidationResult result)
+        {
+            return new LiveMessageList(result.Messages, delegate(string t)
+            {
+                if (_progress != null)
+                {
+                    _progress(t, _progressPercent);
+                }
+            });
         }
 
         private void Report(Action<string, int> progress, ValidationResult result, string text, int percent)

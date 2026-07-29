@@ -10,6 +10,7 @@ namespace UrbanRenewal.Plugins.Motivation
     public sealed class MotivationPlugin : IModulePlugin
     {
         private IAppContext _context;
+        private MotivationRunForm _openForm;
 
         public string Id
         {
@@ -58,10 +59,11 @@ namespace UrbanRenewal.Plugins.Motivation
 
         private void OnRun(object sender, EventArgs e)
         {
-            using (MotivationRunForm form = new MotivationRunForm(_context))
-            {
-                form.ShowDialog();
-            }
+            IWin32Window owner = _context != null ? _context.MainWindow as IWin32Window : null;
+            ModelessFormHelper.ShowOrActivate(
+                ref _openForm,
+                delegate { return new MotivationRunForm(_context); },
+                owner);
         }
     }
 }

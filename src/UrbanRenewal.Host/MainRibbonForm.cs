@@ -137,6 +137,8 @@ namespace UrbanRenewal.Host
             }
         }
 
+        private int _logPaintCounter;
+
         private void InsertLogLine(string line)
         {
             this.listBoxLog.BeginUpdate();
@@ -153,12 +155,23 @@ namespace UrbanRenewal.Host
             {
                 this.listBoxLog.EndUpdate();
             }
-            this.listBoxLog.Refresh();
+            // 频繁 Refresh 会拖死 UI 消息泵；批量后再重绘
+            _logPaintCounter++;
+            if (_logPaintCounter >= 8)
+            {
+                _logPaintCounter = 0;
+                this.listBoxLog.Invalidate();
+            }
         }
 
         /// <summary>分析运行时若日志面板被隐藏，自动展开以便查看逐步日志。</summary>
         internal void EnsureLogPanelVisible()
         {
+            if (InvokeRequired)
+            {
+                BeginInvoke(new Action(EnsureLogPanelVisible));
+                return;
+            }
             if (this.splitWorkspace != null && this.splitWorkspace.Panel2Collapsed)
             {
                 SetLogPanelVisible(true);
@@ -178,6 +191,11 @@ namespace UrbanRenewal.Host
 
         internal void SetStatus(string text)
         {
+            if (InvokeRequired)
+            {
+                BeginInvoke(new Action(delegate { SetStatus(text); }));
+                return;
+            }
             this.barStaticStatus.Caption = text;
         }
 

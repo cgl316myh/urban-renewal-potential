@@ -61,6 +61,19 @@ namespace UrbanRenewal.GIS
             string namePrefix,
             double cellSize)
         {
+            return BuildMultiRingMax(gp, inFeatureClass, distancesMeters, scores, outputGdb, namePrefix, cellSize, null);
+        }
+
+        public static string BuildMultiRingMax(
+            GeoprocessorHelper gp,
+            string inFeatureClass,
+            double[] distancesMeters,
+            int[] scores,
+            string outputGdb,
+            string namePrefix,
+            double cellSize,
+            Action<string> onRing)
+        {
             if (distancesMeters == null || scores == null || distancesMeters.Length != scores.Length || distancesMeters.Length == 0)
             {
                 throw new ArgumentException("距离与得分数组无效。");
@@ -69,6 +82,11 @@ namespace UrbanRenewal.GIS
             List<string> rasters = new List<string>();
             for (int i = 0; i < distancesMeters.Length; i++)
             {
+                if (onRing != null)
+                {
+                    onRing("缓冲环 " + distancesMeters[i].ToString(CultureInfo.InvariantCulture)
+                        + "m → 得分 " + scores[i].ToString(CultureInfo.InvariantCulture));
+                }
                 string r = BuildSingle(gp, inFeatureClass, distancesMeters[i], scores[i], outputGdb, namePrefix + i.ToString(), cellSize);
                 rasters.Add(r);
             }

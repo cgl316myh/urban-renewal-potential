@@ -10,9 +10,12 @@ using UrbanRenewal.Model;
 
 namespace UrbanRenewal.Plugins.Output
 {
+    /// <summary>成果输出；导出在 STA 后台线程执行。</summary>
     public partial class OutputRunForm : Form
     {
         private readonly IAppContext _context;
+        private bool _busy;
+        private StaBackgroundRunner.ProgressUiGate _progressGate;
 
         public OutputRunForm()
         {
@@ -23,6 +26,7 @@ namespace UrbanRenewal.Plugins.Output
             : this()
         {
             _context = context;
+            _progressGate = new StaBackgroundRunner.ProgressUiGate(this, ApplyProgressUi);
             if (LicenseManager.UsageMode != LicenseUsageMode.Designtime && _context != null)
             {
                 _context.ReloadGlobalSettings();
@@ -35,8 +39,25 @@ namespace UrbanRenewal.Plugins.Output
             }
         }
 
+        private void SetBusy(bool busy)
+        {
+            _busy = busy;
+            this.btnRun.Enabled = !busy;
+            this.btnClose.Enabled = !busy;
+            this.btnBrowse.Enabled = !busy;
+            this.txtFolder.Enabled = !busy;
+            this.chkTiff.Enabled = !busy;
+            this.chkShp.Enabled = !busy;
+            this.chkCsv.Enabled = !busy;
+            
+        }
+
         private void btnBrowse_Click(object sender, EventArgs e)
         {
+            if (_busy)
+            {
+                return;
+            }
             using (FolderBrowserDialog dlg = new FolderBrowserDialog())
             {
                 dlg.SelectedPath = this.txtFolder.Text;
@@ -49,6 +70,10 @@ namespace UrbanRenewal.Plugins.Output
 
         private void btnRun_Click(object sender, EventArgs e)
         {
+            if (_busy)
+            {
+                return;
+            }
             if (_context == null)
             {
                 return;
@@ -68,21 +93,25 @@ namespace UrbanRenewal.Plugins.Output
             job.ExportShp = this.chkShp.Checked;
             job.ExportCsv = this.chkCsv.Checked;
 
-            this.btnRun.Enabled = false;
-            if (_context != null)
-            {
-                _context.LogInfo("======== 开始成果输出 ========");
-            }
+            SetBusy(true);
+            this.lblStatus.Text = "正在导出（后台）...";
+            _context.LogInfo("======== 开始成果输出 ========");
+
+            StaBackgroundRunner.Run(
+                this,
+                delegate
+                {
+                    OutputExportEngine engine = new OutputExportEngine();
+                    return engine.Run(job, OnProgress);
+                },
+                FinishOk,
+                FinishError);
+        }
+
+        private void FinishOk(OutputResult result)
+        {
             try
             {
-                OutputExportEngine engine = new OutputExportEngine();
-                OutputResult result = engine.Run(job, delegate(string t, int p)
-                {
-                    this.lblStatus.Text = t + " " + p + "%";
-                    _context.ShowProgress(t, p);
-                    Application.DoEvents();
-                });
-
                 StringBuilder sb = new StringBuilder();
                 for (int i = 0; i < result.Messages.Count; i++)
                 {
@@ -105,16 +134,70 @@ namespace UrbanRenewal.Plugins.Output
                 MessageBox.Show(this, sb.ToString(), "成果输出", MessageBoxButtons.OK,
                     result.Success ? MessageBoxIcon.Information : MessageBoxIcon.Warning);
             }
-            catch (Exception ex)
+            finally
             {
-                _context.LogError(ex.Message);
-                MessageBox.Show(this, ex.Message, "导出失败", MessageBoxButtons.OK, MessageBoxIcon.Error);
+                EndBusy();
+            }
+        }
+
+        private void FinishError(Exception ex)
+        {
+            try
+            {
+                string msg = ex != null ? ex.Message : "未知错误";
+                _context.LogError(msg);
+                MessageBox.Show(this, msg, "导出失败", MessageBoxButtons.OK, MessageBoxIcon.Error);
             }
             finally
             {
-                this.btnRun.Enabled = true;
+                EndBusy();
+            }
+        }
+
+        private void EndBusy()
+        {
+            SetBusy(false);
+            if (_context != null)
+            {
                 _context.HideProgress();
             }
+        }
+
+        private void OnProgress(string text, int percent)
+        {
+            if (_context != null)
+            {
+                _context.LogInfo("[" + percent + "%] " + (text ?? string.Empty));
+            }
+            if (_progressGate != null)
+            {
+                _progressGate.Report(text, percent);
+            }
+        }
+
+        private void ApplyProgressUi(string text, int percent)
+        {
+            if (IsDisposed)
+            {
+                return;
+            }
+            this.lblStatus.Text = text + " " + percent + "%";
+            if (_context != null)
+            {
+                _context.ShowProgress(text, percent);
+            }
+        }
+
+        protected override void OnFormClosing(FormClosingEventArgs e)
+        {
+            if (_busy)
+            {
+                MessageBox.Show(this, "成果导出正在后台执行，请等待完成后再关闭。",
+                    "成果输出", MessageBoxButtons.OK, MessageBoxIcon.Information);
+                e.Cancel = true;
+                return;
+            }
+            base.OnFormClosing(e);
         }
 
         private void btnClose_Click(object sender, EventArgs e)

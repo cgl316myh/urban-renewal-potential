@@ -12,10 +12,13 @@ namespace UrbanRenewal.Plugins.Motivation
 {
     /// <summary>
     /// 动力性分析运行窗体：使用全局输出 GDB / 城市配置。
+    /// 分析在 STA 后台线程执行，避免界面假死。
     /// </summary>
     public partial class MotivationRunForm : Form
     {
         private readonly IAppContext _context;
+        private bool _busy;
+        private StaBackgroundRunner.ProgressUiGate _progressGate;
 
         public MotivationRunForm()
         {
@@ -26,6 +29,7 @@ namespace UrbanRenewal.Plugins.Motivation
             : this()
         {
             _context = context;
+            _progressGate = new StaBackgroundRunner.ProgressUiGate(this, ApplyProgressUi);
             if (!IsDesignModeSafe())
             {
                 RefreshGlobalInfo();
@@ -97,9 +101,22 @@ namespace UrbanRenewal.Plugins.Motivation
             nud.Value = (decimal)p;
         }
 
+        private void SetBusy(bool busy)
+        {
+            _busy = busy;
+            this.btnRun.Enabled = !busy;
+            this.btnClose.Enabled = !busy;
+            this.btnOpenGlobal.Enabled = !busy;
+            this.nudCellSize.Enabled = !busy;
+            this.nudTraffic.Enabled = !busy;
+            this.nudEnvironment.Enabled = !busy;
+            this.nudFacility.Enabled = !busy;
+            this.nudPolicy.Enabled = !busy;
+        }
+
         private void btnOpenGlobal_Click(object sender, EventArgs e)
         {
-            if (_context == null)
+            if (_context == null || _busy)
             {
                 return;
             }
@@ -109,6 +126,10 @@ namespace UrbanRenewal.Plugins.Motivation
 
         private void btnRun_Click(object sender, EventArgs e)
         {
+            if (_busy)
+            {
+                return;
+            }
             if (_context == null)
             {
                 MessageBox.Show(this, "运行上下文无效。", "动力性分析", MessageBoxButtons.OK, MessageBoxIcon.Warning);
@@ -141,49 +162,67 @@ namespace UrbanRenewal.Plugins.Motivation
             job.FacilityWeight = (double)this.nudFacility.Value / 100.0;
             job.PolicyWeight = (double)this.nudPolicy.Value / 100.0;
 
-            List<string> applyMsgs = new List<string>();
-            CityProfile profile = CityProfileStore.ResolveActive(_context.ActiveCityProfileId);
-            List<string> names = WorkspaceCatalog.ListFeatureClassNames(gdb);
-            if (profile != null)
-            {
-                string reqMsg;
-                if (!profile.ValidateRequired(names, out reqMsg))
-                {
-                    MessageBox.Show(this,
-                        "城市配置「" + profile.DisplayName + "」必选图层未齐备，已取消分析。\r\n\r\n" + reqMsg,
-                        "动力性分析", MessageBoxButtons.OK, MessageBoxIcon.Warning);
-                    return;
-                }
-                profile.ApplyToJob(job, names, applyMsgs);
-            }
+            string cityId = _context.ActiveCityProfileId;
+            string srSource = _context.SpatialRefSourcePath;
+            string srLayer = _context.SpatialRefLayerName;
 
-            List<string> usedLayers = SpatialReferenceAudit.CollectMotivationLayerNames(job.LayerHints, names);
-            SpatialReferenceAuditResult srAudit = usedLayers.Count > 0
-                ? SpatialReferenceAudit.Audit(gdb, usedLayers, _context.SpatialRefSourcePath, _context.SpatialRefLayerName)
-                : SpatialReferenceAudit.Audit(gdb, null, _context.SpatialRefSourcePath, _context.SpatialRefLayerName);
-            if (!srAudit.Success || !srAudit.IsUnified)
+            SetBusy(true);
+            this.lblStatus.Text = "准备中（后台）...";
+            _context.LogInfo("======== 开始动力性分析 ========");
+
+            StaBackgroundRunner.Run(
+                this,
+                delegate
+                {
+                    List<string> applyMsgs = new List<string>();
+                    CityProfile profile = CityProfileStore.ResolveActive(cityId);
+                    string profileDisplay = profile != null ? profile.DisplayName : null;
+                    List<string> names = WorkspaceCatalog.ListFeatureClassNames(gdb);
+                    if (profile != null)
+                    {
+                        string reqMsg;
+                        if (!profile.ValidateRequired(names, out reqMsg))
+                        {
+                            throw new InvalidOperationException(
+                                "城市配置「" + profile.DisplayName + "」必选图层未齐备。\r\n\r\n" + reqMsg);
+                        }
+                        profile.ApplyToJob(job, names, applyMsgs);
+                    }
+
+                    List<string> usedLayers = SpatialReferenceAudit.CollectMotivationLayerNames(job.LayerHints, names);
+                    SpatialReferenceAuditResult srAudit = usedLayers.Count > 0
+                        ? SpatialReferenceAudit.Audit(gdb, usedLayers, srSource, srLayer)
+                        : SpatialReferenceAudit.Audit(gdb, null, srSource, srLayer);
+                    if (!srAudit.Success || !srAudit.IsUnified)
+                    {
+                        throw new InvalidOperationException(srAudit.ToBlockMessage());
+                    }
+
+                    MotivationAnalysisEngine engine = new MotivationAnalysisEngine();
+                    MotivationResult result = engine.Run(job, OnProgress);
+                    return new MotivationWorkPack
+                    {
+                        Result = result,
+                        ApplyMsgs = applyMsgs,
+                        ProfileDisplay = profileDisplay,
+                        OutGdb = outGdb
+                    };
+                },
+                FinishOk,
+                FinishError);
+        }
+
+        private void FinishOk(MotivationWorkPack pack)
+        {
+            MotivationResult result = pack != null ? pack.Result : null;
+            if (result == null)
             {
-                string block = srAudit.ToBlockMessage();
-                this.lblStatus.Text = "空间参考不统一";
-                _context.LogError(block);
-                MessageBox.Show(this, block, "动力性分析", MessageBoxButtons.OK, MessageBoxIcon.Warning);
+                EndBusy();
                 return;
             }
-
-            this.btnRun.Enabled = false;
-            this.lblStatus.Text = "正在分析...";
-            if (_context != null)
-            {
-                _context.LogInfo("======== 开始动力性分析 ========");
-            }
-            Application.DoEvents();
-
+            List<string> applyMsgs = pack.ApplyMsgs ?? new List<string>();
             try
             {
-                MotivationAnalysisEngine engine = new MotivationAnalysisEngine();
-                MotivationResult result = engine.Run(job, OnProgress);
-
-                // 引擎可能规范化了输出路径，回写全局
                 if (result.Success && !string.IsNullOrEmpty(result.OutputGdbPath))
                 {
                     _context.OutputGdbPath = result.OutputGdbPath;
@@ -191,17 +230,16 @@ namespace UrbanRenewal.Plugins.Motivation
                 }
 
                 StringBuilder sb = new StringBuilder();
-                if (profile != null)
+                if (!string.IsNullOrEmpty(pack.ProfileDisplay))
                 {
-                    sb.AppendLine("城市配置: " + profile.DisplayName);
+                    sb.AppendLine("城市配置: " + pack.ProfileDisplay);
                 }
-                sb.AppendLine("输出 GDB: " + (result.OutputGdbPath ?? outGdb));
+                sb.AppendLine("输出 GDB: " + (result.OutputGdbPath ?? pack.OutGdb));
                 for (int i = 0; i < applyMsgs.Count; i++)
                 {
                     sb.AppendLine(applyMsgs[i]);
                     _context.LogInfo(applyMsgs[i]);
                 }
-                // 进度步骤已在 ShowProgress 中实时写入日志；此处补充未走进度回调的明细
                 for (int i = 0; i < result.Messages.Count; i++)
                 {
                     sb.AppendLine(result.Messages[i]);
@@ -234,29 +272,80 @@ namespace UrbanRenewal.Plugins.Motivation
                 MessageBox.Show(this, sb.ToString(), "动力性分析", MessageBoxButtons.OK,
                     result.Success ? MessageBoxIcon.Information : MessageBoxIcon.Warning);
             }
-            catch (Exception ex)
+            finally
+            {
+                EndBusy();
+            }
+        }
+
+        private void FinishError(Exception ex)
+        {
+            try
             {
                 this.lblStatus.Text = "异常";
-                _context.LogError(ex.Message);
-                MessageBox.Show(this, ex.Message, "动力性分析失败", MessageBoxButtons.OK, MessageBoxIcon.Error);
+                string msg = ex != null ? ex.Message : "未知错误";
+                _context.LogError(msg);
+                MessageBox.Show(this, msg, "动力性分析失败", MessageBoxButtons.OK, MessageBoxIcon.Error);
             }
             finally
             {
-                this.btnRun.Enabled = true;
-                _context.HideProgress();
-                RefreshGlobalInfo();
+                EndBusy();
             }
+        }
+
+        private void EndBusy()
+        {
+            SetBusy(false);
+            if (_context != null)
+            {
+                _context.HideProgress();
+            }
+            RefreshGlobalInfo();
         }
 
         private void OnProgress(string text, int percent)
         {
+            if (_context != null)
+            {
+                _context.LogInfo("[" + percent + "%] " + (text ?? string.Empty));
+            }
+            if (_progressGate != null)
+            {
+                _progressGate.Report(text, percent);
+            }
+        }
+
+        private void ApplyProgressUi(string text, int percent)
+        {
+            if (IsDisposed)
+            {
+                return;
+            }
             this.lblStatus.Text = text + "  " + percent + "%";
             if (_context != null)
             {
-                // ShowProgress 内会写入主窗体日志窗口
                 _context.ShowProgress(text, percent);
             }
-            Application.DoEvents();
+        }
+
+        private sealed class MotivationWorkPack
+        {
+            public MotivationResult Result;
+            public List<string> ApplyMsgs;
+            public string ProfileDisplay;
+            public string OutGdb;
+        }
+
+        protected override void OnFormClosing(FormClosingEventArgs e)
+        {
+            if (_busy)
+            {
+                MessageBox.Show(this, "动力性分析正在后台执行，请等待完成后再关闭。",
+                    "动力性分析", MessageBoxButtons.OK, MessageBoxIcon.Information);
+                e.Cancel = true;
+                return;
+            }
+            base.OnFormClosing(e);
         }
 
         private void btnClose_Click(object sender, EventArgs e)

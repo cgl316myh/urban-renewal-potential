@@ -60,6 +60,9 @@ namespace UrbanRenewal.Contracts
         /// <summary>打开全局设置（输出 GDB、城市配置），设置一次全模块共用。</summary>
         void ShowGlobalSettings();
 
+        /// <summary>宿主主窗体（用于非模态分析窗体 Owner，避免锁死主界面）。</summary>
+        object MainWindow { get; }
+
         bool OpenFileGdb(string gdbPath, out string message);
 
         string CheckDataIntegrity();

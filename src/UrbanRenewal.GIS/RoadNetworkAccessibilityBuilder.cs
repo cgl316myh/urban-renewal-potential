@@ -26,10 +26,53 @@ namespace UrbanRenewal.GIS
         /// <summary>与 DefaultBreaksMeters 对应的得分（近→远：5→1）。</summary>
         public static readonly int[] DefaultScores = new int[] { 5, 4, 3, 2, 1 };
 
+        private static Action<string> _onMessage;
+
         /// <summary>
         /// 生成路网可达性得分栅格。路网必须事先建好；本方法不会构建 Network Dataset。
         /// </summary>
+        /// <param name="onMessage">可选：每条明细即时回调（用于主窗体日志）。</param>
         public static string Build(
+            GeoprocessorHelper gp,
+            string sourceGdbPath,
+            string outputGdb,
+            string facilityFeatureClass,
+            string featureDatasetName,
+            string networkName,
+            string impedanceAttribute,
+            double cellSize,
+            IList<string> messages,
+            Action<string> onMessage)
+        {
+            _onMessage = onMessage;
+            try
+            {
+                return BuildCore(gp, sourceGdbPath, outputGdb, facilityFeatureClass,
+                    featureDatasetName, networkName, impedanceAttribute, cellSize, messages);
+            }
+            finally
+            {
+                _onMessage = null;
+            }
+        }
+
+        /// <summary>兼容旧调用（无即时回调）。</summary>
+        public static string Build(
+            GeoprocessorHelper gp,
+            string sourceGdbPath,
+            string outputGdb,
+            string facilityFeatureClass,
+            string featureDatasetName,
+            string networkName,
+            string impedanceAttribute,
+            double cellSize,
+            IList<string> messages)
+        {
+            return Build(gp, sourceGdbPath, outputGdb, facilityFeatureClass,
+                featureDatasetName, networkName, impedanceAttribute, cellSize, messages, null);
+        }
+
+        private static string BuildCore(
             GeoprocessorHelper gp,
             string sourceGdbPath,
             string outputGdb,
@@ -123,6 +166,7 @@ namespace UrbanRenewal.GIS
                 return null;
             }
 
+            AddMsg(messages, "正在求解路网服务区（打断 1/2/3/5/8 km，耗时可能较长）...");
             IGPMessages gpMessages = new GPMessagesClass();
             bool ok = false;
             try
@@ -753,9 +797,17 @@ namespace UrbanRenewal.GIS
 
         private static void AddMsg(IList<string> messages, string text)
         {
-            if (messages != null && !string.IsNullOrEmpty(text))
+            if (string.IsNullOrEmpty(text))
+            {
+                return;
+            }
+            if (messages != null)
             {
                 messages.Add(text);
+            }
+            if (_onMessage != null)
+            {
+                _onMessage(text);
             }
         }
     }

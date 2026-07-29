@@ -39,6 +39,10 @@ namespace UrbanRenewal.GIS
             string workFc = OutputGdbHelper.DatasetPath(outputGdb, ShortName(namePrefix) + "_si");
             OutputGdbHelper.TryDeleteDataset(gp, workFc);
 
+            if (messages != null)
+            {
+                messages.Add("SI：复制宗地并计算形状指数（斑块逐条，可能较久）...");
+            }
             CopyFeatures copy = new CopyFeatures();
             copy.in_features = inFeatureClass;
             copy.out_feature_class = workFc;
@@ -97,6 +101,7 @@ namespace UrbanRenewal.GIS
             {
                 messages.Add("SI 计算完成: 斑块数=" + count
                     + (count > 0 ? ("，平均 SI=" + (sumSi / count).ToString("0.000", CultureInfo.InvariantCulture)) : string.Empty));
+                messages.Add("SI：面转栅格...");
             }
 
             string raster = OutputGdbHelper.DatasetPath(outputGdb, ShortName(namePrefix));
@@ -129,6 +134,10 @@ namespace UrbanRenewal.GIS
             string sourceForMetrics = inFeatureClass;
             if (!string.IsNullOrEmpty(landcodeField))
             {
+                if (messages != null)
+                {
+                    messages.Add("PD：按 " + landcodeField + " Dissolve（SINGLE_PART）...");
+                }
                 string dissolved = OutputGdbHelper.DatasetPath(outputGdb, ShortName(namePrefix) + "_d");
                 OutputGdbHelper.TryDeleteDataset(gp, dissolved);
                 try
@@ -159,6 +168,10 @@ namespace UrbanRenewal.GIS
                 messages.Add("未检测到 landcode 字段，破碎度按全局斑块统计。");
             }
 
+            if (messages != null)
+            {
+                messages.Add("PD：复制斑块并计算破碎度得分...");
+            }
             CopyFeatures copy = new CopyFeatures();
             copy.in_features = sourceForMetrics;
             copy.out_feature_class = workFc;
@@ -283,6 +296,10 @@ namespace UrbanRenewal.GIS
 
             string raster = OutputGdbHelper.DatasetPath(outputGdb, ShortName(namePrefix));
             OutputGdbHelper.TryDeleteDataset(gp, raster);
+            if (messages != null)
+            {
+                messages.Add("PD：面转栅格...");
+            }
             FeatureToRasterScore(gp, workFc, raster, cellSize);
             return raster;
         }

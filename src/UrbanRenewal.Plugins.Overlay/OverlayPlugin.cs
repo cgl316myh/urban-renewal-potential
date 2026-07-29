@@ -10,6 +10,8 @@ namespace UrbanRenewal.Plugins.Overlay
     public sealed class OverlayPlugin : IModulePlugin
     {
         private IAppContext _context;
+        private OverlayRunForm _openOverlay;
+        private ParcelLinkRunForm _openParcel;
 
         public string Id
         {
@@ -58,20 +60,25 @@ namespace UrbanRenewal.Plugins.Overlay
             _context = null;
         }
 
+        private IWin32Window Owner
+        {
+            get { return _context != null ? _context.MainWindow as IWin32Window : null; }
+        }
+
         private void OnRunOverlay(object sender, EventArgs e)
         {
-            using (OverlayRunForm form = new OverlayRunForm(_context))
-            {
-                form.ShowDialog();
-            }
+            ModelessFormHelper.ShowOrActivate(
+                ref _openOverlay,
+                delegate { return new OverlayRunForm(_context); },
+                Owner);
         }
 
         private void OnRunParcelLink(object sender, EventArgs e)
         {
-            using (ParcelLinkRunForm form = new ParcelLinkRunForm(_context))
-            {
-                form.ShowDialog();
-            }
+            ModelessFormHelper.ShowOrActivate(
+                ref _openParcel,
+                delegate { return new ParcelLinkRunForm(_context); },
+                Owner);
         }
 
         private void OnShowParcelDetail(object sender, EventArgs e)

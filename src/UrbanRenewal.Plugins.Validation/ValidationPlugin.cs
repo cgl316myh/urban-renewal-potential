@@ -10,6 +10,7 @@ namespace UrbanRenewal.Plugins.Validation
     public sealed class ValidationPlugin : IModulePlugin
     {
         private IAppContext _context;
+        private ValidationRunForm _openForm;
 
         public string Id { get { return "Validation"; } }
         public string Name { get { return "潜力分析-验证校核"; } }
@@ -42,10 +43,11 @@ namespace UrbanRenewal.Plugins.Validation
 
         private void OnRun(object sender, EventArgs e)
         {
-            using (ValidationRunForm form = new ValidationRunForm(_context))
-            {
-                form.ShowDialog();
-            }
+            IWin32Window owner = _context != null ? _context.MainWindow as IWin32Window : null;
+            ModelessFormHelper.ShowOrActivate(
+                ref _openForm,
+                delegate { return new ValidationRunForm(_context); },
+                owner);
         }
     }
 }

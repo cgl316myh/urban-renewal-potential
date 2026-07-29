@@ -10,6 +10,7 @@ namespace UrbanRenewal.Plugins.Feasibility
     public sealed class FeasibilityPlugin : IModulePlugin
     {
         private IAppContext _context;
+        private FeasibilityRunForm _openForm;
 
         public string Id
         {
@@ -58,10 +59,11 @@ namespace UrbanRenewal.Plugins.Feasibility
 
         private void OnRun(object sender, EventArgs e)
         {
-            using (FeasibilityRunForm form = new FeasibilityRunForm(_context))
-            {
-                form.ShowDialog();
-            }
+            IWin32Window owner = _context != null ? _context.MainWindow as IWin32Window : null;
+            ModelessFormHelper.ShowOrActivate(
+                ref _openForm,
+                delegate { return new FeasibilityRunForm(_context); },
+                owner);
         }
     }
 }

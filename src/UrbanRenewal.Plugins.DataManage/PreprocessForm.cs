@@ -15,6 +15,8 @@ namespace UrbanRenewal.Plugins.DataManage
     public partial class PreprocessForm : Form
     {
         private readonly IAppContext _context;
+        private bool _busy;
+        private StaBackgroundRunner.ProgressUiGate _progressGate;
 
         public PreprocessForm()
         {
@@ -25,6 +27,7 @@ namespace UrbanRenewal.Plugins.DataManage
             : this()
         {
             _context = context;
+            _progressGate = new StaBackgroundRunner.ProgressUiGate(this, ApplyProgressUi);
             if (!IsDesignModeSafe() && _context != null)
             {
                 _context.ReloadGlobalSettings();
@@ -158,7 +161,7 @@ namespace UrbanRenewal.Plugins.DataManage
 
         private void btnRun_Click(object sender, EventArgs e)
         {
-            if (_context == null)
+            if (_busy || _context == null)
             {
                 return;
             }
@@ -229,14 +232,13 @@ namespace UrbanRenewal.Plugins.DataManage
             }
 
             this.btnRun.Enabled = false;
-            this.lblStatus.Text = "正在处理...";
+            this.lblStatus.Text = "正在处理（后台）...";
             if (_context != null)
             {
                 _context.LogInfo("======== 开始投影/裁剪预处理 ========");
             }
-            Application.DoEvents();
 
-            // 释放地图对输入库图层的占用，否则删除/替换可能失败
+            // 释放地图对输入库图层的占用，否则删除/替换可能失败（须在 UI 线程）
             try
             {
                 MapWorkspaceService.ClearLayersFromObject(_context.MapControl);
@@ -245,9 +247,27 @@ namespace UrbanRenewal.Plugins.DataManage
             {
             }
 
+            _busy = true;
+            this.btnClose.Enabled = false;
+            
+
+            StaBackgroundRunner.Run(
+                this,
+                delegate
+                {
+                    return FeaturePreprocessBuilder.Run(job, OnProgress);
+                },
+                delegate(FeaturePreprocessResult result)
+                {
+                    FinishPreprocess(result, inGdb, job.OutputGdbPath);
+                },
+                FinishPreprocessError);
+        }
+
+        private void FinishPreprocess(FeaturePreprocessResult result, string inGdb, string outGdb)
+        {
             try
             {
-                FeaturePreprocessResult result = FeaturePreprocessBuilder.Run(job, OnProgress);
                 StringBuilder sb = new StringBuilder();
                 for (int i = 0; i < result.Messages.Count; i++)
                 {
@@ -259,7 +279,7 @@ namespace UrbanRenewal.Plugins.DataManage
 
                 if (result.Success)
                 {
-                    _context.OutputGdbPath = job.OutputGdbPath;
+                    _context.OutputGdbPath = outGdb;
                     _context.SaveGlobalSettings();
 
                     string openMsg;
@@ -280,26 +300,73 @@ namespace UrbanRenewal.Plugins.DataManage
                     MessageBox.Show(this, sb.ToString(), "预处理", MessageBoxButtons.OK, MessageBoxIcon.Warning);
                 }
             }
-            catch (Exception ex)
+            finally
+            {
+                EndPreprocessBusy();
+            }
+        }
+
+        private void FinishPreprocessError(Exception ex)
+        {
+            try
             {
                 this.lblStatus.Text = "失败";
-                _context.LogError(ex.ToString());
-                MessageBox.Show(this, ex.Message, "预处理失败", MessageBoxButtons.OK, MessageBoxIcon.Error);
+                _context.LogError(ex != null ? ex.ToString() : "未知错误");
+                MessageBox.Show(this, ex != null ? ex.Message : "未知错误", "预处理失败", MessageBoxButtons.OK, MessageBoxIcon.Error);
             }
             finally
             {
-                this.btnRun.Enabled = true;
+                EndPreprocessBusy();
+            }
+        }
+
+        private void EndPreprocessBusy()
+        {
+            _busy = false;
+            this.btnRun.Enabled = true;
+            this.btnClose.Enabled = true;
+            
+            if (_context != null)
+            {
+                _context.HideProgress();
             }
         }
 
         private void OnProgress(string text, int percent)
         {
+            if (_context != null)
+            {
+                _context.LogInfo("[" + percent + "%] " + (text ?? string.Empty));
+            }
+            if (_progressGate != null)
+            {
+                _progressGate.Report(text, percent);
+            }
+        }
+
+        private void ApplyProgressUi(string text, int percent)
+        {
+            if (IsDisposed)
+            {
+                return;
+            }
             this.lblStatus.Text = percent + "% " + text;
             if (_context != null)
             {
                 _context.ShowProgress(text, percent);
             }
-            Application.DoEvents();
+        }
+
+        protected override void OnFormClosing(FormClosingEventArgs e)
+        {
+            if (_busy)
+            {
+                MessageBox.Show(this, "预处理正在后台执行，请等待完成后再关闭。",
+                    "预处理", MessageBoxButtons.OK, MessageBoxIcon.Information);
+                e.Cancel = true;
+                return;
+            }
+            base.OnFormClosing(e);
         }
 
         private void btnClose_Click(object sender, EventArgs e)

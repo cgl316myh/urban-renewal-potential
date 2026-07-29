@@ -36,6 +36,11 @@ namespace UrbanRenewal.Host
             get { return null; }
         }
 
+        public object MainWindow
+        {
+            get { return _form; }
+        }
+
         public string GdbPath
         {
             get { return _settings != null ? _settings.InputGdbPath : null; }
@@ -506,9 +511,9 @@ namespace UrbanRenewal.Host
 
         public void ShowProgress(string caption, int percent)
         {
+            // 仅更新状态栏；明细日志由各窗体 OnProgress → LogInfo，避免重复刷列表卡 UI
             string line = "[" + percent + "%] " + (caption ?? string.Empty);
             _form.SetStatus(line);
-            _form.AppendLog("INFO", line);
             _form.EnsureLogPanelVisible();
         }
 

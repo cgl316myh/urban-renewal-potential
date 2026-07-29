@@ -102,6 +102,7 @@ namespace UrbanRenewal.GIS
             }
 
             GeoprocessorHelper gp = new GeoprocessorHelper();
+            gp.BindToProgress(_progress, delegate { return _progressPercent; });
             string scratchGdb = OutputGdbHelper.EnsureExists(gp, job.OutputGdbPath);
             job.OutputGdbPath = scratchGdb;
             Note(result, "中间暂存 GDB: " + scratchGdb);

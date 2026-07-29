@@ -10,6 +10,7 @@ namespace UrbanRenewal.Plugins.DataManage
     public sealed class DataManagePlugin : IModulePlugin
     {
         private IAppContext _context;
+        private PreprocessForm _openPreprocess;
 
         public string Id
         {
@@ -182,10 +183,11 @@ namespace UrbanRenewal.Plugins.DataManage
                 return;
             }
 
-            using (PreprocessForm form = new PreprocessForm(_context))
-            {
-                form.ShowDialog();
-            }
+            IWin32Window owner = _context.MainWindow as IWin32Window;
+            ModelessFormHelper.ShowOrActivate(
+                ref _openPreprocess,
+                delegate { return new PreprocessForm(_context); },
+                owner);
         }
     }
 }

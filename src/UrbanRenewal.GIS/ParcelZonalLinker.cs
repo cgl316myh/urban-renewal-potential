@@ -43,6 +43,10 @@ namespace UrbanRenewal.GIS
             string outFc = OutputGdbHelper.DatasetPath(outputGdb, outName);
             OutputGdbHelper.TryDeleteDataset(gp, outFc);
 
+            if (messages != null)
+            {
+                messages.Add("复制宗地到输出库...");
+            }
             CopyFeatures copy = new CopyFeatures();
             copy.in_features = parcelFeatureClass;
             copy.out_feature_class = outFc;
@@ -52,6 +56,10 @@ namespace UrbanRenewal.GIS
                 messages.Add("已复制宗地到输出库: " + outName);
             }
 
+            if (messages != null)
+            {
+                messages.Add("准备分区字段与得分字段...");
+            }
             EnsureZoneId(gp, outFc, messages);
             EnsureDoubleField(gp, outFc, FieldPotentialScore);
             EnsureDoubleField(gp, outFc, FieldMotivScore);
@@ -68,14 +76,30 @@ namespace UrbanRenewal.GIS
                 stats = "MAXIMUM";
             }
 
+            if (messages != null)
+            {
+                messages.Add("区统计·综合潜力（" + stats + "，可能较久）...");
+            }
             Dictionary<int, double> potMap = RunZonalMeanMap(gp, outFc, potentialRaster, stats, outputGdb, "zpot", messages);
+            if (messages != null)
+            {
+                messages.Add("区统计·动力性（" + stats + "）...");
+            }
             Dictionary<int, double> motMap = string.IsNullOrEmpty(motivationRaster)
                 ? new Dictionary<int, double>()
                 : RunZonalMeanMap(gp, outFc, motivationRaster, stats, outputGdb, "zmot", messages);
+            if (messages != null)
+            {
+                messages.Add("区统计·可行度（" + stats + "）...");
+            }
             Dictionary<int, double> feaMap = string.IsNullOrEmpty(feasibilityRaster)
                 ? new Dictionary<int, double>()
                 : RunZonalMeanMap(gp, outFc, feasibilityRaster, stats, outputGdb, "zfea", messages);
 
+            if (messages != null)
+            {
+                messages.Add("写回宗地得分字段...");
+            }
             parcelCount = WriteScores(outFc, potMap, motMap, feaMap, messages);
             return outFc;
         }

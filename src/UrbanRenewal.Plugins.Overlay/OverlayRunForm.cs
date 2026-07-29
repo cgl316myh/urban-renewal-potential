@@ -9,9 +9,12 @@ using UrbanRenewal.Model;
 
 namespace UrbanRenewal.Plugins.Overlay
 {
+    /// <summary>叠置评价；分析在 STA 后台线程执行。</summary>
     public partial class OverlayRunForm : Form
     {
         private readonly IAppContext _context;
+        private bool _busy;
+        private StaBackgroundRunner.ProgressUiGate _progressGate;
 
         public OverlayRunForm()
         {
@@ -22,6 +25,7 @@ namespace UrbanRenewal.Plugins.Overlay
             : this()
         {
             _context = context;
+            _progressGate = new StaBackgroundRunner.ProgressUiGate(this, ApplyProgressUi);
             if (!IsDesignModeSafe())
             {
                 RefreshGlobalInfo();
@@ -74,9 +78,21 @@ namespace UrbanRenewal.Plugins.Overlay
             return (decimal)p;
         }
 
+        private void SetBusy(bool busy)
+        {
+            _busy = busy;
+            this.btnRun.Enabled = !busy;
+            this.btnClose.Enabled = !busy;
+            this.btnOpenGlobal.Enabled = !busy;
+            this.nudCellSize.Enabled = !busy;
+            this.nudMotivW.Enabled = !busy;
+            this.nudFeasibW.Enabled = !busy;
+            
+        }
+
         private void btnOpenGlobal_Click(object sender, EventArgs e)
         {
-            if (_context == null)
+            if (_context == null || _busy)
             {
                 return;
             }
@@ -86,6 +102,10 @@ namespace UrbanRenewal.Plugins.Overlay
 
         private void btnRun_Click(object sender, EventArgs e)
         {
+            if (_busy)
+            {
+                return;
+            }
             if (_context == null)
             {
                 MessageBox.Show(this, "运行上下文无效。", "叠置评价", MessageBoxButtons.OK, MessageBoxIcon.Warning);
@@ -107,30 +127,35 @@ namespace UrbanRenewal.Plugins.Overlay
             job.CellSize = (double)this.nudCellSize.Value;
             job.MotivationWeight = (double)this.nudMotivW.Value / 100.0;
             job.FeasibilityWeight = (double)this.nudFeasibW.Value / 100.0;
+            double motivW = job.MotivationWeight;
+            double feasibW = job.FeasibilityWeight;
 
-            CityProfile profile = CityProfileStore.ResolveActive(_context.ActiveCityProfileId);
-            if (profile != null && profile.CellSize >= 5 && profile.CellSize <= 500)
-            {
-                // 窗体像元优先；若用户未改可用配置
-            }
+            SetBusy(true);
+            this.lblStatus.Text = "正在叠置（后台）...";
+            _context.LogInfo("======== 开始叠置评价 ========");
 
-            this.btnRun.Enabled = false;
-            this.lblStatus.Text = "正在叠置...";
-            if (_context != null)
-            {
-                _context.LogInfo("======== 开始叠置评价 ========");
-            }
-            Application.DoEvents();
+            StaBackgroundRunner.Run(
+                this,
+                delegate
+                {
+                    OverlayAnalysisEngine engine = new OverlayAnalysisEngine();
+                    return engine.Run(job, OnProgress);
+                },
+                delegate(OverlayResult result)
+                {
+                    FinishOk(result, motivW, feasibW);
+                },
+                FinishError);
+        }
 
+        private void FinishOk(OverlayResult result, double motivW, double feasibW)
+        {
             try
             {
-                OverlayAnalysisEngine engine = new OverlayAnalysisEngine();
-                OverlayResult result = engine.Run(job, OnProgress);
-
                 if (result.Success)
                 {
-                    _context.MotivationWeight = job.MotivationWeight;
-                    _context.FeasibilityWeight = job.FeasibilityWeight;
+                    _context.MotivationWeight = motivW;
+                    _context.FeasibilityWeight = feasibW;
                     _context.OutputGdbPath = result.OutputGdbPath;
                     _context.SaveGlobalSettings();
                 }
@@ -164,28 +189,72 @@ namespace UrbanRenewal.Plugins.Overlay
                 MessageBox.Show(this, sb.ToString(), "叠置评价", MessageBoxButtons.OK,
                     result.Success ? MessageBoxIcon.Information : MessageBoxIcon.Warning);
             }
-            catch (Exception ex)
+            finally
+            {
+                EndBusy();
+            }
+        }
+
+        private void FinishError(Exception ex)
+        {
+            try
             {
                 this.lblStatus.Text = "异常";
-                _context.LogError(ex.Message);
-                MessageBox.Show(this, ex.Message, "叠置评价失败", MessageBoxButtons.OK, MessageBoxIcon.Error);
+                string msg = ex != null ? ex.Message : "未知错误";
+                _context.LogError(msg);
+                MessageBox.Show(this, msg, "叠置评价失败", MessageBoxButtons.OK, MessageBoxIcon.Error);
             }
             finally
             {
-                this.btnRun.Enabled = true;
-                _context.HideProgress();
-                RefreshGlobalInfo();
+                EndBusy();
             }
+        }
+
+        private void EndBusy()
+        {
+            SetBusy(false);
+            if (_context != null)
+            {
+                _context.HideProgress();
+            }
+            RefreshGlobalInfo();
         }
 
         private void OnProgress(string text, int percent)
         {
+            if (_context != null)
+            {
+                _context.LogInfo("[" + percent + "%] " + (text ?? string.Empty));
+            }
+            if (_progressGate != null)
+            {
+                _progressGate.Report(text, percent);
+            }
+        }
+
+        private void ApplyProgressUi(string text, int percent)
+        {
+            if (IsDisposed)
+            {
+                return;
+            }
             this.lblStatus.Text = text + "  " + percent + "%";
             if (_context != null)
             {
                 _context.ShowProgress(text, percent);
             }
-            Application.DoEvents();
+        }
+
+        protected override void OnFormClosing(FormClosingEventArgs e)
+        {
+            if (_busy)
+            {
+                MessageBox.Show(this, "叠置评价正在后台执行，请等待完成后再关闭。",
+                    "叠置评价", MessageBoxButtons.OK, MessageBoxIcon.Information);
+                e.Cancel = true;
+                return;
+            }
+            base.OnFormClosing(e);
         }
 
         private void btnClose_Click(object sender, EventArgs e)
