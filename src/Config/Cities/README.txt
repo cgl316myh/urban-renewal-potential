@@ -3,6 +3,7 @@
 - OutputGdbPath：所有分析结果（中间+结果）写入此 File GDB
 - ActiveCityProfileId：当前城市图层角色配置
 - InputGdbPath：最近打开的输入 GDB
+- CellSize：潜力分析统一像元大小（米，默认 30；动力性/可行度/叠置共用）
 
 在程序中：「数据管理 → 全局设置」修改并保存即可，动力性/可行度等模块自动使用。
 

@@ -1,7 +1,6 @@
 using System;
 using System.Collections.Generic;
 using System.ComponentModel;
-using System.Text;
 using System.Windows.Forms;
 using UrbanRenewal.Contracts;
 using UrbanRenewal.GIS;
@@ -10,12 +9,12 @@ using UrbanRenewal.Model;
 namespace UrbanRenewal.Plugins.DataManage
 {
     /// <summary>
-    /// 投影/裁剪预处理：纠正坐标系/范围后，用正确图层替换输入 GDB 中的原图层。
+    /// 投影/裁剪预处理：全局输入 → clip.gdb；不改原库、不改分析输出、不清空地图。
     /// </summary>
     public partial class PreprocessForm : Form
     {
         private readonly IAppContext _context;
-        private bool _busy;
+        private bool _busy;
         private StaBackgroundRunner.ProgressUiGate _progressGate;
 
         public PreprocessForm()
@@ -27,12 +26,14 @@ namespace UrbanRenewal.Plugins.DataManage
             : this()
         {
             _context = context;
-            _progressGate = new StaBackgroundRunner.ProgressUiGate(this, ApplyProgressUi);
+            _progressGate = new StaBackgroundRunner.ProgressUiGate(this, ApplyProgressUi);
             if (!IsDesignModeSafe() && _context != null)
             {
                 _context.ReloadGlobalSettings();
                 this.txtInputGdb.Text = _context.GdbPath ?? string.Empty;
-                this.txtOutGdb.Text = _context.OutputGdbPath ?? string.Empty;
+                // 裁切结果默认写入 clip.gdb，与全局「分析输出 GDB」分离
+                string clipDefault = OutputGdbHelper.SuggestClipGdbBeside(_context.GdbPath);
+                this.txtOutGdb.Text = clipDefault;
                 LoadLayers();
             }
         }
@@ -126,11 +127,6 @@ namespace UrbanRenewal.Plugins.DataManage
             {
                 this.cboClip.SelectedIndex = clipIndex;
             }
-
-            this.lblHint.Text = "处理后替换输入GDB原图层；暂存库仅作中间结果。"
-                + (audit.Success && !string.IsNullOrEmpty(audit.ReferenceSpatialReferenceName)
-                    ? " 基准: " + audit.ReferenceSpatialReferenceName
-                    : string.Empty);
         }
 
         private void btnSelectMismatch_Click(object sender, EventArgs e)
@@ -175,8 +171,18 @@ namespace UrbanRenewal.Plugins.DataManage
             }
             if (string.IsNullOrEmpty(outGdb) || !outGdb.EndsWith(".gdb", StringComparison.OrdinalIgnoreCase))
             {
-                MessageBox.Show(this, "请指定暂存 File GDB（用于中间结果；可在全局设置中配置输出库）。", "预处理",
+                MessageBox.Show(this, "请指定裁切结果 File GDB（建议 clip.gdb，与全局分析输出库分开）。", "预处理",
                     MessageBoxButtons.OK, MessageBoxIcon.Warning);
+                return;
+            }
+            if (string.Equals(
+                System.IO.Path.GetFullPath(inGdb).TrimEnd('\\', '/'),
+                System.IO.Path.GetFullPath(outGdb).TrimEnd('\\', '/'),
+                StringComparison.OrdinalIgnoreCase))
+            {
+                MessageBox.Show(this,
+                    "输出 GDB 不能与输入 GDB 相同。\r\n请另指定一个库保存处理结果，以保护原始数据。",
+                    "预处理", MessageBoxButtons.OK, MessageBoxIcon.Warning);
                 return;
             }
             if (!this.chkProject.Checked && !this.chkClip.Checked)
@@ -197,7 +203,7 @@ namespace UrbanRenewal.Plugins.DataManage
             job.OutputGdbPath = outGdb;
             job.DoProject = this.chkProject.Checked;
             job.DoClip = this.chkClip.Checked;
-            job.ReplaceInInputGdb = true;
+            job.ReplaceInInputGdb = false; // 非破坏：绝不覆盖原库
             job.ClipLayerName = this.cboClip.SelectedItem != null ? this.cboClip.SelectedItem.ToString() : null;
 
             for (int i = 0; i < this.lstLayers.Items.Count; i++)
@@ -219,37 +225,34 @@ namespace UrbanRenewal.Plugins.DataManage
             }
 
             DialogResult confirm = MessageBox.Show(this,
-                "将对选中的 " + job.LayerNames.Count + " 个图层做投影/裁剪，\r\n"
-                + "并用正确结果覆盖输入 GDB 中的同名原图层。\r\n\r\n"
-                + "输入 GDB:\r\n" + inGdb + "\r\n\r\n"
-                + "此操作会删除并替换原图层，建议事先备份。是否继续？",
-                "预处理 — 替换输入库图层",
+                "将对选中的 " + job.LayerNames.Count + " 个图层做投影/裁剪。\r\n\r\n"
+                + "流程：全局输入 GDB → 裁切结果库（不改原库）。\r\n"
+                + "裁切结果写入：\r\n" + outGdb + "\r\n\r\n"
+                + "完成后可将「全局输入」切换为该裁切库；\r\n"
+                + "全局「分析输出 GDB」保持不变，后续动力性分析不再与输入同库抢锁。\r\n\r\n"
+                + "是否继续？",
+                "预处理 — 非破坏模式",
                 MessageBoxButtons.YesNo,
-                MessageBoxIcon.Warning);
+                MessageBoxIcon.Question);
             if (confirm != DialogResult.Yes)
             {
                 return;
             }
 
+            // 记住当前分析输出库，完成后不得被 clip.gdb 覆盖
+            string analysisOutGdb = _context.OutputGdbPath;
+
             this.btnRun.Enabled = false;
-            this.lblStatus.Text = "正在处理（后台）...";
             if (_context != null)
             {
-                _context.LogInfo("======== 开始投影/裁剪预处理 ========");
-            }
-
-            // 释放地图对输入库图层的占用，否则删除/替换可能失败（须在 UI 线程）
-            try
-            {
-                MapWorkspaceService.ClearLayersFromObject(_context.MapControl);
-            }
-            catch
-            {
+                _context.LogInfo("======== 开始投影/裁剪预处理（全局输入 → clip，分析输出不变） ========");
+                _context.LogInfo("输入(源): " + inGdb);
+                _context.LogInfo("裁切结果: " + outGdb);
+                _context.LogInfo("分析输出(保持): " + (analysisOutGdb ?? "(未设置)"));
             }
 
             _busy = true;
             this.btnClose.Enabled = false;
-            
 
             StaBackgroundRunner.Run(
                 this,
@@ -259,19 +262,18 @@ namespace UrbanRenewal.Plugins.DataManage
                 },
                 delegate(FeaturePreprocessResult result)
                 {
-                    FinishPreprocess(result, inGdb, job.OutputGdbPath);
+                    FinishPreprocess(result, inGdb, outGdb, analysisOutGdb);
                 },
                 FinishPreprocessError);
         }
 
-        private void FinishPreprocess(FeaturePreprocessResult result, string inGdb, string outGdb)
+        private void FinishPreprocess(FeaturePreprocessResult result, string inGdb, string clipGdb, string analysisOutGdb)
         {
             try
             {
-                StringBuilder sb = new StringBuilder();
                 for (int i = 0; i < result.Messages.Count; i++)
                 {
-                    sb.AppendLine(result.Messages[i]);
+                    _context.LogInfo(result.Messages[i]);
                 }
                 _context.LogInfo(result.Success
                     ? "======== 预处理完成 ========"
@@ -279,25 +281,41 @@ namespace UrbanRenewal.Plugins.DataManage
 
                 if (result.Success)
                 {
-                    _context.OutputGdbPath = outGdb;
-                    _context.SaveGlobalSettings();
-
-                    string openMsg;
-                    if (_context.OpenFileGdb(inGdb, out openMsg))
+                    // 分析输出库始终保持用户原来的设置，绝不用 clip.gdb 覆盖
+                    if (!string.IsNullOrEmpty(analysisOutGdb)
+                        && analysisOutGdb.EndsWith(".gdb", StringComparison.OrdinalIgnoreCase)
+                        && !OutputGdbHelper.IsSameGdb(analysisOutGdb, clipGdb))
                     {
-                        _context.ZoomToFullExtent();
-                        sb.AppendLine();
-                        sb.AppendLine(openMsg);
+                        _context.OutputGdbPath = analysisOutGdb;
                     }
 
-                    this.lblStatus.Text = "完成（已替换 " + result.ReplacedLayers.Count + " 个）";
+                    // 裁切完成后：全局输入固定切到 clip.gdb，后续动力性/可行度/叠置/宗地/验证均从此库读数
+                    _context.GdbPath = clipGdb;
+                    _context.SaveGlobalSettings();
+                    this.txtInputGdb.Text = clipGdb;
+
+                    _context.LogInfo("已将全局输入切换为裁切库: " + clipGdb);
+                    _context.LogInfo("后续分析（动力性/可行度/叠置/宗地关联/验证）均从此库读取。");
+                    _context.LogInfo("分析输出仍为: " + (_context.OutputGdbPath ?? "(未设置)"));
+
+                    MessageBox.Show(this,
+                        "预处理完成。原输入 GDB 未改动。\r\n\r\n"
+                        + "裁切结果：\r\n" + clipGdb + "\r\n\r\n"
+                        + "已将全局「输入 GDB」切换为该裁切库。\r\n"
+                        + "动力性、可行度、叠置、宗地关联、验证等分析\r\n"
+                        + "均从此库读取数据；分析输出库保持不变。\r\n\r\n"
+                        + "地图图层未清空。",
+                        "预处理完成",
+                        MessageBoxButtons.OK,
+                        MessageBoxIcon.Information);
+
+                    // 不调用 OpenFileGdb，避免清空当前地图图层
                     LoadLayers();
-                    MessageBox.Show(this, sb.ToString(), "预处理完成", MessageBoxButtons.OK, MessageBoxIcon.Information);
                 }
                 else
                 {
-                    this.lblStatus.Text = "未成功";
-                    MessageBox.Show(this, sb.ToString(), "预处理", MessageBoxButtons.OK, MessageBoxIcon.Warning);
+                    MessageBox.Show(this, string.Join("\r\n", result.Messages.ToArray()),
+                        "预处理", MessageBoxButtons.OK, MessageBoxIcon.Warning);
                 }
             }
             finally
@@ -310,7 +328,6 @@ namespace UrbanRenewal.Plugins.DataManage
         {
             try
             {
-                this.lblStatus.Text = "失败";
                 _context.LogError(ex != null ? ex.ToString() : "未知错误");
                 MessageBox.Show(this, ex != null ? ex.Message : "未知错误", "预处理失败", MessageBoxButtons.OK, MessageBoxIcon.Error);
             }
@@ -325,7 +342,6 @@ namespace UrbanRenewal.Plugins.DataManage
             _busy = false;
             this.btnRun.Enabled = true;
             this.btnClose.Enabled = true;
-            
             if (_context != null)
             {
                 _context.HideProgress();
@@ -350,7 +366,6 @@ namespace UrbanRenewal.Plugins.DataManage
             {
                 return;
             }
-            this.lblStatus.Text = percent + "% " + text;
             if (_context != null)
             {
                 _context.ShowProgress(text, percent);

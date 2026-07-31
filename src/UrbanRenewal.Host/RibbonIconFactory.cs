@@ -26,6 +26,10 @@ namespace UrbanRenewal.Host
             {
                 return GetLarge("map_pan");
             }
+            if (caption.IndexOf("缩小", StringComparison.Ordinal) >= 0)
+            {
+                return GetLarge("map_zoomout");
+            }
             if (caption.IndexOf("放大", StringComparison.Ordinal) >= 0)
             {
                 return GetLarge("map_zoomin");
@@ -157,6 +161,15 @@ namespace UrbanRenewal.Host
                             g.DrawLine(p, 18, 18, 26, 26);
                             g.DrawLine(p, 10, 13, 16, 13);
                             g.DrawLine(p, 13, 10, 13, 16);
+                        }
+                        break;
+                    case "map_zoomout":
+                        DrawRoundRect(g, bounds, Color.FromArgb(100, 70, 140), Color.FromArgb(140, 100, 180));
+                        using (Pen p = new Pen(Color.White, 2f))
+                        {
+                            g.DrawEllipse(p, 6, 6, 14, 14);
+                            g.DrawLine(p, 18, 18, 26, 26);
+                            g.DrawLine(p, 10, 13, 16, 13);
                         }
                         break;
                     case "global_settings":

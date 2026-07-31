@@ -29,8 +29,6 @@ namespace UrbanRenewal.Plugins.DataManage
             this.btnSelectMismatch = new System.Windows.Forms.Button();
             this.btnSelectAll = new System.Windows.Forms.Button();
             this.btnClear = new System.Windows.Forms.Button();
-            this.lblHint = new System.Windows.Forms.Label();
-            this.lblStatus = new System.Windows.Forms.Label();
             this.btnRun = new System.Windows.Forms.Button();
             this.btnClose = new System.Windows.Forms.Button();
             this.SuspendLayout();
@@ -59,7 +57,7 @@ namespace UrbanRenewal.Plugins.DataManage
             this.lblOut.Name = "lblOut";
             this.lblOut.Size = new System.Drawing.Size(65, 12);
             this.lblOut.TabIndex = 2;
-            this.lblOut.Text = "暂存 GDB：";
+            this.lblOut.Text = "裁切库：";
             // 
             // txtOutGdb
             // 
@@ -149,39 +147,22 @@ namespace UrbanRenewal.Plugins.DataManage
             this.btnClear.UseVisualStyleBackColor = true;
             this.btnClear.Click += new System.EventHandler(this.btnClear_Click);
             // 
-            // lblHint
-            // 
-            this.lblHint.Location = new System.Drawing.Point(286, 100);
-            this.lblHint.Name = "lblHint";
-            this.lblHint.Size = new System.Drawing.Size(324, 28);
-            this.lblHint.TabIndex = 12;
-            this.lblHint.Text = "勾选不正确图层 → 投影/裁剪后覆盖写回输入GDB";
-            // 
-            // lblStatus
-            // 
-            this.lblStatus.AutoSize = true;
-            this.lblStatus.Location = new System.Drawing.Point(18, 432);
-            this.lblStatus.Name = "lblStatus";
-            this.lblStatus.Size = new System.Drawing.Size(29, 12);
-            this.lblStatus.TabIndex = 13;
-            this.lblStatus.Text = "就绪";
-            // 
             // btnRun
             // 
-            this.btnRun.Location = new System.Drawing.Point(454, 426);
+            this.btnRun.Location = new System.Drawing.Point(454, 432);
             this.btnRun.Name = "btnRun";
             this.btnRun.Size = new System.Drawing.Size(75, 28);
-            this.btnRun.TabIndex = 14;
+            this.btnRun.TabIndex = 12;
             this.btnRun.Text = "开始";
             this.btnRun.UseVisualStyleBackColor = true;
             this.btnRun.Click += new System.EventHandler(this.btnRun_Click);
             // 
             // btnClose
             // 
-            this.btnClose.Location = new System.Drawing.Point(535, 426);
+            this.btnClose.Location = new System.Drawing.Point(535, 432);
             this.btnClose.Name = "btnClose";
             this.btnClose.Size = new System.Drawing.Size(75, 28);
-            this.btnClose.TabIndex = 15;
+            this.btnClose.TabIndex = 13;
             this.btnClose.Text = "关闭";
             this.btnClose.UseVisualStyleBackColor = true;
             this.btnClose.Click += new System.EventHandler(this.btnClose_Click);
@@ -190,11 +171,9 @@ namespace UrbanRenewal.Plugins.DataManage
             // 
             this.AutoScaleDimensions = new System.Drawing.SizeF(6F, 12F);
             this.AutoScaleMode = System.Windows.Forms.AutoScaleMode.Font;
-            this.ClientSize = new System.Drawing.Size(628, 466);
+            this.ClientSize = new System.Drawing.Size(628, 474);
             this.Controls.Add(this.btnClose);
             this.Controls.Add(this.btnRun);
-            this.Controls.Add(this.lblStatus);
-            this.Controls.Add(this.lblHint);
             this.Controls.Add(this.btnClear);
             this.Controls.Add(this.btnSelectAll);
             this.Controls.Add(this.btnSelectMismatch);
@@ -231,8 +210,6 @@ namespace UrbanRenewal.Plugins.DataManage
         private System.Windows.Forms.Button btnSelectMismatch;
         private System.Windows.Forms.Button btnSelectAll;
         private System.Windows.Forms.Button btnClear;
-        private System.Windows.Forms.Label lblHint;
-        private System.Windows.Forms.Label lblStatus;
         private System.Windows.Forms.Button btnRun;
         private System.Windows.Forms.Button btnClose;
     }

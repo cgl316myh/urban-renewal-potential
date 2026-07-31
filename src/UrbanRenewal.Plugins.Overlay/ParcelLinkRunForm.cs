@@ -1,7 +1,6 @@
 using System;
 using System.Collections.Generic;
 using System.ComponentModel;
-using System.Text;
 using System.Windows.Forms;
 using UrbanRenewal.Analysis;
 using UrbanRenewal.Contracts;
@@ -14,7 +13,7 @@ namespace UrbanRenewal.Plugins.Overlay
     public partial class ParcelLinkRunForm : Form
     {
         private readonly IAppContext _context;
-        private bool _busy;
+        private bool _busy;
         private StaBackgroundRunner.ProgressUiGate _progressGate;
 
         public ParcelLinkRunForm()
@@ -26,7 +25,7 @@ namespace UrbanRenewal.Plugins.Overlay
             : this()
         {
             _context = context;
-            _progressGate = new StaBackgroundRunner.ProgressUiGate(this, ApplyProgressUi);
+            _progressGate = new StaBackgroundRunner.ProgressUiGate(this, ApplyProgressUi);
             if (!IsDesignModeSafe())
             {
                 RefreshGlobalInfo();
@@ -45,13 +44,6 @@ namespace UrbanRenewal.Plugins.Overlay
                 return;
             }
             _context.ReloadGlobalSettings();
-            string outGdb = _context.OutputGdbPath;
-            this.lblOutInfo.Text = "输出 GDB："
-                + (string.IsNullOrEmpty(outGdb) ? "（未设置）" : outGdb);
-            CityProfile profile = CityProfileStore.ResolveActive(_context.ActiveCityProfileId);
-            this.lblCityInfo.Text = profile != null
-                ? ("城市配置：" + profile.DisplayName + " [" + profile.Id + "]")
-                : "城市配置：（未设置）";
         }
 
         private void SetBusy(bool busy)
@@ -59,19 +51,7 @@ namespace UrbanRenewal.Plugins.Overlay
             _busy = busy;
             this.btnRun.Enabled = !busy;
             this.btnClose.Enabled = !busy;
-            this.btnOpenGlobal.Enabled = !busy;
             this.cboStat.Enabled = !busy;
-            
-        }
-
-        private void btnOpenGlobal_Click(object sender, EventArgs e)
-        {
-            if (_context == null || _busy)
-            {
-                return;
-            }
-            _context.ShowGlobalSettings();
-            RefreshGlobalInfo();
         }
 
         private void btnRun_Click(object sender, EventArgs e)
@@ -98,6 +78,15 @@ namespace UrbanRenewal.Plugins.Overlay
             {
                 MessageBox.Show(this, "请先指定输出 File GDB。", "宗地关联", MessageBoxButtons.OK, MessageBoxIcon.Warning);
                 return;
+            }
+
+            string sameNote;
+            outGdb = OutputGdbHelper.EnsureSeparateAnalysisOutput(gdb, outGdb, out sameNote);
+            if (!string.IsNullOrEmpty(sameNote))
+            {
+                _context.LogInfo(sameNote);
+                _context.OutputGdbPath = outGdb;
+                _context.SaveGlobalSettings();
             }
 
             ParcelLinkJob job = new ParcelLinkJob();
@@ -127,8 +116,9 @@ namespace UrbanRenewal.Plugins.Overlay
             }
 
             SetBusy(true);
-            this.lblStatus.Text = "正在关联（后台）...";
             _context.LogInfo("======== 开始宗地关联 ========");
+            _context.LogInfo("输入 GDB（分析数据）: " + gdb);
+            _context.LogInfo("输出 GDB: " + outGdb);
 
             StaBackgroundRunner.Run(
                 this,
@@ -154,15 +144,13 @@ namespace UrbanRenewal.Plugins.Overlay
                     _context.SaveGlobalSettings();
                 }
 
-                StringBuilder sb = new StringBuilder();
                 for (int i = 0; i < applyMsgs.Count; i++)
                 {
-                    sb.AppendLine(applyMsgs[i]);
                     _context.LogInfo(applyMsgs[i]);
                 }
                 for (int i = 0; i < result.Messages.Count; i++)
                 {
-                    sb.AppendLine(result.Messages[i]);
+                    _context.LogInfo(result.Messages[i]);
                 }
                 _context.LogInfo(result.Success
                     ? "======== 宗地关联完成 ========"
@@ -173,18 +161,20 @@ namespace UrbanRenewal.Plugins.Overlay
                     string msg;
                     if (_context.AddFeatureLayer(result.ParcelFeatureClassPath, "宗地潜力", out msg))
                     {
-                        sb.AppendLine(msg);
+                        _context.LogInfo(msg);
                         _context.ZoomToFullExtent();
                     }
                     else
                     {
-                        sb.AppendLine(msg);
+                        _context.LogInfo(msg);
                     }
                 }
 
-                this.lblStatus.Text = result.Success ? "完成" : "失败";
-                MessageBox.Show(this, sb.ToString(), "宗地关联", MessageBoxButtons.OK,
-                    result.Success ? MessageBoxIcon.Information : MessageBoxIcon.Warning);
+                if (!result.Success)
+                {
+                    MessageBox.Show(this, string.Join("\r\n", result.Messages.ToArray()),
+                        "宗地关联", MessageBoxButtons.OK, MessageBoxIcon.Warning);
+                }
             }
             finally
             {
@@ -196,7 +186,6 @@ namespace UrbanRenewal.Plugins.Overlay
         {
             try
             {
-                this.lblStatus.Text = "异常";
                 string msg = ex != null ? ex.Message : "未知错误";
                 _context.LogError(msg);
                 MessageBox.Show(this, msg, "宗地关联失败", MessageBoxButtons.OK, MessageBoxIcon.Error);
@@ -235,7 +224,6 @@ namespace UrbanRenewal.Plugins.Overlay
             {
                 return;
             }
-            this.lblStatus.Text = text + "  " + percent + "%";
             if (_context != null)
             {
                 _context.ShowProgress(text, percent);

@@ -1,7 +1,6 @@
 using System;
 using System.Collections.Generic;
 using System.ComponentModel;
-using System.Text;
 using System.Windows.Forms;
 using UrbanRenewal.Analysis;
 using UrbanRenewal.Contracts;
@@ -49,20 +48,11 @@ namespace UrbanRenewal.Plugins.Motivation
             }
             _context.ReloadGlobalSettings();
 
-            string outGdb = _context.OutputGdbPath;
-            this.lblOutInfo.Text = "输出 GDB："
-                + (string.IsNullOrEmpty(outGdb) ? "（未设置 — 请先在全局设置中指定）" : outGdb);
-
             CityProfile profile = CityProfileStore.ResolveActive(_context.ActiveCityProfileId);
             if (profile != null)
             {
                 CityProfileStore.NormalizeWeights(profile);
-                this.lblCityInfo.Text = "城市配置：" + profile.DisplayName + " [" + profile.Id + "]";
                 ApplyProfileToUi(profile);
-            }
-            else
-            {
-                this.lblCityInfo.Text = "城市配置：（未设置 — 可在全局设置中选择）";
             }
         }
 
@@ -71,11 +61,6 @@ namespace UrbanRenewal.Plugins.Motivation
             if (profile == null)
             {
                 return;
-            }
-            if (profile.CellSize >= (double)this.nudCellSize.Minimum
-                && profile.CellSize <= (double)this.nudCellSize.Maximum)
-            {
-                this.nudCellSize.Value = (decimal)profile.CellSize;
             }
             SetWeightPercent(this.nudTraffic, profile.TrafficWeight);
             SetWeightPercent(this.nudEnvironment, profile.EnvironmentWeight);
@@ -106,22 +91,10 @@ namespace UrbanRenewal.Plugins.Motivation
             _busy = busy;
             this.btnRun.Enabled = !busy;
             this.btnClose.Enabled = !busy;
-            this.btnOpenGlobal.Enabled = !busy;
-            this.nudCellSize.Enabled = !busy;
             this.nudTraffic.Enabled = !busy;
             this.nudEnvironment.Enabled = !busy;
             this.nudFacility.Enabled = !busy;
             this.nudPolicy.Enabled = !busy;
-        }
-
-        private void btnOpenGlobal_Click(object sender, EventArgs e)
-        {
-            if (_context == null || _busy)
-            {
-                return;
-            }
-            _context.ShowGlobalSettings();
-            RefreshGlobalInfo();
         }
 
         private void btnRun_Click(object sender, EventArgs e)
@@ -153,10 +126,20 @@ namespace UrbanRenewal.Plugins.Motivation
                 return;
             }
 
+            // 输入与输出同库时改用旁路工作库（正常：输入=clip.gdb，输出=分析库）
+            string sameNote;
+            outGdb = OutputGdbHelper.EnsureSeparateAnalysisOutput(gdb, outGdb, out sameNote);
+            if (!string.IsNullOrEmpty(sameNote))
+            {
+                _context.LogInfo(sameNote);
+                _context.OutputGdbPath = outGdb;
+                _context.SaveGlobalSettings();
+            }
+
             MotivationJob job = new MotivationJob();
             job.GdbPath = gdb;
             job.OutputGdbPath = outGdb;
-            job.CellSize = (double)this.nudCellSize.Value;
+            job.CellSize = _context.CellSize;
             job.TrafficWeight = (double)this.nudTraffic.Value / 100.0;
             job.EnvironmentWeight = (double)this.nudEnvironment.Value / 100.0;
             job.FacilityWeight = (double)this.nudFacility.Value / 100.0;
@@ -167,8 +150,12 @@ namespace UrbanRenewal.Plugins.Motivation
             string srLayer = _context.SpatialRefLayerName;
 
             SetBusy(true);
-            this.lblStatus.Text = "准备中（后台）...";
             _context.LogInfo("======== 开始动力性分析 ========");
+            _context.LogInfo("输入 GDB: " + gdb);
+            _context.LogInfo("输出 GDB: " + outGdb);
+            _context.LogInfo("像元大小: " + job.CellSize + " 米");
+
+            // 不再清空地图：靠「输入=clip.gdb、输出=分析库」分库避免 schema lock
 
             StaBackgroundRunner.Run(
                 this,
@@ -229,20 +216,18 @@ namespace UrbanRenewal.Plugins.Motivation
                     _context.SaveGlobalSettings();
                 }
 
-                StringBuilder sb = new StringBuilder();
                 if (!string.IsNullOrEmpty(pack.ProfileDisplay))
                 {
-                    sb.AppendLine("城市配置: " + pack.ProfileDisplay);
+                    _context.LogInfo("城市配置: " + pack.ProfileDisplay);
                 }
-                sb.AppendLine("输出 GDB: " + (result.OutputGdbPath ?? pack.OutGdb));
+                _context.LogInfo("输出 GDB: " + (result.OutputGdbPath ?? pack.OutGdb));
                 for (int i = 0; i < applyMsgs.Count; i++)
                 {
-                    sb.AppendLine(applyMsgs[i]);
                     _context.LogInfo(applyMsgs[i]);
                 }
                 for (int i = 0; i < result.Messages.Count; i++)
                 {
-                    sb.AppendLine(result.Messages[i]);
+                    _context.LogInfo(result.Messages[i]);
                 }
                 _context.LogInfo(result.Success
                     ? "======== 动力性分析完成 ========"
@@ -253,12 +238,12 @@ namespace UrbanRenewal.Plugins.Motivation
                     string msg = string.Empty;
                     if (_context.AddRasterLayer(result.MotivationRasterPath, "动力性得分", out msg))
                     {
-                        sb.AppendLine(msg);
+                        _context.LogInfo(msg);
                         _context.ZoomToFullExtent();
                     }
                     else
                     {
-                        sb.AppendLine(msg);
+                        _context.LogInfo(msg);
                     }
 
                     foreach (KeyValuePair<string, string> kv in result.CriterionRasters)
@@ -268,9 +253,11 @@ namespace UrbanRenewal.Plugins.Motivation
                     }
                 }
 
-                this.lblStatus.Text = result.Success ? "完成" : "失败";
-                MessageBox.Show(this, sb.ToString(), "动力性分析", MessageBoxButtons.OK,
-                    result.Success ? MessageBoxIcon.Information : MessageBoxIcon.Warning);
+                if (!result.Success)
+                {
+                    MessageBox.Show(this, string.Join("\r\n", result.Messages.ToArray()),
+                        "动力性分析", MessageBoxButtons.OK, MessageBoxIcon.Warning);
+                }
             }
             finally
             {
@@ -282,7 +269,6 @@ namespace UrbanRenewal.Plugins.Motivation
         {
             try
             {
-                this.lblStatus.Text = "异常";
                 string msg = ex != null ? ex.Message : "未知错误";
                 _context.LogError(msg);
                 MessageBox.Show(this, msg, "动力性分析失败", MessageBoxButtons.OK, MessageBoxIcon.Error);
@@ -321,7 +307,6 @@ namespace UrbanRenewal.Plugins.Motivation
             {
                 return;
             }
-            this.lblStatus.Text = text + "  " + percent + "%";
             if (_context != null)
             {
                 _context.ShowProgress(text, percent);

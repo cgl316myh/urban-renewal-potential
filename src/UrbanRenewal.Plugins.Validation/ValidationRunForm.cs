@@ -1,8 +1,6 @@
 using System;
-using System.Collections.Generic;
 using System.ComponentModel;
 using System.Diagnostics;
-using System.Text;
 using System.Windows.Forms;
 using UrbanRenewal.Analysis;
 using UrbanRenewal.Contracts;
@@ -15,7 +13,7 @@ namespace UrbanRenewal.Plugins.Validation
     public partial class ValidationRunForm : Form
     {
         private readonly IAppContext _context;
-        private bool _busy;
+        private bool _busy;
         private StaBackgroundRunner.ProgressUiGate _progressGate;
 
         public ValidationRunForm()
@@ -27,10 +25,10 @@ namespace UrbanRenewal.Plugins.Validation
             : this()
         {
             _context = context;
-            _progressGate = new StaBackgroundRunner.ProgressUiGate(this, ApplyProgressUi);
-            if (!IsDesignModeSafe())
+            _progressGate = new StaBackgroundRunner.ProgressUiGate(this, ApplyProgressUi);
+            if (!IsDesignModeSafe() && _context != null)
             {
-                RefreshInfo();
+                _context.ReloadGlobalSettings();
             }
         }
 
@@ -39,38 +37,14 @@ namespace UrbanRenewal.Plugins.Validation
             return LicenseManager.UsageMode == LicenseUsageMode.Designtime;
         }
 
-        private void RefreshInfo()
-        {
-            if (_context == null)
-            {
-                return;
-            }
-            _context.ReloadGlobalSettings();
-            this.lblOutInfo.Text = "输出 GDB：" + (_context.OutputGdbPath ?? "（未设置）");
-            CityProfile p = CityProfileStore.ResolveActive(_context.ActiveCityProfileId);
-            this.lblCityInfo.Text = p != null ? ("城市配置：" + p.DisplayName) : "城市配置：（未设置）";
-        }
-
         private void SetBusy(bool busy)
         {
             _busy = busy;
             this.btnRun.Enabled = !busy;
             this.btnClose.Enabled = !busy;
-            this.btnOpenGlobal.Enabled = !busy;
             this.nudHighThr.Enabled = !busy;
             this.nudPassRatio.Enabled = !busy;
             this.txtComment.Enabled = !busy;
-            
-        }
-
-        private void btnOpenGlobal_Click(object sender, EventArgs e)
-        {
-            if (_context == null || _busy)
-            {
-                return;
-            }
-            _context.ShowGlobalSettings();
-            RefreshInfo();
         }
 
         private void btnRun_Click(object sender, EventArgs e)
@@ -97,6 +71,15 @@ namespace UrbanRenewal.Plugins.Validation
                 return;
             }
 
+            string sameNote;
+            outGdb = OutputGdbHelper.EnsureSeparateAnalysisOutput(gdb, outGdb, out sameNote);
+            if (!string.IsNullOrEmpty(sameNote))
+            {
+                _context.LogInfo(sameNote);
+                _context.OutputGdbPath = outGdb;
+                _context.SaveGlobalSettings();
+            }
+
             ValidationJob job = new ValidationJob();
             job.GdbPath = gdb;
             job.OutputGdbPath = outGdb;
@@ -119,8 +102,9 @@ namespace UrbanRenewal.Plugins.Validation
             }
 
             SetBusy(true);
-            this.lblStatus.Text = "正在验证（后台）...";
             _context.LogInfo("======== 开始验证校核 ========");
+            _context.LogInfo("输入 GDB（分析数据）: " + gdb);
+            _context.LogInfo("输出 GDB: " + outGdb);
 
             StaBackgroundRunner.Run(
                 this,
@@ -137,10 +121,9 @@ namespace UrbanRenewal.Plugins.Validation
         {
             try
             {
-                StringBuilder sb = new StringBuilder();
                 for (int i = 0; i < result.Messages.Count; i++)
                 {
-                    sb.AppendLine(result.Messages[i]);
+                    _context.LogInfo(result.Messages[i]);
                 }
                 _context.LogInfo(result.Success
                     ? "======== 验证校核完成 ========"
@@ -149,7 +132,10 @@ namespace UrbanRenewal.Plugins.Validation
                 {
                     string msg;
                     _context.AddFeatureLayer(result.DiffFeatureClassPath, "验证差异(偏低已更新)", out msg);
-                    sb.AppendLine(msg);
+                    if (!string.IsNullOrEmpty(msg))
+                    {
+                        _context.LogInfo(msg);
+                    }
                 }
                 if (result.Success && !string.IsNullOrEmpty(result.ReportPath))
                 {
@@ -161,9 +147,11 @@ namespace UrbanRenewal.Plugins.Validation
                     {
                     }
                 }
-                this.lblStatus.Text = result.Success ? (result.Passed ? "通过" : "未通过") : "失败";
-                MessageBox.Show(this, sb.ToString(), "验证校核", MessageBoxButtons.OK,
-                    result.Success ? MessageBoxIcon.Information : MessageBoxIcon.Warning);
+                if (!result.Success)
+                {
+                    MessageBox.Show(this, string.Join("\r\n", result.Messages.ToArray()),
+                        "验证校核", MessageBoxButtons.OK, MessageBoxIcon.Warning);
+                }
             }
             finally
             {
@@ -175,7 +163,6 @@ namespace UrbanRenewal.Plugins.Validation
         {
             try
             {
-                this.lblStatus.Text = "异常";
                 string msg = ex != null ? ex.Message : "未知错误";
                 _context.LogError(msg);
                 MessageBox.Show(this, msg, "验证失败", MessageBoxButtons.OK, MessageBoxIcon.Error);
@@ -213,7 +200,6 @@ namespace UrbanRenewal.Plugins.Validation
             {
                 return;
             }
-            this.lblStatus.Text = text + " " + percent + "%";
             if (_context != null)
             {
                 _context.ShowProgress(text, percent);

@@ -5,10 +5,14 @@ using System.Text;
 using System.Windows.Forms;
 using DevExpress.XtraBars;
 using DevExpress.XtraBars.Ribbon;
+using ESRI.ArcGIS.Carto;
 using ESRI.ArcGIS.Controls;
+using ESRI.ArcGIS.Display;
+using ESRI.ArcGIS.Geometry;
 using UrbanRenewal.GIS;
 using UrbanRenewal.Model;
 using UrbanRenewal.PluginLoader;
+using IOPath = System.IO.Path;
 
 namespace UrbanRenewal.Host
 {
@@ -24,6 +28,7 @@ namespace UrbanRenewal.Host
 
         private AxMapControl _axMapControl;
         private AxTOCControl _axTocControl;
+        private ILayer _tocContextLayer;
 
         public MainRibbonForm()
         {
@@ -46,6 +51,7 @@ namespace UrbanRenewal.Host
             RibbonHostImpl.ApplyLargeImage(this.btnMapFit, this.btnMapFit.Caption);
             RibbonHostImpl.ApplyLargeImage(this.btnMapPan, this.btnMapPan.Caption);
             RibbonHostImpl.ApplyLargeImage(this.btnMapZoomIn, this.btnMapZoomIn.Caption);
+            RibbonHostImpl.ApplyLargeImage(this.btnMapZoomOut, this.btnMapZoomOut.Caption);
             RibbonHostImpl.ApplyLargeImage(this.btnToggleLog, this.btnToggleLog.Caption);
         }
 
@@ -80,6 +86,7 @@ namespace UrbanRenewal.Host
                 ((ISupportInitialize)_axTocControl).EndInit();
 
                 _axTocControl.SetBuddyControl(_axMapControl);
+                _axTocControl.OnMouseDown += axTocControl_OnMouseDown;
                 AppendLog("INFO", "ArcEngine 地图控件已嵌入。");
             }
             catch (Exception ex)
@@ -105,7 +112,7 @@ namespace UrbanRenewal.Host
                 delegate(string m) { AppendLog("INFO", m); },
                 delegate(string m) { AppendLog("ERROR", m); });
 
-            string pluginsDir = Path.Combine(Application.StartupPath, _settings.PluginsDirectoryName);
+            string pluginsDir = IOPath.Combine(Application.StartupPath, _settings.PluginsDirectoryName);
             AppendLog("INFO", "StartupPath=" + Application.StartupPath);
             _pluginManager.LoadAll(pluginsDir);
             _pluginManager.InitializeAll(_appContext, _ribbonHost);
@@ -242,6 +249,17 @@ namespace UrbanRenewal.Host
             AppendLog("INFO", "当前工具: 放大");
         }
 
+        private void btnMapZoomOut_ItemClick(object sender, ItemClickEventArgs e)
+        {
+            if (_axMapControl == null)
+            {
+                AppendLog("WARN", "地图控件未就绪。");
+                return;
+            }
+            MapWorkspaceService.ActivateZoomOut((IMapControl3)_axMapControl.Object);
+            AppendLog("INFO", "当前工具: 缩小");
+        }
+
         private void btnToggleLog_ItemClick(object sender, ItemClickEventArgs e)
         {
             ToggleLogPanel();
@@ -262,6 +280,271 @@ namespace UrbanRenewal.Host
             this.splitWorkspace.Panel2Collapsed = !visible;
             this.btnToggleLog.Caption = visible ? "隐藏日志" : "显示日志";
             RibbonHostImpl.ApplyLargeImage(this.btnToggleLog, this.btnToggleLog.Caption);
+        }
+
+        private void axTocControl_OnMouseDown(object sender, ITOCControlEvents_OnMouseDownEvent e)
+        {
+            if (_axTocControl == null || _axMapControl == null)
+            {
+                return;
+            }
+
+            esriTOCControlItem itemType = esriTOCControlItem.esriTOCControlItemNone;
+            IBasicMap map = null;
+            ILayer layer = null;
+            object other = null;
+            object data = null;
+
+            _axTocControl.HitTest(e.x, e.y, ref itemType, ref map, ref layer, ref other, ref data);
+
+            // 左键：点击矢量图例符号 → 自定义符号窗体
+            if (e.button == 1)
+            {
+                if (layer == null)
+                {
+                    return;
+                }
+
+                if (itemType == esriTOCControlItem.esriTOCControlItemLegendClass)
+                {
+                    IFeatureLayer featureLayer = layer as IFeatureLayer;
+                    if (featureLayer != null)
+                    {
+                        try
+                        {
+                            ILegendClass legendClass = ((ILegendGroup)other).get_Class((int)data);
+                            if (legendClass == null || legendClass.Symbol == null)
+                            {
+                                return;
+                            }
+
+                            using (SymbolForm form = new SymbolForm(legendClass.Symbol, layer.Name))
+                            {
+                                if (form.ShowDialog(this) == DialogResult.OK && form.ResultSymbol != null)
+                                {
+                                    legendClass.Symbol = form.ResultSymbol;
+
+                                    IGeoFeatureLayer geoFeatureLayer = layer as IGeoFeatureLayer;
+                                    if (geoFeatureLayer != null)
+                                    {
+                                        ISimpleRenderer simpleRenderer = geoFeatureLayer.Renderer as ISimpleRenderer;
+                                        if (simpleRenderer != null)
+                                        {
+                                            simpleRenderer.Symbol = form.ResultSymbol;
+                                        }
+                                    }
+
+                                    _axMapControl.ActiveView.PartialRefresh(esriViewDrawPhase.esriViewGeography, layer, null);
+                                    _axTocControl.Update();
+                                }
+                            }
+                        }
+                        catch (Exception ex)
+                        {
+                            MessageBox.Show(this, "修改图层符号失败：\r\n" + ex.Message, "错误",
+                                MessageBoxButtons.OK, MessageBoxIcon.Error);
+                        }
+                    }
+                    else
+                    {
+                        MessageBox.Show(this, "仅支持修改矢量图层符号。", "提示",
+                            MessageBoxButtons.OK, MessageBoxIcon.Information);
+                    }
+                }
+
+                return;
+            }
+
+            // 右键：图层菜单
+            if (e.button != 2)
+            {
+                return;
+            }
+
+            if (layer == null)
+            {
+                return;
+            }
+
+            _tocContextLayer = layer;
+
+            bool isFeature = layer is IFeatureLayer;
+            this.menuTocViewTable.Enabled = isFeature;
+
+            bool isPolygon = false;
+            bool isVectorGeom = false;
+            IFeatureLayer fl = layer as IFeatureLayer;
+            if (fl != null && fl.FeatureClass != null)
+            {
+                esriGeometryType st = fl.FeatureClass.ShapeType;
+                isPolygon = st == esriGeometryType.esriGeometryPolygon;
+                isVectorGeom =
+                    st == esriGeometryType.esriGeometryPoint ||
+                    st == esriGeometryType.esriGeometryMultipoint ||
+                    st == esriGeometryType.esriGeometryPolyline ||
+                    st == esriGeometryType.esriGeometryLine ||
+                    st == esriGeometryType.esriGeometryPolygon;
+            }
+            this.menuTocClassRender.Enabled = isPolygon;
+            this.menuTocUniqueRender.Enabled = isVectorGeom;
+
+            this.contextMenuToc.Show(_axTocControl, new System.Drawing.Point(e.x, e.y));
+        }
+
+        private void menuTocUniqueRender_Click(object sender, EventArgs e)
+        {
+            if (_tocContextLayer == null)
+            {
+                return;
+            }
+
+            IFeatureLayer featureLayer = _tocContextLayer as IFeatureLayer;
+            if (featureLayer == null || featureLayer.FeatureClass == null)
+            {
+                MessageBox.Show(this, "仅支持对点、线、面图层进行唯一值渲染。", "提示",
+                    MessageBoxButtons.OK, MessageBoxIcon.Information);
+                return;
+            }
+
+            esriGeometryType st = featureLayer.FeatureClass.ShapeType;
+            if (st != esriGeometryType.esriGeometryPoint &&
+                st != esriGeometryType.esriGeometryMultipoint &&
+                st != esriGeometryType.esriGeometryPolyline &&
+                st != esriGeometryType.esriGeometryLine &&
+                st != esriGeometryType.esriGeometryPolygon)
+            {
+                MessageBox.Show(this, "仅支持对点、线、面图层进行唯一值渲染。", "提示",
+                    MessageBoxButtons.OK, MessageBoxIcon.Information);
+                return;
+            }
+
+            try
+            {
+                using (UniqueValueRenderForm form = new UniqueValueRenderForm(featureLayer))
+                {
+                    if (form.ShowDialog(this) == DialogResult.OK && form.Applied)
+                    {
+                        _axMapControl.ActiveView.PartialRefresh(esriViewDrawPhase.esriViewGeography, _tocContextLayer, null);
+                        _axTocControl.Update();
+                        AppendLog("INFO", "已应用唯一值渲染: " + _tocContextLayer.Name);
+                    }
+                }
+            }
+            catch (Exception ex)
+            {
+                MessageBox.Show(this, "唯一值渲染失败：\r\n" + ex.Message, "错误",
+                    MessageBoxButtons.OK, MessageBoxIcon.Error);
+            }
+        }
+
+        private void menuTocClassRender_Click(object sender, EventArgs e)
+        {
+            if (_tocContextLayer == null)
+            {
+                return;
+            }
+
+            IFeatureLayer featureLayer = _tocContextLayer as IFeatureLayer;
+            if (featureLayer == null || featureLayer.FeatureClass == null ||
+                featureLayer.FeatureClass.ShapeType != esriGeometryType.esriGeometryPolygon)
+            {
+                MessageBox.Show(this, "仅支持对面图层进行分段渲染。", "提示",
+                    MessageBoxButtons.OK, MessageBoxIcon.Information);
+                return;
+            }
+
+            try
+            {
+                using (PolygonClassRenderForm form = new PolygonClassRenderForm(featureLayer))
+                {
+                    if (form.ShowDialog(this) == DialogResult.OK && form.Applied)
+                    {
+                        _axMapControl.ActiveView.PartialRefresh(esriViewDrawPhase.esriViewGeography, _tocContextLayer, null);
+                        _axTocControl.Update();
+                        AppendLog("INFO", "已应用分段渲染: " + _tocContextLayer.Name);
+                    }
+                }
+            }
+            catch (Exception ex)
+            {
+                MessageBox.Show(this, "面图层分段渲染失败：\r\n" + ex.Message, "错误",
+                    MessageBoxButtons.OK, MessageBoxIcon.Error);
+            }
+        }
+
+        private void menuTocViewTable_Click(object sender, EventArgs e)
+        {
+            if (_tocContextLayer == null)
+            {
+                return;
+            }
+
+            IFeatureLayer featureLayer = _tocContextLayer as IFeatureLayer;
+            if (featureLayer == null)
+            {
+                MessageBox.Show(this, "仅支持查看矢量图层属性表。", "提示",
+                    MessageBoxButtons.OK, MessageBoxIcon.Information);
+                return;
+            }
+
+            AttributeTableForm form = new AttributeTableForm();
+            form.LoadFeatureLayer(featureLayer);
+            form.Show(this);
+        }
+
+        private void menuTocZoomToLayer_Click(object sender, EventArgs e)
+        {
+            if (_tocContextLayer == null || _axMapControl == null)
+            {
+                return;
+            }
+
+            try
+            {
+                IEnvelope env = _tocContextLayer.AreaOfInterest;
+                if (env == null || env.IsEmpty)
+                {
+                    MessageBox.Show(this, "无法获取图层范围。", "提示",
+                        MessageBoxButtons.OK, MessageBoxIcon.Information);
+                    return;
+                }
+
+                _axMapControl.Extent = env;
+                _axMapControl.ActiveView.Refresh();
+                AppendLog("INFO", "已缩放到图层: " + _tocContextLayer.Name);
+            }
+            catch (Exception ex)
+            {
+                MessageBox.Show(this, "缩放到图层失败：\r\n" + ex.Message, "错误",
+                    MessageBoxButtons.OK, MessageBoxIcon.Error);
+            }
+        }
+
+        private void menuTocRemoveLayer_Click(object sender, EventArgs e)
+        {
+            if (_tocContextLayer == null || _axMapControl == null)
+            {
+                return;
+            }
+
+            string layerName = _tocContextLayer.Name;
+            DialogResult result = MessageBox.Show(
+                this,
+                "确定移除图层“" + layerName + "”吗？",
+                "移除图层",
+                MessageBoxButtons.YesNo,
+                MessageBoxIcon.Question);
+
+            if (result != DialogResult.Yes)
+            {
+                return;
+            }
+
+            _axMapControl.Map.DeleteLayer(_tocContextLayer);
+            _tocContextLayer = null;
+            _axMapControl.ActiveView.Refresh();
+            _axTocControl.Update();
+            AppendLog("INFO", "已移除图层: " + layerName);
         }
     }
 }

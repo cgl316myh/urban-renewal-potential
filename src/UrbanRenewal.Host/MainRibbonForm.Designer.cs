@@ -33,6 +33,7 @@ namespace UrbanRenewal.Host
             this.btnMapFit = new DevExpress.XtraBars.BarButtonItem();
             this.btnMapPan = new DevExpress.XtraBars.BarButtonItem();
             this.btnMapZoomIn = new DevExpress.XtraBars.BarButtonItem();
+            this.btnMapZoomOut = new DevExpress.XtraBars.BarButtonItem();
             this.btnToggleLog = new DevExpress.XtraBars.BarButtonItem();
             this.barStaticStatus = new DevExpress.XtraBars.BarStaticItem();
             this.ribbonPageMap = new DevExpress.XtraBars.Ribbon.RibbonPage();
@@ -47,8 +48,14 @@ namespace UrbanRenewal.Host
             this.panelLog = new System.Windows.Forms.Panel();
             this.listBoxLog = new System.Windows.Forms.ListBox();
             this.panelLogHeader = new System.Windows.Forms.Panel();
-            this.lblLogTitle = new System.Windows.Forms.Label();
             this.btnHideLog = new System.Windows.Forms.Button();
+            this.lblLogTitle = new System.Windows.Forms.Label();
+            this.contextMenuToc = new System.Windows.Forms.ContextMenuStrip(this.components);
+            this.menuTocViewTable = new System.Windows.Forms.ToolStripMenuItem();
+            this.menuTocClassRender = new System.Windows.Forms.ToolStripMenuItem();
+            this.menuTocUniqueRender = new System.Windows.Forms.ToolStripMenuItem();
+            this.menuTocZoomToLayer = new System.Windows.Forms.ToolStripMenuItem();
+            this.menuTocRemoveLayer = new System.Windows.Forms.ToolStripMenuItem();
             ((System.ComponentModel.ISupportInitialize)(this.ribbonControl)).BeginInit();
             ((System.ComponentModel.ISupportInitialize)(this.splitWorkspace)).BeginInit();
             this.splitWorkspace.Panel1.SuspendLayout();
@@ -62,6 +69,7 @@ namespace UrbanRenewal.Host
             this.panelMap.SuspendLayout();
             this.panelLog.SuspendLayout();
             this.panelLogHeader.SuspendLayout();
+            this.contextMenuToc.SuspendLayout();
             this.SuspendLayout();
             // 
             // ribbonControl
@@ -73,15 +81,16 @@ namespace UrbanRenewal.Host
             this.btnMapFit,
             this.btnMapPan,
             this.btnMapZoomIn,
+            this.btnMapZoomOut,
             this.btnToggleLog,
             this.barStaticStatus});
             this.ribbonControl.Location = new System.Drawing.Point(0, 0);
-            this.ribbonControl.MaxItemId = 6;
+            this.ribbonControl.MaxItemId = 7;
             this.ribbonControl.Name = "ribbonControl";
             this.ribbonControl.Pages.AddRange(new DevExpress.XtraBars.Ribbon.RibbonPage[] {
             this.ribbonPageMap});
             this.ribbonControl.RibbonStyle = DevExpress.XtraBars.Ribbon.RibbonControlStyle.Office2013;
-            this.ribbonControl.Size = new System.Drawing.Size(1280, 145);
+            this.ribbonControl.Size = new System.Drawing.Size(1493, 147);
             this.ribbonControl.StatusBar = this.ribbonStatusBar;
             // 
             // btnMapFit
@@ -104,6 +113,13 @@ namespace UrbanRenewal.Host
             this.btnMapZoomIn.Id = 3;
             this.btnMapZoomIn.Name = "btnMapZoomIn";
             this.btnMapZoomIn.ItemClick += new DevExpress.XtraBars.ItemClickEventHandler(this.btnMapZoomIn_ItemClick);
+            // 
+            // btnMapZoomOut
+            // 
+            this.btnMapZoomOut.Caption = "缩小";
+            this.btnMapZoomOut.Id = 6;
+            this.btnMapZoomOut.Name = "btnMapZoomOut";
+            this.btnMapZoomOut.ItemClick += new DevExpress.XtraBars.ItemClickEventHandler(this.btnMapZoomOut_ItemClick);
             // 
             // btnToggleLog
             // 
@@ -132,6 +148,7 @@ namespace UrbanRenewal.Host
             this.ribbonPageGroupView.ItemLinks.Add(this.btnMapFit);
             this.ribbonPageGroupView.ItemLinks.Add(this.btnMapPan);
             this.ribbonPageGroupView.ItemLinks.Add(this.btnMapZoomIn);
+            this.ribbonPageGroupView.ItemLinks.Add(this.btnMapZoomOut);
             this.ribbonPageGroupView.ItemLinks.Add(this.btnToggleLog);
             this.ribbonPageGroupView.Name = "ribbonPageGroupView";
             this.ribbonPageGroupView.Text = "视图";
@@ -139,18 +156,17 @@ namespace UrbanRenewal.Host
             // ribbonStatusBar
             // 
             this.ribbonStatusBar.ItemLinks.Add(this.barStaticStatus);
-            this.ribbonStatusBar.Location = new System.Drawing.Point(0, 770);
+            this.ribbonStatusBar.Location = new System.Drawing.Point(0, 902);
             this.ribbonStatusBar.Name = "ribbonStatusBar";
             this.ribbonStatusBar.Ribbon = this.ribbonControl;
-            this.ribbonStatusBar.Size = new System.Drawing.Size(1280, 30);
+            this.ribbonStatusBar.Size = new System.Drawing.Size(1493, 31);
             // 
-            // splitWorkspace — 左：TOC+地图；右：日志
+            // splitWorkspace
             // 
             this.splitWorkspace.Dock = System.Windows.Forms.DockStyle.Fill;
             this.splitWorkspace.FixedPanel = System.Windows.Forms.FixedPanel.Panel2;
-            this.splitWorkspace.Location = new System.Drawing.Point(0, 145);
+            this.splitWorkspace.Location = new System.Drawing.Point(0, 147);
             this.splitWorkspace.Name = "splitWorkspace";
-            this.splitWorkspace.Orientation = System.Windows.Forms.Orientation.Vertical;
             // 
             // splitWorkspace.Panel1
             // 
@@ -160,16 +176,16 @@ namespace UrbanRenewal.Host
             // 
             this.splitWorkspace.Panel2.Controls.Add(this.panelLog);
             this.splitWorkspace.Panel2MinSize = 120;
-            this.splitWorkspace.Size = new System.Drawing.Size(1280, 625);
-            this.splitWorkspace.SplitterDistance = 1000;
+            this.splitWorkspace.Size = new System.Drawing.Size(1493, 755);
+            this.splitWorkspace.SplitterDistance = 1212;
+            this.splitWorkspace.SplitterWidth = 5;
             this.splitWorkspace.TabIndex = 2;
             // 
-            // splitMap — 左 TOC，右地图
+            // splitMap
             // 
             this.splitMap.Dock = System.Windows.Forms.DockStyle.Fill;
             this.splitMap.Location = new System.Drawing.Point(0, 0);
             this.splitMap.Name = "splitMap";
-            this.splitMap.Orientation = System.Windows.Forms.Orientation.Vertical;
             // 
             // splitMap.Panel1
             // 
@@ -178,8 +194,9 @@ namespace UrbanRenewal.Host
             // splitMap.Panel2
             // 
             this.splitMap.Panel2.Controls.Add(this.panelMap);
-            this.splitMap.Size = new System.Drawing.Size(1000, 625);
-            this.splitMap.SplitterDistance = 240;
+            this.splitMap.Size = new System.Drawing.Size(1212, 755);
+            this.splitMap.SplitterDistance = 290;
+            this.splitMap.SplitterWidth = 5;
             this.splitMap.TabIndex = 0;
             // 
             // panelToc
@@ -189,15 +206,15 @@ namespace UrbanRenewal.Host
             this.panelToc.Dock = System.Windows.Forms.DockStyle.Fill;
             this.panelToc.Location = new System.Drawing.Point(0, 0);
             this.panelToc.Name = "panelToc";
-            this.panelToc.Size = new System.Drawing.Size(240, 625);
+            this.panelToc.Size = new System.Drawing.Size(290, 755);
             this.panelToc.TabIndex = 0;
             // 
             // labelTocTip
             // 
             this.labelTocTip.AutoSize = true;
-            this.labelTocTip.Location = new System.Drawing.Point(12, 12);
+            this.labelTocTip.Location = new System.Drawing.Point(14, 14);
             this.labelTocTip.Name = "labelTocTip";
-            this.labelTocTip.Size = new System.Drawing.Size(173, 12);
+            this.labelTocTip.Size = new System.Drawing.Size(156, 14);
             this.labelTocTip.TabIndex = 0;
             this.labelTocTip.Text = "图层目录（AxTOCControl）";
             // 
@@ -208,15 +225,15 @@ namespace UrbanRenewal.Host
             this.panelMap.Dock = System.Windows.Forms.DockStyle.Fill;
             this.panelMap.Location = new System.Drawing.Point(0, 0);
             this.panelMap.Name = "panelMap";
-            this.panelMap.Size = new System.Drawing.Size(756, 625);
+            this.panelMap.Size = new System.Drawing.Size(917, 755);
             this.panelMap.TabIndex = 0;
             // 
             // labelMapTip
             // 
             this.labelMapTip.AutoSize = true;
-            this.labelMapTip.Location = new System.Drawing.Point(12, 12);
+            this.labelMapTip.Location = new System.Drawing.Point(14, 14);
             this.labelMapTip.Name = "labelMapTip";
-            this.labelMapTip.Size = new System.Drawing.Size(173, 12);
+            this.labelMapTip.Size = new System.Drawing.Size(154, 14);
             this.labelMapTip.TabIndex = 0;
             this.labelMapTip.Text = "地图视图（AxMapControl）";
             // 
@@ -228,8 +245,20 @@ namespace UrbanRenewal.Host
             this.panelLog.Dock = System.Windows.Forms.DockStyle.Fill;
             this.panelLog.Location = new System.Drawing.Point(0, 0);
             this.panelLog.Name = "panelLog";
-            this.panelLog.Size = new System.Drawing.Size(276, 625);
+            this.panelLog.Size = new System.Drawing.Size(276, 755);
             this.panelLog.TabIndex = 0;
+            // 
+            // listBoxLog
+            // 
+            this.listBoxLog.BorderStyle = System.Windows.Forms.BorderStyle.None;
+            this.listBoxLog.Dock = System.Windows.Forms.DockStyle.Fill;
+            this.listBoxLog.FormattingEnabled = true;
+            this.listBoxLog.IntegralHeight = false;
+            this.listBoxLog.ItemHeight = 14;
+            this.listBoxLog.Location = new System.Drawing.Point(0, 33);
+            this.listBoxLog.Name = "listBoxLog";
+            this.listBoxLog.Size = new System.Drawing.Size(276, 722);
+            this.listBoxLog.TabIndex = 1;
             // 
             // panelLogHeader
             // 
@@ -238,46 +267,80 @@ namespace UrbanRenewal.Host
             this.panelLogHeader.Dock = System.Windows.Forms.DockStyle.Top;
             this.panelLogHeader.Location = new System.Drawing.Point(0, 0);
             this.panelLogHeader.Name = "panelLogHeader";
-            this.panelLogHeader.Size = new System.Drawing.Size(276, 28);
+            this.panelLogHeader.Size = new System.Drawing.Size(276, 33);
             this.panelLogHeader.TabIndex = 0;
-            // 
-            // lblLogTitle
-            // 
-            this.lblLogTitle.AutoSize = true;
-            this.lblLogTitle.Location = new System.Drawing.Point(8, 8);
-            this.lblLogTitle.Name = "lblLogTitle";
-            this.lblLogTitle.Size = new System.Drawing.Size(53, 12);
-            this.lblLogTitle.TabIndex = 0;
-            this.lblLogTitle.Text = "运行日志";
             // 
             // btnHideLog
             // 
             this.btnHideLog.Anchor = ((System.Windows.Forms.AnchorStyles)((System.Windows.Forms.AnchorStyles.Top | System.Windows.Forms.AnchorStyles.Right)));
-            this.btnHideLog.Location = new System.Drawing.Point(210, 3);
+            this.btnHideLog.Location = new System.Drawing.Point(199, 3);
             this.btnHideLog.Name = "btnHideLog";
-            this.btnHideLog.Size = new System.Drawing.Size(60, 22);
+            this.btnHideLog.Size = new System.Drawing.Size(70, 26);
             this.btnHideLog.TabIndex = 1;
             this.btnHideLog.Text = "隐藏";
             this.btnHideLog.UseVisualStyleBackColor = true;
             this.btnHideLog.Click += new System.EventHandler(this.btnHideLog_Click);
             // 
-            // listBoxLog
+            // lblLogTitle
             // 
-            this.listBoxLog.BorderStyle = System.Windows.Forms.BorderStyle.None;
-            this.listBoxLog.Dock = System.Windows.Forms.DockStyle.Fill;
-            this.listBoxLog.FormattingEnabled = true;
-            this.listBoxLog.IntegralHeight = false;
-            this.listBoxLog.ItemHeight = 12;
-            this.listBoxLog.Location = new System.Drawing.Point(0, 28);
-            this.listBoxLog.Name = "listBoxLog";
-            this.listBoxLog.Size = new System.Drawing.Size(276, 597);
-            this.listBoxLog.TabIndex = 1;
+            this.lblLogTitle.AutoSize = true;
+            this.lblLogTitle.Location = new System.Drawing.Point(9, 9);
+            this.lblLogTitle.Name = "lblLogTitle";
+            this.lblLogTitle.Size = new System.Drawing.Size(55, 14);
+            this.lblLogTitle.TabIndex = 0;
+            this.lblLogTitle.Text = "运行日志";
+            // 
+            // contextMenuToc
+            // 
+            this.contextMenuToc.Items.AddRange(new System.Windows.Forms.ToolStripItem[] {
+            this.menuTocViewTable,
+            this.menuTocClassRender,
+            this.menuTocUniqueRender,
+            this.menuTocZoomToLayer,
+            this.menuTocRemoveLayer});
+            this.contextMenuToc.Name = "contextMenuToc";
+            this.contextMenuToc.Size = new System.Drawing.Size(137, 114);
+            // 
+            // menuTocViewTable
+            // 
+            this.menuTocViewTable.Name = "menuTocViewTable";
+            this.menuTocViewTable.Size = new System.Drawing.Size(136, 22);
+            this.menuTocViewTable.Text = "查看属性表";
+            this.menuTocViewTable.Click += new System.EventHandler(this.menuTocViewTable_Click);
+            // 
+            // menuTocClassRender
+            // 
+            this.menuTocClassRender.Name = "menuTocClassRender";
+            this.menuTocClassRender.Size = new System.Drawing.Size(136, 22);
+            this.menuTocClassRender.Text = "分段渲染";
+            this.menuTocClassRender.Click += new System.EventHandler(this.menuTocClassRender_Click);
+            // 
+            // menuTocUniqueRender
+            // 
+            this.menuTocUniqueRender.Name = "menuTocUniqueRender";
+            this.menuTocUniqueRender.Size = new System.Drawing.Size(136, 22);
+            this.menuTocUniqueRender.Text = "唯一值渲染";
+            this.menuTocUniqueRender.Click += new System.EventHandler(this.menuTocUniqueRender_Click);
+            // 
+            // menuTocZoomToLayer
+            // 
+            this.menuTocZoomToLayer.Name = "menuTocZoomToLayer";
+            this.menuTocZoomToLayer.Size = new System.Drawing.Size(136, 22);
+            this.menuTocZoomToLayer.Text = "缩放到图层";
+            this.menuTocZoomToLayer.Click += new System.EventHandler(this.menuTocZoomToLayer_Click);
+            // 
+            // menuTocRemoveLayer
+            // 
+            this.menuTocRemoveLayer.Name = "menuTocRemoveLayer";
+            this.menuTocRemoveLayer.Size = new System.Drawing.Size(136, 22);
+            this.menuTocRemoveLayer.Text = "移除图层";
+            this.menuTocRemoveLayer.Click += new System.EventHandler(this.menuTocRemoveLayer_Click);
             // 
             // MainRibbonForm
             // 
-            this.AutoScaleDimensions = new System.Drawing.SizeF(6F, 12F);
+            this.AutoScaleDimensions = new System.Drawing.SizeF(7F, 14F);
             this.AutoScaleMode = System.Windows.Forms.AutoScaleMode.Font;
-            this.ClientSize = new System.Drawing.Size(1280, 800);
+            this.ClientSize = new System.Drawing.Size(1493, 933);
             this.Controls.Add(this.splitWorkspace);
             this.Controls.Add(this.ribbonStatusBar);
             this.Controls.Add(this.ribbonControl);
@@ -286,6 +349,7 @@ namespace UrbanRenewal.Host
             this.StartPosition = System.Windows.Forms.FormStartPosition.CenterScreen;
             this.StatusBar = this.ribbonStatusBar;
             this.Text = "城市更新潜力评价与验证系统";
+            this.WindowState = System.Windows.Forms.FormWindowState.Maximized;
             ((System.ComponentModel.ISupportInitialize)(this.ribbonControl)).EndInit();
             this.splitWorkspace.Panel1.ResumeLayout(false);
             this.splitWorkspace.Panel2.ResumeLayout(false);
@@ -299,11 +363,12 @@ namespace UrbanRenewal.Host
             this.panelToc.PerformLayout();
             this.panelMap.ResumeLayout(false);
             this.panelMap.PerformLayout();
+            this.panelLog.ResumeLayout(false);
             this.panelLogHeader.ResumeLayout(false);
             this.panelLogHeader.PerformLayout();
-            this.panelLog.ResumeLayout(false);
+            this.contextMenuToc.ResumeLayout(false);
             this.ResumeLayout(false);
-            this.PerformLayout();
+
         }
 
         #endregion
@@ -312,6 +377,7 @@ namespace UrbanRenewal.Host
         private DevExpress.XtraBars.BarButtonItem btnMapFit;
         private DevExpress.XtraBars.BarButtonItem btnMapPan;
         private DevExpress.XtraBars.BarButtonItem btnMapZoomIn;
+        private DevExpress.XtraBars.BarButtonItem btnMapZoomOut;
         private DevExpress.XtraBars.BarButtonItem btnToggleLog;
         private DevExpress.XtraBars.BarStaticItem barStaticStatus;
         private DevExpress.XtraBars.Ribbon.RibbonPage ribbonPageMap;
@@ -328,5 +394,11 @@ namespace UrbanRenewal.Host
         private System.Windows.Forms.Label lblLogTitle;
         private System.Windows.Forms.Button btnHideLog;
         private System.Windows.Forms.ListBox listBoxLog;
+        private System.Windows.Forms.ContextMenuStrip contextMenuToc;
+        private System.Windows.Forms.ToolStripMenuItem menuTocViewTable;
+        private System.Windows.Forms.ToolStripMenuItem menuTocClassRender;
+        private System.Windows.Forms.ToolStripMenuItem menuTocUniqueRender;
+        private System.Windows.Forms.ToolStripMenuItem menuTocZoomToLayer;
+        private System.Windows.Forms.ToolStripMenuItem menuTocRemoveLayer;
     }
 }

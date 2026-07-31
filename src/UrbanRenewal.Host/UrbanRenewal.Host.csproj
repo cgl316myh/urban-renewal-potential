@@ -1,4 +1,4 @@
-﻿<?xml version="1.0" encoding="utf-8"?>
+<?xml version="1.0" encoding="utf-8"?>
 <Project ToolsVersion="4.0" DefaultTargets="Build" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
   <Import Project="$(MSBuildExtensionsPath)\$(MSBuildToolsVersion)\Microsoft.Common.props" Condition="Exists('$(MSBuildExtensionsPath)\$(MSBuildToolsVersion)\Microsoft.Common.props')" />
   <Import Project="..\ArcGisPaths.props" Condition="Exists('..\ArcGisPaths.props')" />
@@ -60,8 +60,33 @@
       <Private>False</Private>
       <SpecificVersion>False</SpecificVersion>
     </Reference>
+    <Reference Include="ESRI.ArcGIS.Carto">
+      <HintPath>$(ArcGisDotNetDir)\ESRI.ArcGIS.Carto.dll</HintPath>
+      <Private>False</Private>
+      <SpecificVersion>False</SpecificVersion>
+    </Reference>
     <Reference Include="ESRI.ArcGIS.Controls">
       <HintPath>$(ArcGisDotNetDir)\ESRI.ArcGIS.Controls.dll</HintPath>
+      <Private>False</Private>
+      <SpecificVersion>False</SpecificVersion>
+    </Reference>
+    <Reference Include="ESRI.ArcGIS.DataSourcesFile">
+      <HintPath>$(ArcGisDotNetDir)\ESRI.ArcGIS.DataSourcesFile.dll</HintPath>
+      <Private>False</Private>
+      <SpecificVersion>False</SpecificVersion>
+    </Reference>
+    <Reference Include="ESRI.ArcGIS.Display">
+      <HintPath>$(ArcGisDotNetDir)\ESRI.ArcGIS.Display.dll</HintPath>
+      <Private>False</Private>
+      <SpecificVersion>False</SpecificVersion>
+    </Reference>
+    <Reference Include="ESRI.ArcGIS.Geodatabase">
+      <HintPath>$(ArcGisDotNetDir)\ESRI.ArcGIS.Geodatabase.dll</HintPath>
+      <Private>False</Private>
+      <SpecificVersion>False</SpecificVersion>
+    </Reference>
+    <Reference Include="ESRI.ArcGIS.Geometry">
+      <HintPath>$(ArcGisDotNetDir)\ESRI.ArcGIS.Geometry.dll</HintPath>
       <Private>False</Private>
       <SpecificVersion>False</SpecificVersion>
     </Reference>
@@ -77,6 +102,7 @@
     </Reference>
     <Reference Include="System" />
     <Reference Include="System.Core" />
+    <Reference Include="System.Data" />
     <Reference Include="System.Drawing" />
     <Reference Include="System.Windows.Forms" />
     <Reference Include="System.Xml" />
@@ -119,6 +145,31 @@
     <Compile Include="RibbonHostImpl.cs" />
     <Compile Include="RibbonIconFactory.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
+    <Compile Include="Toc\JenksClassifier.cs" />
+    <Compile Include="Toc\SymbolForm.cs">
+      <SubType>Form</SubType>
+    </Compile>
+    <Compile Include="Toc\SymbolForm.Designer.cs">
+      <DependentUpon>SymbolForm.cs</DependentUpon>
+    </Compile>
+    <Compile Include="Toc\AttributeTableForm.cs">
+      <SubType>Form</SubType>
+    </Compile>
+    <Compile Include="Toc\AttributeTableForm.Designer.cs">
+      <DependentUpon>AttributeTableForm.cs</DependentUpon>
+    </Compile>
+    <Compile Include="Toc\UniqueValueRenderForm.cs">
+      <SubType>Form</SubType>
+    </Compile>
+    <Compile Include="Toc\UniqueValueRenderForm.Designer.cs">
+      <DependentUpon>UniqueValueRenderForm.cs</DependentUpon>
+    </Compile>
+    <Compile Include="Toc\PolygonClassRenderForm.cs">
+      <SubType>Form</SubType>
+    </Compile>
+    <Compile Include="Toc\PolygonClassRenderForm.Designer.cs">
+      <DependentUpon>PolygonClassRenderForm.cs</DependentUpon>
+    </Compile>
   </ItemGroup>
   <ItemGroup>
     <None Include="plugins.config">
@@ -141,24 +192,38 @@
     <EmbeddedResource Include="MainRibbonForm.resx">
       <DependentUpon>MainRibbonForm.cs</DependentUpon>
     </EmbeddedResource>
+    <EmbeddedResource Include="Toc\SymbolForm.resx">
+      <DependentUpon>SymbolForm.cs</DependentUpon>
+    </EmbeddedResource>
+    <EmbeddedResource Include="Toc\AttributeTableForm.resx">
+      <DependentUpon>AttributeTableForm.cs</DependentUpon>
+    </EmbeddedResource>
+    <EmbeddedResource Include="Toc\UniqueValueRenderForm.resx">
+      <DependentUpon>UniqueValueRenderForm.cs</DependentUpon>
+    </EmbeddedResource>
+    <EmbeddedResource Include="Toc\PolygonClassRenderForm.resx">
+      <DependentUpon>PolygonClassRenderForm.cs</DependentUpon>
+    </EmbeddedResource>
     <EmbeddedResource Include="Properties\licenses.licx" />
   </ItemGroup>
   <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />
-  <PropertyGroup>
-    <PostBuildEvent>if not exist "$(TargetDir)Plugins" mkdir "$(TargetDir)Plugins"
-copy /Y "$(SolutionDir)UrbanRenewal.Plugins.DataManage\bin\$(ConfigurationName)\UrbanRenewal.Plugins.DataManage.dll" "$(TargetDir)Plugins\" 2>nul
-copy /Y "$(SolutionDir)UrbanRenewal.Plugins.Motivation\bin\$(ConfigurationName)\UrbanRenewal.Plugins.Motivation.dll" "$(TargetDir)Plugins\" 2>nul
-copy /Y "$(SolutionDir)UrbanRenewal.Plugins.Feasibility\bin\$(ConfigurationName)\UrbanRenewal.Plugins.Feasibility.dll" "$(TargetDir)Plugins\" 2>nul
-copy /Y "$(SolutionDir)UrbanRenewal.Plugins.Overlay\bin\$(ConfigurationName)\UrbanRenewal.Plugins.Overlay.dll" "$(TargetDir)Plugins\" 2>nul
-copy /Y "$(SolutionDir)UrbanRenewal.Plugins.Validation\bin\$(ConfigurationName)\UrbanRenewal.Plugins.Validation.dll" "$(TargetDir)Plugins\" 2>nul
-copy /Y "$(SolutionDir)UrbanRenewal.Plugins.Output\bin\$(ConfigurationName)\UrbanRenewal.Plugins.Output.dll" "$(TargetDir)Plugins\" 2>nul
-copy /Y "$(SolutionDir)UrbanRenewal.Plugins.Config\bin\$(ConfigurationName)\UrbanRenewal.Plugins.Config.dll" "$(TargetDir)Plugins\" 2>nul
-rem 清理 Plugins 中的依赖 DLL，避免与主程序双份加载
-del /Q "$(TargetDir)Plugins\UrbanRenewal.Contracts.dll" 2>nul
-del /Q "$(TargetDir)Plugins\UrbanRenewal.Model.dll" 2>nul
-del /Q "$(TargetDir)Plugins\UrbanRenewal.GIS.dll" 2>nul
-del /Q "$(TargetDir)Plugins\UrbanRenewal.Analysis.dll" 2>nul
-del /Q "$(TargetDir)Plugins\UrbanRenewal.PluginLoader.dll" 2>nul
-del /Q "$(TargetDir)Plugins\UrbanRenewal.Core.dll" 2>nul</PostBuildEvent>
-  </PropertyGroup>
+  <!-- 用 MSBuild 复制插件，避免 PostBuild 批命令在中文路径下退出 9009 -->
+  <Target Name="CopyPluginsToHost" AfterTargets="Build">
+    <PropertyGroup>
+      <_PluginsOut>$(TargetDir)Plugins</_PluginsOut>
+      <_SrcRoot>$(MSBuildProjectDirectory)\..</_SrcRoot>
+    </PropertyGroup>
+    <MakeDir Directories="$(_PluginsOut)" />
+    <ItemGroup>
+      <_PluginDll Include="$(_SrcRoot)\UrbanRenewal.Plugins.DataManage\bin\$(Configuration)\UrbanRenewal.Plugins.DataManage.dll" Condition="Exists('$(_SrcRoot)\UrbanRenewal.Plugins.DataManage\bin\$(Configuration)\UrbanRenewal.Plugins.DataManage.dll')" />
+      <_PluginDll Include="$(_SrcRoot)\UrbanRenewal.Plugins.Motivation\bin\$(Configuration)\UrbanRenewal.Plugins.Motivation.dll" Condition="Exists('$(_SrcRoot)\UrbanRenewal.Plugins.Motivation\bin\$(Configuration)\UrbanRenewal.Plugins.Motivation.dll')" />
+      <_PluginDll Include="$(_SrcRoot)\UrbanRenewal.Plugins.Feasibility\bin\$(Configuration)\UrbanRenewal.Plugins.Feasibility.dll" Condition="Exists('$(_SrcRoot)\UrbanRenewal.Plugins.Feasibility\bin\$(Configuration)\UrbanRenewal.Plugins.Feasibility.dll')" />
+      <_PluginDll Include="$(_SrcRoot)\UrbanRenewal.Plugins.Overlay\bin\$(Configuration)\UrbanRenewal.Plugins.Overlay.dll" Condition="Exists('$(_SrcRoot)\UrbanRenewal.Plugins.Overlay\bin\$(Configuration)\UrbanRenewal.Plugins.Overlay.dll')" />
+      <_PluginDll Include="$(_SrcRoot)\UrbanRenewal.Plugins.Validation\bin\$(Configuration)\UrbanRenewal.Plugins.Validation.dll" Condition="Exists('$(_SrcRoot)\UrbanRenewal.Plugins.Validation\bin\$(Configuration)\UrbanRenewal.Plugins.Validation.dll')" />
+      <_PluginDll Include="$(_SrcRoot)\UrbanRenewal.Plugins.Output\bin\$(Configuration)\UrbanRenewal.Plugins.Output.dll" Condition="Exists('$(_SrcRoot)\UrbanRenewal.Plugins.Output\bin\$(Configuration)\UrbanRenewal.Plugins.Output.dll')" />
+      <_PluginDll Include="$(_SrcRoot)\UrbanRenewal.Plugins.Config\bin\$(Configuration)\UrbanRenewal.Plugins.Config.dll" Condition="Exists('$(_SrcRoot)\UrbanRenewal.Plugins.Config\bin\$(Configuration)\UrbanRenewal.Plugins.Config.dll')" />
+    </ItemGroup>
+    <Copy SourceFiles="@(_PluginDll)" DestinationFolder="$(_PluginsOut)" SkipUnchangedFiles="true" ContinueOnError="true" />
+    <Delete Files="$(_PluginsOut)\UrbanRenewal.Contracts.dll;$(_PluginsOut)\UrbanRenewal.Model.dll;$(_PluginsOut)\UrbanRenewal.GIS.dll;$(_PluginsOut)\UrbanRenewal.Analysis.dll;$(_PluginsOut)\UrbanRenewal.PluginLoader.dll;$(_PluginsOut)\UrbanRenewal.Core.dll" ContinueOnError="true" />
+  </Target>
 </Project>

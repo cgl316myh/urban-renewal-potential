@@ -35,9 +35,12 @@ namespace UrbanRenewal.Plugins.DataManage
             this.btnSpatialRefGdb = new System.Windows.Forms.Button();
             this.btnSpatialRefClear = new System.Windows.Forms.Button();
             this.lblSpatialRefSrc = new System.Windows.Forms.Label();
+            this.lblCell = new System.Windows.Forms.Label();
+            this.nudCellSize = new System.Windows.Forms.NumericUpDown();
             this.lblHint = new System.Windows.Forms.Label();
             this.btnSave = new System.Windows.Forms.Button();
             this.btnCancel = new System.Windows.Forms.Button();
+            ((System.ComponentModel.ISupportInitialize)(this.nudCellSize)).BeginInit();
             this.SuspendLayout();
             // 
             // lblInput
@@ -207,20 +210,39 @@ namespace UrbanRenewal.Plugins.DataManage
             this.btnOpenConfig.UseVisualStyleBackColor = true;
             this.btnOpenConfig.Click += new System.EventHandler(this.btnOpenConfig_Click);
             // 
+            // lblCell
+            // 
+            this.lblCell.AutoSize = true;
+            this.lblCell.Location = new System.Drawing.Point(18, 180);
+            this.lblCell.Name = "lblCell";
+            this.lblCell.Size = new System.Drawing.Size(101, 12);
+            this.lblCell.TabIndex = 18;
+            this.lblCell.Text = "像元大小(米)：";
+            // 
+            // nudCellSize
+            // 
+            this.nudCellSize.Location = new System.Drawing.Point(125, 176);
+            this.nudCellSize.Maximum = new decimal(new int[] { 500, 0, 0, 0 });
+            this.nudCellSize.Minimum = new decimal(new int[] { 5, 0, 0, 0 });
+            this.nudCellSize.Name = "nudCellSize";
+            this.nudCellSize.Size = new System.Drawing.Size(80, 21);
+            this.nudCellSize.TabIndex = 19;
+            this.nudCellSize.Value = new decimal(new int[] { 30, 0, 0, 0 });
+            // 
             // lblHint
             // 
-            this.lblHint.Location = new System.Drawing.Point(18, 180);
+            this.lblHint.Location = new System.Drawing.Point(18, 210);
             this.lblHint.Name = "lblHint";
             this.lblHint.Size = new System.Drawing.Size(585, 48);
-            this.lblHint.TabIndex = 18;
-            this.lblHint.Text = "基准坐标系(SpatialRef)可从 Shapefile 或输入 GDB 某一图层读取，保存后作为完整性检查与分析的统一基准；未配置时仍自动推断。";
+            this.lblHint.TabIndex = 20;
+            this.lblHint.Text = "像元大小供动力性/可行度/叠置等潜力分析共用。基准坐标系可从 Shapefile 或输入 GDB 图层读取；未配置时仍自动推断。";
             // 
             // btnSave
             // 
-            this.btnSave.Location = new System.Drawing.Point(426, 240);
+            this.btnSave.Location = new System.Drawing.Point(426, 270);
             this.btnSave.Name = "btnSave";
             this.btnSave.Size = new System.Drawing.Size(90, 30);
-            this.btnSave.TabIndex = 19;
+            this.btnSave.TabIndex = 21;
             this.btnSave.Text = "保存";
             this.btnSave.UseVisualStyleBackColor = true;
             this.btnSave.Click += new System.EventHandler(this.btnSave_Click);
@@ -228,10 +250,10 @@ namespace UrbanRenewal.Plugins.DataManage
             // btnCancel
             // 
             this.btnCancel.DialogResult = System.Windows.Forms.DialogResult.Cancel;
-            this.btnCancel.Location = new System.Drawing.Point(522, 240);
+            this.btnCancel.Location = new System.Drawing.Point(522, 270);
             this.btnCancel.Name = "btnCancel";
             this.btnCancel.Size = new System.Drawing.Size(86, 30);
-            this.btnCancel.TabIndex = 20;
+            this.btnCancel.TabIndex = 22;
             this.btnCancel.Text = "取消";
             this.btnCancel.UseVisualStyleBackColor = true;
             // 
@@ -241,10 +263,12 @@ namespace UrbanRenewal.Plugins.DataManage
             this.AutoScaleDimensions = new System.Drawing.SizeF(6F, 12F);
             this.AutoScaleMode = System.Windows.Forms.AutoScaleMode.Font;
             this.CancelButton = this.btnCancel;
-            this.ClientSize = new System.Drawing.Size(624, 288);
+            this.ClientSize = new System.Drawing.Size(624, 318);
             this.Controls.Add(this.btnCancel);
             this.Controls.Add(this.btnSave);
             this.Controls.Add(this.lblHint);
+            this.Controls.Add(this.nudCellSize);
+            this.Controls.Add(this.lblCell);
             this.Controls.Add(this.btnOpenConfig);
             this.Controls.Add(this.btnDraft);
             this.Controls.Add(this.btnDetect);
@@ -269,6 +293,7 @@ namespace UrbanRenewal.Plugins.DataManage
             this.Name = "GlobalSettingsForm";
             this.StartPosition = System.Windows.Forms.FormStartPosition.CenterParent;
             this.Text = "全局设置";
+            ((System.ComponentModel.ISupportInitialize)(this.nudCellSize)).EndInit();
             this.ResumeLayout(false);
             this.PerformLayout();
         }
@@ -293,6 +318,8 @@ namespace UrbanRenewal.Plugins.DataManage
         private System.Windows.Forms.Button btnSpatialRefGdb;
         private System.Windows.Forms.Button btnSpatialRefClear;
         private System.Windows.Forms.Label lblSpatialRefSrc;
+        private System.Windows.Forms.Label lblCell;
+        private System.Windows.Forms.NumericUpDown nudCellSize;
         private System.Windows.Forms.Label lblHint;
         private System.Windows.Forms.Button btnSave;
         private System.Windows.Forms.Button btnCancel;

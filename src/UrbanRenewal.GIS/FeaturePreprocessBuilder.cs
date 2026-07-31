@@ -18,12 +18,13 @@ namespace UrbanRenewal.GIS
             LayerNames = new List<string>();
             DoProject = true;
             DoClip = true;
-            ReplaceInInputGdb = true;
+            // 默认不破坏原库：结果只写入输出 GDB
+            ReplaceInInputGdb = false;
         }
 
         public string InputGdbPath { get; set; }
 
-        /// <summary>中间暂存 File GDB（投影/裁剪中间结果）；最终可替换回输入库。</summary>
+        /// <summary>处理后输出 File GDB（投影/裁剪结果）；原输入库保持只读不变。</summary>
         public string OutputGdbPath { get; set; }
 
         public string ClipLayerName { get; set; }
@@ -32,7 +33,7 @@ namespace UrbanRenewal.GIS
         public bool DoClip { get; set; }
 
         /// <summary>
-        /// true：处理成功后用正确图层替换输入 GDB 中的同名原图层（后期运算仍读输入库）。
+        /// true：额外用结果覆盖输入 GDB 同名图层（破坏性，默认 false，界面不再启用）。
         /// </summary>
         public bool ReplaceInInputGdb { get; set; }
     }
@@ -53,13 +54,14 @@ namespace UrbanRenewal.GIS
         public List<string> Messages { get; private set; }
         public List<string> OutputLayers { get; private set; }
 
-        /// <summary>已成功替换进输入 GDB 的图层名。</summary>
+        /// <summary>若启用破坏性写回，已替换进输入 GDB 的图层名。</summary>
         public List<string> ReplacedLayers { get; private set; }
     }
 
     /// <summary>
     /// 批量投影到目标坐标系，并按建成区/分析范围裁剪。
-    /// 默认：中间结果写入输出 GDB，再替换输入 GDB 中的错误图层（同名），供后期运算继续使用输入库。
+    /// 非破坏：从输入 GDB 读取，结果写入输出 GDB；原图层不删不改。
+    /// 后续分析可将「输入 GDB」切换为该输出库。
     /// 不处理 Network Dataset（须在 ArcGIS 中预建）；跳过路网拓扑附属要素。
     /// </summary>
     public static class FeaturePreprocessBuilder
@@ -108,11 +110,11 @@ namespace UrbanRenewal.GIS
             Note(result, "中间暂存 GDB: " + scratchGdb);
             if (job.ReplaceInInputGdb)
             {
-                Note(result, "模式: 处理成功后替换输入 GDB 中的原图层（后期运算仍读输入库）。");
+                Note(result, "模式: 破坏性写回（将覆盖输入 GDB 原图层）— 不推荐。");
             }
             else
             {
-                Note(result, "模式: 仅写入暂存 GDB，不替换输入库。");
+                Note(result, "模式: 非破坏 — 原输入 GDB 只读，结果写入输出 GDB。");
             }
 
             Report(progress, result, "准备裁剪范围...", 5);
@@ -172,11 +174,15 @@ namespace UrbanRenewal.GIS
             int total = job.LayerNames.Count;
             int done = 0;
             int okCount = 0;
+            // 先全部写入暂存，再统一写回输入库，避免 Clip 读输入库时的 schema 锁导致 CopyFeatures 失败
+            List<string> pendingReplaceNames = new List<string>();
+            List<string> pendingReplacePaths = new List<string>();
+
             for (int i = 0; i < job.LayerNames.Count; i++)
             {
                 string layerName = job.LayerNames[i];
                 done++;
-                int pct = 10 + (int)(80.0 * done / Math.Max(1, total));
+                int pct = 10 + (int)(70.0 * done / Math.Max(1, total));
                 Report(progress, result, "处理 " + layerName + "...", pct);
 
                 if (IsNetworkArtifact(layerName))
@@ -197,18 +203,34 @@ namespace UrbanRenewal.GIS
 
                     result.OutputLayers.Add(outPath);
                     okCount++;
-
                     if (job.ReplaceInInputGdb)
                     {
-                        if (TryReplaceInInputGdb(gp, job.InputGdbPath, layerName, outPath, result))
-                        {
-                            result.ReplacedLayers.Add(layerName);
-                        }
+                        pendingReplaceNames.Add(layerName);
+                        pendingReplacePaths.Add(outPath);
                     }
                 }
                 catch (Exception ex)
                 {
                     Note(result, "[失败] " + layerName + ": " + ex.Message);
+                }
+            }
+
+            // 释放裁剪阶段对输入库的占用后再替换
+            clipPrepared = null;
+            FileGdbLockHelper.ForceComRelease();
+
+            if (job.ReplaceInInputGdb && pendingReplaceNames.Count > 0)
+            {
+                Report(progress, result, "写回输入 GDB（释放占用后）...", 85);
+                Note(result, "开始写回输入库（" + pendingReplaceNames.Count + " 个），已尝试释放 File GDB 锁…");
+                for (int i = 0; i < pendingReplaceNames.Count; i++)
+                {
+                    int pct = 85 + (int)(12.0 * (i + 1) / pendingReplaceNames.Count);
+                    Report(progress, result, "替换 " + pendingReplaceNames[i] + "...", pct);
+                    if (TryReplaceInInputGdb(gp, job.InputGdbPath, pendingReplaceNames[i], pendingReplacePaths[i], result))
+                    {
+                        result.ReplacedLayers.Add(pendingReplaceNames[i]);
+                    }
                 }
             }
 
@@ -249,45 +271,117 @@ namespace UrbanRenewal.GIS
             string rootPath = WorkspaceCatalog.ToFeatureClassPath(inputGdb, leafName);
 
             // 1) 优先覆盖原路径（后期数据配置中的图层名可保持不变）
-            try
+            string errInPlace;
+            if (TryCopyReplace(gp, inputGdb, layerName, leafName, correctedPath, originalPath, out errInPlace))
             {
-                OutputGdbHelper.TryDeleteDataset(gp, originalPath);
-                CopyTo(gp, correctedPath, originalPath, "Replace-" + leafName);
                 Note(result, "[替换] 输入GDB ← " + layerName
                     + "（错误图层已覆盖；后期运算仍读输入库）");
                 return true;
             }
-            catch (Exception exInPlace)
+
+            // 2) 要素数据集内无法混入新坐标系时，改写到 GDB 根目录
+            if (slash >= 0
+                && !string.Equals(originalPath, rootPath, StringComparison.OrdinalIgnoreCase))
             {
-                // 2) 要素数据集内无法混入新坐标系时，改写到 GDB 根目录
-                if (slash >= 0
-                    && !string.Equals(originalPath, rootPath, StringComparison.OrdinalIgnoreCase))
+                string errRoot;
+                // 尽量先删掉原路径再写根目录
+                TryDeleteTarget(gp, inputGdb, layerName, originalPath);
+                if (TryCopyReplace(gp, inputGdb, leafName, leafName, correctedPath, rootPath, out errRoot))
                 {
-                    try
-                    {
-                        OutputGdbHelper.TryDeleteDataset(gp, originalPath);
-                        OutputGdbHelper.TryDeleteDataset(gp, rootPath);
-                        CopyTo(gp, correctedPath, rootPath, "ReplaceRoot-" + leafName);
-                        Note(result, "[替换] 输入GDB ← " + leafName
-                            + "（原路径 " + layerName + " 因坐标系变更无法写回要素数据集，已放到 GDB 根目录；"
-                            + "请到「数据配置」确认该角色仍指向此图层）");
-                        return true;
-                    }
-                    catch (Exception exRoot)
-                    {
-                        Note(result, "[替换失败] " + layerName + ": " + exRoot.Message
-                            + "（先尝试原路径失败: " + exInPlace.Message + "）。"
-                            + "正确结果仍在暂存库: " + correctedPath
-                            + "。若图层被占用，请关闭地图图层后重试。");
-                        return false;
-                    }
+                    Note(result, "[替换] 输入GDB ← " + leafName
+                        + "（原路径 " + layerName + " 因坐标系变更无法写回要素数据集，已放到 GDB 根目录；"
+                        + "请到「数据配置」确认该角色仍指向此图层）");
+                    return true;
                 }
 
-                Note(result, "[替换失败] " + layerName + ": " + exInPlace.Message
-                    + "。正确结果仍保留在暂存库: " + correctedPath
-                    + "（若图层正被地图占用，请关闭后重试）");
+                Note(result, "[替换失败] " + layerName + ": " + errRoot
+                    + "（先尝试原路径失败: " + errInPlace + "）。"
+                    + "正确结果仍在暂存库: " + correctedPath
+                    + "。请确认地图已清空、无其他程序打开该 GDB 后重试。");
                 return false;
             }
+
+            Note(result, "[替换失败] " + layerName + ": " + errInPlace
+                + "。正确结果仍保留在暂存库: " + correctedPath
+                + "（请确认地图已清空、无其他程序打开该 GDB 后重试）");
+            return false;
+        }
+
+        /// <summary>删除目标 → CopyFeatures；失败则 FeatureClassToFeatureClass；再失败则 staging 名中转。</summary>
+        private static bool TryCopyReplace(
+            GeoprocessorHelper gp,
+            string inputGdb,
+            string openName,
+            string leafName,
+            string correctedPath,
+            string destPath,
+            out string error)
+        {
+            error = null;
+            FileGdbLockHelper.ForceComRelease();
+
+            TryDeleteTarget(gp, inputGdb, openName, destPath);
+
+            try
+            {
+                CopyFeatures copy = new CopyFeatures();
+                copy.in_features = correctedPath;
+                copy.out_feature_class = destPath;
+                gp.Execute(copy, "Replace-" + leafName);
+                return true;
+            }
+            catch (Exception exCopy)
+            {
+                error = exCopy.Message;
+            }
+
+            // 回退：先写到临时名，再删目标、再拷到正式名（避开「删不掉却覆盖失败」）
+            string stagingName = "r_" + StableHash(leafName).ToString("0000");
+            string stagingPath = OutputGdbHelper.DatasetPath(inputGdb, stagingName);
+            try
+            {
+                OutputGdbHelper.TryDeleteDataset(gp, stagingPath);
+                CopyFeatures copyStg = new CopyFeatures();
+                copyStg.in_features = correctedPath;
+                copyStg.out_feature_class = stagingPath;
+                gp.Execute(copyStg, "ReplaceStg-" + leafName);
+
+                TryDeleteTarget(gp, inputGdb, openName, destPath);
+                FileGdbLockHelper.ForceComRelease();
+
+                CopyFeatures copyFinal = new CopyFeatures();
+                copyFinal.in_features = stagingPath;
+                copyFinal.out_feature_class = destPath;
+                gp.Execute(copyFinal, "ReplaceFinal-" + leafName);
+                try { OutputGdbHelper.TryDeleteDataset(gp, stagingPath); }
+                catch { }
+                return true;
+            }
+            catch (Exception exStg)
+            {
+                error = (error ?? string.Empty) + "；中转写回失败: " + exStg.Message;
+                try { OutputGdbHelper.TryDeleteDataset(gp, stagingPath); }
+                catch { }
+                return false;
+            }
+        }
+
+        private static void TryDeleteTarget(
+            GeoprocessorHelper gp,
+            string inputGdb,
+            string openName,
+            string datasetPath)
+        {
+            string lockMsg;
+            if (!FileGdbLockHelper.TryDeleteFeatureClassExclusive(inputGdb, openName, out lockMsg))
+            {
+                OutputGdbHelper.TryDeleteDataset(gp, datasetPath);
+            }
+            else if (FileGdbLockHelper.FeatureClassExists(inputGdb, openName))
+            {
+                OutputGdbHelper.TryDeleteDataset(gp, datasetPath);
+            }
+            FileGdbLockHelper.ForceComRelease();
         }
 
         /// <summary>

@@ -73,6 +73,8 @@ namespace UrbanRenewal.Contracts
 
         void ActivateZoomInTool();
 
+        void ActivateZoomOutTool();
+
         /// <summary>
         /// 将栅格结果加载到地图。
         /// </summary>
@@ -88,6 +90,9 @@ namespace UrbanRenewal.Contracts
 
         /// <summary>综合潜力叠置：可行度权重（默认 0.3）。</summary>
         double FeasibilityWeight { get; set; }
+
+        /// <summary>潜力分析统一像元大小（米，默认 30）。</summary>
+        double CellSize { get; set; }
 
         /// <summary>当前 DevExpress 皮肤名。</summary>
         string SkinName { get; set; }

@@ -1,7 +1,6 @@
 using System;
 using System.Collections.Generic;
 using System.ComponentModel;
-using System.Text;
 using System.Windows.Forms;
 using UrbanRenewal.Analysis;
 using UrbanRenewal.Contracts;
@@ -48,25 +47,6 @@ namespace UrbanRenewal.Plugins.Feasibility
                 return;
             }
             _context.ReloadGlobalSettings();
-
-            string outGdb = _context.OutputGdbPath;
-            this.lblOutInfo.Text = "输出 GDB："
-                + (string.IsNullOrEmpty(outGdb) ? "（未设置 — 请先在全局设置中指定）" : outGdb);
-
-            CityProfile profile = CityProfileStore.ResolveActive(_context.ActiveCityProfileId);
-            if (profile != null)
-            {
-                this.lblCityInfo.Text = "城市配置：" + profile.DisplayName + " [" + profile.Id + "]";
-                if (profile.CellSize >= (double)this.nudCellSize.Minimum
-                    && profile.CellSize <= (double)this.nudCellSize.Maximum)
-                {
-                    this.nudCellSize.Value = (decimal)profile.CellSize;
-                }
-            }
-            else
-            {
-                this.lblCityInfo.Text = "城市配置：（未设置 — 可在全局设置中选择）";
-            }
         }
 
         private void SetBusy(bool busy)
@@ -74,20 +54,8 @@ namespace UrbanRenewal.Plugins.Feasibility
             _busy = busy;
             this.btnRun.Enabled = !busy;
             this.btnClose.Enabled = !busy;
-            this.btnOpenGlobal.Enabled = !busy;
-            this.nudCellSize.Enabled = !busy;
             this.nudElevThr.Enabled = !busy;
             this.nudSlopeThr.Enabled = !busy;
-        }
-
-        private void btnOpenGlobal_Click(object sender, EventArgs e)
-        {
-            if (_context == null || _busy)
-            {
-                return;
-            }
-            _context.ShowGlobalSettings();
-            RefreshGlobalInfo();
         }
 
         private void btnRun_Click(object sender, EventArgs e)
@@ -119,10 +87,19 @@ namespace UrbanRenewal.Plugins.Feasibility
                 return;
             }
 
+            string sameNote;
+            outGdb = OutputGdbHelper.EnsureSeparateAnalysisOutput(gdb, outGdb, out sameNote);
+            if (!string.IsNullOrEmpty(sameNote))
+            {
+                _context.LogInfo(sameNote);
+                _context.OutputGdbPath = outGdb;
+                _context.SaveGlobalSettings();
+            }
+
             FeasibilityJob job = new FeasibilityJob();
             job.GdbPath = gdb;
             job.OutputGdbPath = outGdb;
-            job.CellSize = (double)this.nudCellSize.Value;
+            job.CellSize = _context.CellSize;
             job.ElevationThreshold = (double)this.nudElevThr.Value;
             job.SlopeThresholdDegrees = (double)this.nudSlopeThr.Value;
 
@@ -131,8 +108,10 @@ namespace UrbanRenewal.Plugins.Feasibility
             string srLayer = _context.SpatialRefLayerName;
 
             SetBusy(true);
-            this.lblStatus.Text = "准备中（后台）...";
             _context.LogInfo("======== 开始可行度分析 ========");
+            _context.LogInfo("输入 GDB（分析数据）: " + gdb);
+            _context.LogInfo("输出 GDB: " + outGdb);
+            _context.LogInfo("像元大小: " + job.CellSize + " 米");
 
             StaBackgroundRunner.Run(
                 this,
@@ -194,20 +173,18 @@ namespace UrbanRenewal.Plugins.Feasibility
                     _context.SaveGlobalSettings();
                 }
 
-                StringBuilder sb = new StringBuilder();
                 if (!string.IsNullOrEmpty(pack.ProfileDisplay))
                 {
-                    sb.AppendLine("城市配置: " + pack.ProfileDisplay);
+                    _context.LogInfo("城市配置: " + pack.ProfileDisplay);
                 }
-                sb.AppendLine("输出 GDB: " + (result.OutputGdbPath ?? pack.OutGdb));
+                _context.LogInfo("输出 GDB: " + (result.OutputGdbPath ?? pack.OutGdb));
                 for (int i = 0; i < applyMsgs.Count; i++)
                 {
-                    sb.AppendLine(applyMsgs[i]);
                     _context.LogInfo(applyMsgs[i]);
                 }
                 for (int i = 0; i < result.Messages.Count; i++)
                 {
-                    sb.AppendLine(result.Messages[i]);
+                    _context.LogInfo(result.Messages[i]);
                 }
                 _context.LogInfo(result.Success
                     ? "======== 可行度分析完成 ========"
@@ -218,12 +195,12 @@ namespace UrbanRenewal.Plugins.Feasibility
                     string msg = string.Empty;
                     if (_context.AddRasterLayer(result.FeasibilityRasterPath, "可行度得分", out msg))
                     {
-                        sb.AppendLine(msg);
+                        _context.LogInfo(msg);
                         _context.ZoomToFullExtent();
                     }
                     else
                     {
-                        sb.AppendLine(msg);
+                        _context.LogInfo(msg);
                     }
 
                     foreach (KeyValuePair<string, string> kv in result.FactorRasters)
@@ -233,9 +210,11 @@ namespace UrbanRenewal.Plugins.Feasibility
                     }
                 }
 
-                this.lblStatus.Text = result.Success ? "完成" : "失败";
-                MessageBox.Show(this, sb.ToString(), "可行度分析", MessageBoxButtons.OK,
-                    result.Success ? MessageBoxIcon.Information : MessageBoxIcon.Warning);
+                if (!result.Success)
+                {
+                    MessageBox.Show(this, string.Join("\r\n", result.Messages.ToArray()),
+                        "可行度分析", MessageBoxButtons.OK, MessageBoxIcon.Warning);
+                }
             }
             finally
             {
@@ -247,7 +226,6 @@ namespace UrbanRenewal.Plugins.Feasibility
         {
             try
             {
-                this.lblStatus.Text = "异常";
                 string msg = ex != null ? ex.Message : "未知错误";
                 _context.LogError(msg);
                 MessageBox.Show(this, msg, "可行度分析失败", MessageBoxButtons.OK, MessageBoxIcon.Error);
@@ -286,7 +264,6 @@ namespace UrbanRenewal.Plugins.Feasibility
             {
                 return;
             }
-            this.lblStatus.Text = text + "  " + percent + "%";
             if (_context != null)
             {
                 _context.ShowProgress(text, percent);

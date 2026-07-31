@@ -17,4 +17,5 @@
   <ProjectMxdPath></ProjectMxdPath>
   <MotivationWeight>0.7</MotivationWeight>
   <FeasibilityWeight>0.3</FeasibilityWeight>
+  <CellSize>30</CellSize>
 </GlobalAppSettings>

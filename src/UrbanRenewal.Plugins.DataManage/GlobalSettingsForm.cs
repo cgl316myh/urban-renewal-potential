@@ -47,6 +47,16 @@ namespace UrbanRenewal.Plugins.DataManage
                 _spatialRefFactoryCode = _context.SpatialRefFactoryCode;
                 RefreshSpatialRefUi();
                 LoadCityProfiles();
+                double cell = _context.CellSize;
+                if (cell < (double)this.nudCellSize.Minimum)
+                {
+                    cell = (double)this.nudCellSize.Minimum;
+                }
+                if (cell > (double)this.nudCellSize.Maximum)
+                {
+                    cell = (double)this.nudCellSize.Maximum;
+                }
+                this.nudCellSize.Value = (decimal)cell;
             }
         }
 
@@ -500,6 +510,7 @@ namespace UrbanRenewal.Plugins.DataManage
             CityProfile profile = GetSelectedProfile();
             _context.OutputGdbPath = outGdb;
             _context.ActiveCityProfileId = profile != null ? profile.Id : null;
+            _context.CellSize = (double)this.nudCellSize.Value;
             _context.SpatialRefSourcePath = _spatialRefSourcePath;
             _context.SpatialRefLayerName = _spatialRefLayerName;
             _context.SpatialRefName = _spatialRefName;
@@ -521,6 +532,7 @@ namespace UrbanRenewal.Plugins.DataManage
             // OpenFileGdb 可能已自动建议输出路径；以界面值为准再写回
             _context.OutputGdbPath = outGdb;
             _context.ActiveCityProfileId = profile != null ? profile.Id : null;
+            _context.CellSize = (double)this.nudCellSize.Value;
             _context.SpatialRefSourcePath = _spatialRefSourcePath;
             _context.SpatialRefLayerName = _spatialRefLayerName;
             _context.SpatialRefName = _spatialRefName;
@@ -537,6 +549,7 @@ namespace UrbanRenewal.Plugins.DataManage
                 + "\r\n\r\n输入: " + input
                 + "\r\n输出: " + outGdb
                 + "\r\n城市: " + (profile != null ? profile.DisplayName : "(未选择)")
+                + "\r\n像元: " + this.nudCellSize.Value.ToString() + " 米"
                 + "\r\nSpatialRef: " + (string.IsNullOrEmpty(_spatialRefName) ? "(自动推断)" : _spatialRefName)
                 + "\r\n\r\n提示：配置已写入用户目录，重启/重新编译后仍会保留。"
                 + "\r\n若需下次启动自动恢复当前地图，请再单击「数据管理 → 保存工程」。",

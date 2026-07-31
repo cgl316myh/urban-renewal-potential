@@ -1,6 +1,5 @@
 using System;
 using System.ComponentModel;
-using System.Text;
 using System.Windows.Forms;
 using UrbanRenewal.Analysis;
 using UrbanRenewal.Contracts;
@@ -13,7 +12,7 @@ namespace UrbanRenewal.Plugins.Overlay
     public partial class OverlayRunForm : Form
     {
         private readonly IAppContext _context;
-        private bool _busy;
+        private bool _busy;
         private StaBackgroundRunner.ProgressUiGate _progressGate;
 
         public OverlayRunForm()
@@ -25,7 +24,7 @@ namespace UrbanRenewal.Plugins.Overlay
             : this()
         {
             _context = context;
-            _progressGate = new StaBackgroundRunner.ProgressUiGate(this, ApplyProgressUi);
+            _progressGate = new StaBackgroundRunner.ProgressUiGate(this, ApplyProgressUi);
             if (!IsDesignModeSafe())
             {
                 RefreshGlobalInfo();
@@ -44,14 +43,6 @@ namespace UrbanRenewal.Plugins.Overlay
                 return;
             }
             _context.ReloadGlobalSettings();
-            string outGdb = _context.OutputGdbPath;
-            this.lblOutInfo.Text = "输出 GDB："
-                + (string.IsNullOrEmpty(outGdb) ? "（未设置 — 请先在全局设置中指定）" : outGdb);
-
-            CityProfile profile = CityProfileStore.ResolveActive(_context.ActiveCityProfileId);
-            this.lblCityInfo.Text = profile != null
-                ? ("城市配置：" + profile.DisplayName + " [" + profile.Id + "]")
-                : "城市配置：（未设置）";
 
             double mw = _context.MotivationWeight;
             double fw = _context.FeasibilityWeight;
@@ -83,21 +74,8 @@ namespace UrbanRenewal.Plugins.Overlay
             _busy = busy;
             this.btnRun.Enabled = !busy;
             this.btnClose.Enabled = !busy;
-            this.btnOpenGlobal.Enabled = !busy;
-            this.nudCellSize.Enabled = !busy;
             this.nudMotivW.Enabled = !busy;
             this.nudFeasibW.Enabled = !busy;
-            
-        }
-
-        private void btnOpenGlobal_Click(object sender, EventArgs e)
-        {
-            if (_context == null || _busy)
-            {
-                return;
-            }
-            _context.ShowGlobalSettings();
-            RefreshGlobalInfo();
         }
 
         private void btnRun_Click(object sender, EventArgs e)
@@ -114,6 +92,7 @@ namespace UrbanRenewal.Plugins.Overlay
 
             _context.ReloadGlobalSettings();
             string outGdb = _context.OutputGdbPath;
+            string gdb = _context.GdbPath;
             if (string.IsNullOrEmpty(outGdb) || !outGdb.EndsWith(".gdb", StringComparison.OrdinalIgnoreCase))
             {
                 MessageBox.Show(this, "请先在「数据管理 → 全局设置」中指定输出 File GDB。",
@@ -121,18 +100,29 @@ namespace UrbanRenewal.Plugins.Overlay
                 return;
             }
 
+            string sameNote;
+            outGdb = OutputGdbHelper.EnsureSeparateAnalysisOutput(gdb, outGdb, out sameNote);
+            if (!string.IsNullOrEmpty(sameNote))
+            {
+                _context.LogInfo(sameNote);
+                _context.OutputGdbPath = outGdb;
+                _context.SaveGlobalSettings();
+            }
+
             OverlayJob job = new OverlayJob();
-            job.GdbPath = _context.GdbPath;
+            job.GdbPath = gdb;
             job.OutputGdbPath = outGdb;
-            job.CellSize = (double)this.nudCellSize.Value;
+            job.CellSize = _context.CellSize;
             job.MotivationWeight = (double)this.nudMotivW.Value / 100.0;
             job.FeasibilityWeight = (double)this.nudFeasibW.Value / 100.0;
             double motivW = job.MotivationWeight;
             double feasibW = job.FeasibilityWeight;
 
             SetBusy(true);
-            this.lblStatus.Text = "正在叠置（后台）...";
             _context.LogInfo("======== 开始叠置评价 ========");
+            _context.LogInfo("输入 GDB（分析数据）: " + (gdb ?? "(空)"));
+            _context.LogInfo("输出 GDB: " + outGdb);
+            _context.LogInfo("像元大小: " + job.CellSize + " 米");
 
             StaBackgroundRunner.Run(
                 this,
@@ -160,10 +150,9 @@ namespace UrbanRenewal.Plugins.Overlay
                     _context.SaveGlobalSettings();
                 }
 
-                StringBuilder sb = new StringBuilder();
                 for (int i = 0; i < result.Messages.Count; i++)
                 {
-                    sb.AppendLine(result.Messages[i]);
+                    _context.LogInfo(result.Messages[i]);
                 }
                 _context.LogInfo(result.Success
                     ? "======== 叠置评价完成 ========"
@@ -175,19 +164,21 @@ namespace UrbanRenewal.Plugins.Overlay
                     if (!string.IsNullOrEmpty(result.PotentialRasterPath)
                         && _context.AddRasterLayer(result.PotentialRasterPath, "综合潜力得分", out msg))
                     {
-                        sb.AppendLine(msg);
+                        _context.LogInfo(msg);
                     }
                     if (!string.IsNullOrEmpty(result.LevelRasterPath)
                         && _context.AddRasterLayer(result.LevelRasterPath, "潜力等级", out msg))
                     {
-                        sb.AppendLine(msg);
+                        _context.LogInfo(msg);
                     }
                     _context.ZoomToFullExtent();
                 }
 
-                this.lblStatus.Text = result.Success ? "完成" : "失败";
-                MessageBox.Show(this, sb.ToString(), "叠置评价", MessageBoxButtons.OK,
-                    result.Success ? MessageBoxIcon.Information : MessageBoxIcon.Warning);
+                if (!result.Success)
+                {
+                    MessageBox.Show(this, string.Join("\r\n", result.Messages.ToArray()),
+                        "叠置评价", MessageBoxButtons.OK, MessageBoxIcon.Warning);
+                }
             }
             finally
             {
@@ -199,7 +190,6 @@ namespace UrbanRenewal.Plugins.Overlay
         {
             try
             {
-                this.lblStatus.Text = "异常";
                 string msg = ex != null ? ex.Message : "未知错误";
                 _context.LogError(msg);
                 MessageBox.Show(this, msg, "叠置评价失败", MessageBoxButtons.OK, MessageBoxIcon.Error);
@@ -238,7 +228,6 @@ namespace UrbanRenewal.Plugins.Overlay
             {
                 return;
             }
-            this.lblStatus.Text = text + "  " + percent + "%";
             if (_context != null)
             {
                 _context.ShowProgress(text, percent);

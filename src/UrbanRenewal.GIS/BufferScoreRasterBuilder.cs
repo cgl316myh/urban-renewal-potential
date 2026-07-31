@@ -37,6 +37,10 @@ namespace UrbanRenewal.GIS
             string buf = OutputGdbHelper.DatasetPath(outputGdb, shortName + "_b");
             string raster = OutputGdbHelper.DatasetPath(outputGdb, shortName);
 
+            // 上次运行残留 + schema lock 时 Overwrite 仍会 000258，先强制删
+            OutputGdbHelper.TryDeleteDataset(gp, buf);
+            OutputGdbHelper.TryDeleteDataset(gp, raster);
+
             ESRI.ArcGIS.AnalysisTools.Buffer buffer = new ESRI.ArcGIS.AnalysisTools.Buffer();
             buffer.in_features = inFeatureClass;
             buffer.out_feature_class = buf;

@@ -2,7 +2,6 @@ using System;
 using System.ComponentModel;
 using System.Diagnostics;
 using System.IO;
-using System.Text;
 using System.Windows.Forms;
 using UrbanRenewal.Analysis;
 using UrbanRenewal.Contracts;
@@ -14,7 +13,7 @@ namespace UrbanRenewal.Plugins.Output
     public partial class OutputRunForm : Form
     {
         private readonly IAppContext _context;
-        private bool _busy;
+        private bool _busy;
         private StaBackgroundRunner.ProgressUiGate _progressGate;
 
         public OutputRunForm()
@@ -26,11 +25,10 @@ namespace UrbanRenewal.Plugins.Output
             : this()
         {
             _context = context;
-            _progressGate = new StaBackgroundRunner.ProgressUiGate(this, ApplyProgressUi);
+            _progressGate = new StaBackgroundRunner.ProgressUiGate(this, ApplyProgressUi);
             if (LicenseManager.UsageMode != LicenseUsageMode.Designtime && _context != null)
             {
                 _context.ReloadGlobalSettings();
-                this.lblOutInfo.Text = "输出 GDB：" + (_context.OutputGdbPath ?? "（未设置）");
                 if (!string.IsNullOrEmpty(_context.OutputGdbPath))
                 {
                     string parent = Path.GetDirectoryName(_context.OutputGdbPath);
@@ -49,7 +47,6 @@ namespace UrbanRenewal.Plugins.Output
             this.chkTiff.Enabled = !busy;
             this.chkShp.Enabled = !busy;
             this.chkCsv.Enabled = !busy;
-            
         }
 
         private void btnBrowse_Click(object sender, EventArgs e)
@@ -94,7 +91,6 @@ namespace UrbanRenewal.Plugins.Output
             job.ExportCsv = this.chkCsv.Checked;
 
             SetBusy(true);
-            this.lblStatus.Text = "正在导出（后台）...";
             _context.LogInfo("======== 开始成果输出 ========");
 
             StaBackgroundRunner.Run(
@@ -112,10 +108,9 @@ namespace UrbanRenewal.Plugins.Output
         {
             try
             {
-                StringBuilder sb = new StringBuilder();
                 for (int i = 0; i < result.Messages.Count; i++)
                 {
-                    sb.AppendLine(result.Messages[i]);
+                    _context.LogInfo(result.Messages[i]);
                 }
                 _context.LogInfo(result.Success
                     ? "======== 成果输出完成 ========"
@@ -130,9 +125,11 @@ namespace UrbanRenewal.Plugins.Output
                     {
                     }
                 }
-                this.lblStatus.Text = result.Success ? "完成" : "失败";
-                MessageBox.Show(this, sb.ToString(), "成果输出", MessageBoxButtons.OK,
-                    result.Success ? MessageBoxIcon.Information : MessageBoxIcon.Warning);
+                if (!result.Success)
+                {
+                    MessageBox.Show(this, string.Join("\r\n", result.Messages.ToArray()),
+                        "成果输出", MessageBoxButtons.OK, MessageBoxIcon.Warning);
+                }
             }
             finally
             {
@@ -181,7 +178,6 @@ namespace UrbanRenewal.Plugins.Output
             {
                 return;
             }
-            this.lblStatus.Text = text + " " + percent + "%";
             if (_context != null)
             {
                 _context.ShowProgress(text, percent);

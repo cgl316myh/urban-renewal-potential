@@ -141,6 +141,37 @@ namespace UrbanRenewal.Host
             }
         }
 
+        public double CellSize
+        {
+            get
+            {
+                double v = _settings != null ? _settings.CellSize : 30;
+                if (v < 5)
+                {
+                    return 30;
+                }
+                if (v > 500)
+                {
+                    return 500;
+                }
+                return v;
+            }
+            set
+            {
+                EnsureSettings();
+                double v = value;
+                if (v < 5)
+                {
+                    v = 5;
+                }
+                if (v > 500)
+                {
+                    v = 500;
+                }
+                _settings.CellSize = v;
+            }
+        }
+
         public string SkinName
         {
             get { return _settings != null ? _settings.SkinName : "Office 2013"; }
@@ -191,6 +222,7 @@ namespace UrbanRenewal.Host
                 + "；输出GDB=" + (_settings.OutputGdbPath ?? "(空)")
                 + "；输入GDB=" + (_settings.InputGdbPath ?? "(空)")
                 + "；城市=" + (_settings.ActiveCityProfileId ?? "(空)")
+                + "；像元=" + CellSize + "米"
                 + "；SpatialRef=" + (_settings.SpatialRefName ?? "(自动)")
                 + "；工程MXD=" + (_settings.ProjectMxdPath ?? "(未保存)"));
             RefreshStatusBar();
@@ -461,6 +493,14 @@ namespace UrbanRenewal.Host
             if (_form.MapControl != null && _form.MapControl.Object != null)
             {
                 MapWorkspaceService.ActivateZoomIn((IMapControl3)_form.MapControl.Object);
+            }
+        }
+
+        public void ActivateZoomOutTool()
+        {
+            if (_form.MapControl != null && _form.MapControl.Object != null)
+            {
+                MapWorkspaceService.ActivateZoomOut((IMapControl3)_form.MapControl.Object);
             }
         }
 

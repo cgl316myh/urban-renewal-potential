@@ -79,10 +79,7 @@ namespace UrbanRenewal.Model
                 return;
             }
 
-            if (CellSize > 0)
-            {
-                job.CellSize = CellSize;
-            }
+            // 像元大小由全局设置统一指定，此处不再覆盖
             job.TrafficWeight = TrafficWeight;
             job.EnvironmentWeight = EnvironmentWeight;
             job.FacilityWeight = FacilityWeight;
@@ -129,10 +126,7 @@ namespace UrbanRenewal.Model
                 return;
             }
 
-            if (CellSize > 0)
-            {
-                job.CellSize = CellSize;
-            }
+            // 像元大小由全局设置统一指定，此处不再覆盖
 
             if (job.LayerHints == null)
             {

@@ -85,12 +85,59 @@ namespace UrbanRenewal.GIS
             }
             try
             {
-                mapControl.ClearLayers();
-                mapControl.Refresh();
+                // 先断开 FeatureClass 引用，再删层，避免 ClearLayers 后 RCW 仍占 File GDB 锁
+                for (int i = mapControl.LayerCount - 1; i >= 0; i--)
+                {
+                    try
+                    {
+                        ILayer layer = mapControl.get_Layer(i);
+                        IFeatureLayer fl = layer as IFeatureLayer;
+                        if (fl != null)
+                        {
+                            try { fl.FeatureClass = null; }
+                            catch { }
+                        }
+                        // IMapControl3.DeleteLayer 参数为图层索引（int），不是 ILayer
+                        mapControl.DeleteLayer(i);
+                    }
+                    catch
+                    {
+                    }
+                }
+                try { mapControl.ClearLayers(); }
+                catch { }
+                try
+                {
+                    if (mapControl.ActiveView != null)
+                    {
+                        mapControl.ActiveView.ContentsChanged();
+                        mapControl.ActiveView.Refresh();
+                    }
+                    else
+                    {
+                        mapControl.Refresh();
+                    }
+                }
+                catch
+                {
+                    try { mapControl.Refresh(); }
+                    catch { }
+                }
             }
             catch
             {
             }
+
+            FileGdbLockHelper.ForceComRelease();
+        }
+
+        /// <summary>
+        /// 预处理写回输入库前：清空地图并尽量释放 GDB 占用。
+        /// </summary>
+        public static void ReleaseGdbLocksForReplace(object mapControlOrAx)
+        {
+            ClearLayersFromObject(mapControlOrAx);
+            FileGdbLockHelper.ForceComRelease();
         }
 
         /// <summary>支持传入 AxMapControl 或 IMapControl3。</summary>
@@ -193,6 +240,17 @@ namespace UrbanRenewal.GIS
                 return;
             }
             ICommand cmd = new ControlsMapZoomInToolClass();
+            cmd.OnCreate(mapControl.Object);
+            mapControl.CurrentTool = cmd as ITool;
+        }
+
+        public static void ActivateZoomOut(IMapControl3 mapControl)
+        {
+            if (mapControl == null)
+            {
+                return;
+            }
+            ICommand cmd = new ControlsMapZoomOutToolClass();
             cmd.OnCreate(mapControl.Object);
             mapControl.CurrentTool = cmd as ITool;
         }
