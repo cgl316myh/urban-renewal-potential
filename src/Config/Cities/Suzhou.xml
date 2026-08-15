@@ -8,6 +8,19 @@
              environmentWeight="0.20"
              facilityWeight="0.25"
              policyWeight="0.25">
+  <!-- 交通优化方案 B：地铁作加分项；得分≤0 的环跳过 -->
+  <BufferScoreRules metroPreset="B">
+    <MetroMulti distances="300,600,1000" scores="2,1,1" />
+    <MetroSingle distances="300,600" scores="2,1" />
+    <CBD distance="1000" score="3" />
+    <TrafficFacility distance="300" score="1" />
+    <EcoCorridor distance="500" score="2" />
+    <OpenSpace distance="500" score="2" />
+    <Green distance="300" score="1" />
+    <PublicService distance="1000" score="2" />
+    <Convenience distance="300" score="1" />
+    <Commercial distance="1000" score="1" />
+  </BufferScoreRules>
   <Layer role="StudyArea" name="中心城区（分析范围）" keywords="中心城区,分析范围" required="true" />
   <Layer role="MetroMulti" name="两线地铁站" keywords="两线地铁" />
   <Layer role="Metro" name="一线地铁站" keywords="一线地铁,地铁站" />

@@ -228,6 +228,8 @@ namespace UrbanRenewal.Analysis
         {
             List<string> parts = new List<string>();
             double cell = job.CellSize;
+            BufferScoreRules rules = job.BufferScoreRules ?? BufferScoreRules.CreateOriginal();
+            Note(result, "缓冲赋分规则: " + rules.DescribeMetro());
 
             string metroMulti = Resolve(job, names, "MetroMulti", "两线地铁", "两线", "换乘", "多线", "枢纽站");
             string metro = Resolve(job, names, "Metro", "一线地铁", "一线", "单线地铁");
@@ -237,28 +239,46 @@ namespace UrbanRenewal.Analysis
 
             if (!string.IsNullOrEmpty(metroMulti))
             {
-                Report(_progress, result, "交通·多线地铁多环缓冲(300/600/1000m)...", 21);
-                Note(result, "多线地铁: " + metroMulti);
-                parts.Add(BufferScoreRasterBuilder.BuildMultiRingMax(
-                    _gp, Prepared(metroMulti, result),
-                    new double[] { 300, 600, 1000 },
-                    new int[] { 4, 3, 2 },
-                    OutGdb, "metro_multi", cell,
-                    delegate(string t) { Note(result, "  · " + t); }));
-                Note(result, "交通·多线地铁缓冲完成");
+                double[] dMulti;
+                int[] sMulti;
+                GetActiveRingsSafe(rules.MetroMulti, out dMulti, out sMulti);
+                if (dMulti.Length > 0)
+                {
+                    Report(_progress, result, "交通·多线地铁多环缓冲(" + rules.MetroMulti.ToDisplay() + ")...", 21);
+                    Note(result, "多线地铁: " + metroMulti);
+                    parts.Add(BufferScoreRasterBuilder.BuildMultiRingMax(
+                        _gp, Prepared(metroMulti, result),
+                        dMulti, sMulti,
+                        OutGdb, "metro_multi", cell,
+                        delegate(string t) { Note(result, "  · " + t); }));
+                    Note(result, "交通·多线地铁缓冲完成");
+                }
+                else
+                {
+                    Note(result, "多线地铁规则无有效环，已跳过。");
+                }
             }
 
             if (!string.IsNullOrEmpty(metro) && !string.Equals(metro, metroMulti, StringComparison.OrdinalIgnoreCase))
             {
-                Report(_progress, result, "交通·一线地铁多环缓冲(300/600/1000m)...", 24);
-                Note(result, "地铁站点: " + metro);
-                parts.Add(BufferScoreRasterBuilder.BuildMultiRingMax(
-                    _gp, Prepared(metro, result),
-                    new double[] { 300, 600, 1000 },
-                    new int[] { 3, 2, 1 },
-                    OutGdb, "metro", cell,
-                    delegate(string t) { Note(result, "  · " + t); }));
-                Note(result, "交通·一线地铁缓冲完成");
+                double[] dSingle;
+                int[] sSingle;
+                GetActiveRingsSafe(rules.MetroSingle, out dSingle, out sSingle);
+                if (dSingle.Length > 0)
+                {
+                    Report(_progress, result, "交通·一线地铁多环缓冲(" + rules.MetroSingle.ToDisplay() + ")...", 24);
+                    Note(result, "地铁站点: " + metro);
+                    parts.Add(BufferScoreRasterBuilder.BuildMultiRingMax(
+                        _gp, Prepared(metro, result),
+                        dSingle, sSingle,
+                        OutGdb, "metro", cell,
+                        delegate(string t) { Note(result, "  · " + t); }));
+                    Note(result, "交通·一线地铁缓冲完成");
+                }
+                else
+                {
+                    Note(result, "单线地铁规则无有效环，已跳过。");
+                }
             }
 
             // 路网可达性（须预先构建 Network Dataset，如 roadNet\roadNet_ND）
@@ -270,19 +290,23 @@ namespace UrbanRenewal.Analysis
                 Note(result, "交通·路网可达性完成");
             }
 
-            if (!string.IsNullOrEmpty(cbd))
+            if (rules.Cbd != null && rules.Cbd.IsActive && !string.IsNullOrEmpty(cbd))
             {
-                Report(_progress, result, "交通·CBD 缓冲(1000m)...", 33);
+                Report(_progress, result, "交通·CBD 缓冲(" + rules.Cbd.ToDisplay() + ")...", 33);
                 Note(result, "CBD: " + cbd);
-                parts.Add(BufferScoreRasterBuilder.BuildSingle(_gp, Prepared(cbd, result), 1000, 3, OutGdb, "cbd", cell));
+                parts.Add(BufferScoreRasterBuilder.BuildSingle(
+                    _gp, Prepared(cbd, result), rules.Cbd.Distance, rules.Cbd.Score, OutGdb, "cbd", cell));
                 Note(result, "交通·CBD 缓冲完成");
             }
 
-            if (!string.IsNullOrEmpty(trafficFac))
+            if (rules.TrafficFacility != null && rules.TrafficFacility.IsActive && !string.IsNullOrEmpty(trafficFac))
             {
-                Report(_progress, result, "交通·交通设施缓冲(300m)...", 35);
+                Report(_progress, result, "交通·交通设施缓冲(" + rules.TrafficFacility.ToDisplay() + ")...", 35);
                 Note(result, "交通设施: " + trafficFac);
-                parts.Add(BufferScoreRasterBuilder.BuildSingle(_gp, Prepared(trafficFac, result), 300, 1, OutGdb, "traf_fac", cell));
+                parts.Add(BufferScoreRasterBuilder.BuildSingle(
+                    _gp, Prepared(trafficFac, result),
+                    rules.TrafficFacility.Distance, rules.TrafficFacility.Score,
+                    OutGdb, "traf_fac", cell));
                 Note(result, "交通·交通设施缓冲完成");
             }
 
@@ -294,6 +318,17 @@ namespace UrbanRenewal.Analysis
 
             Report(_progress, result, "交通·准则层 MAX 合并...", 37);
             return BufferScoreRasterBuilder.MaxCombine(_gp, parts, OutGdb, "traffic");
+        }
+
+        private static void GetActiveRingsSafe(MultiRingRule rule, out double[] distances, out int[] scores)
+        {
+            if (rule == null)
+            {
+                distances = new double[0];
+                scores = new int[0];
+                return;
+            }
+            rule.GetActiveRings(out distances, out scores);
         }
 
         /// <summary>
@@ -368,6 +403,7 @@ namespace UrbanRenewal.Analysis
         {
             List<string> parts = new List<string>();
             double cell = job.CellSize;
+            BufferScoreRules rules = job.BufferScoreRules ?? BufferScoreRules.CreateOriginal();
 
             string eco = Resolve(job, names, "EcoCorridor", "重要生态廊道", "生态廊道", "水系", "河道", "绿廊");
             string openSpace = Resolve(job, names, "OpenSpace", "大型开敞空间", "开敞空间", "湖泊");
@@ -375,24 +411,36 @@ namespace UrbanRenewal.Analysis
 
             if (!string.IsNullOrEmpty(eco))
             {
-                Report(_progress, result, "环境·生态廊道缓冲(500m)...", 42);
-                Note(result, "生态廊道: " + eco);
-                parts.Add(BufferScoreRasterBuilder.BuildSingle(
-                    _gp, Prepared(eco, result), 500, 2, OutGdb, "eco", cell));
+                SingleRingRule ecoRule = rules.EcoCorridor ?? SingleRingRule.Create(500, 2);
+                if (ecoRule.IsActive)
+                {
+                    Report(_progress, result, "环境·生态廊道缓冲(" + ecoRule.ToDisplay() + ")...", 42);
+                    Note(result, "生态廊道: " + eco);
+                    parts.Add(BufferScoreRasterBuilder.BuildSingle(
+                        _gp, Prepared(eco, result), ecoRule.Distance, ecoRule.Score, OutGdb, "eco", cell));
+                }
             }
             if (!string.IsNullOrEmpty(openSpace))
             {
-                Report(_progress, result, "环境·开敞空间缓冲(500m)...", 45);
-                Note(result, "开敞空间: " + openSpace);
-                parts.Add(BufferScoreRasterBuilder.BuildSingle(
-                    _gp, Prepared(openSpace, result), 500, 2, OutGdb, "open", cell));
+                SingleRingRule openRule = rules.OpenSpace ?? SingleRingRule.Create(500, 2);
+                if (openRule.IsActive)
+                {
+                    Report(_progress, result, "环境·开敞空间缓冲(" + openRule.ToDisplay() + ")...", 45);
+                    Note(result, "开敞空间: " + openSpace);
+                    parts.Add(BufferScoreRasterBuilder.BuildSingle(
+                        _gp, Prepared(openSpace, result), openRule.Distance, openRule.Score, OutGdb, "open", cell));
+                }
             }
             if (!string.IsNullOrEmpty(green) && !string.Equals(green, openSpace, StringComparison.OrdinalIgnoreCase))
             {
-                Report(_progress, result, "环境·现状绿地缓冲(300m)...", 48);
-                Note(result, "现状绿地: " + green);
-                parts.Add(BufferScoreRasterBuilder.BuildSingle(
-                    _gp, Prepared(green, result), 300, 1, OutGdb, "green", cell));
+                SingleRingRule greenRule = rules.Green ?? SingleRingRule.Create(300, 1);
+                if (greenRule.IsActive)
+                {
+                    Report(_progress, result, "环境·现状绿地缓冲(" + greenRule.ToDisplay() + ")...", 48);
+                    Note(result, "现状绿地: " + green);
+                    parts.Add(BufferScoreRasterBuilder.BuildSingle(
+                        _gp, Prepared(green, result), greenRule.Distance, greenRule.Score, OutGdb, "green", cell));
+                }
             }
 
             if (parts.Count == 0)
@@ -408,6 +456,7 @@ namespace UrbanRenewal.Analysis
         {
             List<string> parts = new List<string>();
             double cell = job.CellSize;
+            BufferScoreRules rules = job.BufferScoreRules ?? BufferScoreRules.CreateOriginal();
 
             string pub = Resolve(job, names, "PublicService", "市级医院", "高校学院", "文体设施", "公共服务", "公服", "医院", "学校");
             string conv = Resolve(job, names, "Convenience", "便民", "文体");
@@ -415,24 +464,36 @@ namespace UrbanRenewal.Analysis
 
             if (!string.IsNullOrEmpty(pub))
             {
-                Report(_progress, result, "设施·市级公服缓冲(1000m)...", 62);
-                Note(result, "市级公服: " + pub);
-                parts.Add(BufferScoreRasterBuilder.BuildSingle(
-                    _gp, Prepared(pub, result), 1000, 2, OutGdb, "pub", cell));
+                SingleRingRule pubRule = rules.PublicService ?? SingleRingRule.Create(1000, 2);
+                if (pubRule.IsActive)
+                {
+                    Report(_progress, result, "设施·市级公服缓冲(" + pubRule.ToDisplay() + ")...", 62);
+                    Note(result, "市级公服: " + pub);
+                    parts.Add(BufferScoreRasterBuilder.BuildSingle(
+                        _gp, Prepared(pub, result), pubRule.Distance, pubRule.Score, OutGdb, "pub", cell));
+                }
             }
             if (!string.IsNullOrEmpty(conv))
             {
-                Report(_progress, result, "设施·便民设施缓冲(300m)...", 66);
-                Note(result, "便民设施: " + conv);
-                parts.Add(BufferScoreRasterBuilder.BuildSingle(
-                    _gp, Prepared(conv, result), 300, 1, OutGdb, "conv", cell));
+                SingleRingRule convRule = rules.Convenience ?? SingleRingRule.Create(300, 1);
+                if (convRule.IsActive)
+                {
+                    Report(_progress, result, "设施·便民设施缓冲(" + convRule.ToDisplay() + ")...", 66);
+                    Note(result, "便民设施: " + conv);
+                    parts.Add(BufferScoreRasterBuilder.BuildSingle(
+                        _gp, Prepared(conv, result), convRule.Distance, convRule.Score, OutGdb, "conv", cell));
+                }
             }
             if (!string.IsNullOrEmpty(shop))
             {
-                Report(_progress, result, "设施·商业设施缓冲(1000m)...", 70);
-                Note(result, "商业设施: " + shop);
-                parts.Add(BufferScoreRasterBuilder.BuildSingle(
-                    _gp, Prepared(shop, result), 1000, 1, OutGdb, "shop", cell));
+                SingleRingRule shopRule = rules.Commercial ?? SingleRingRule.Create(1000, 1);
+                if (shopRule.IsActive)
+                {
+                    Report(_progress, result, "设施·商业设施缓冲(" + shopRule.ToDisplay() + ")...", 70);
+                    Note(result, "商业设施: " + shop);
+                    parts.Add(BufferScoreRasterBuilder.BuildSingle(
+                        _gp, Prepared(shop, result), shopRule.Distance, shopRule.Score, OutGdb, "shop", cell));
+                }
             }
 
             if (parts.Count == 0)

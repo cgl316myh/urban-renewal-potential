@@ -14,6 +14,8 @@
   required="true" 表示缺失则拒绝运行分析。
   preferredCrsName：建议投影坐标系名称（完整性检查对照用）。
   权重可用 0~1 或百分数（如 30）。
+  BufferScoreRules：交通缓冲赋分（metroPreset=Original/A/B/C/Custom）。
+    B 推荐：多线 2/1/1、单线 2/1；得分≤0 的环不参与。
 -->
 <CityProfile id="Template"
              displayName="（模板-请复制改名）"
@@ -24,6 +26,18 @@
              environmentWeight="0.20"
              facilityWeight="0.25"
              policyWeight="0.25">
+  <BufferScoreRules metroPreset="B">
+    <MetroMulti distances="300,600,1000" scores="2,1,1" />
+    <MetroSingle distances="300,600" scores="2,1" />
+    <CBD distance="1000" score="3" />
+    <TrafficFacility distance="300" score="1" />
+    <EcoCorridor distance="500" score="2" />
+    <OpenSpace distance="500" score="2" />
+    <Green distance="300" score="1" />
+    <PublicService distance="1000" score="2" />
+    <Convenience distance="300" score="1" />
+    <Commercial distance="1000" score="1" />
+  </BufferScoreRules>
   <Layer role="StudyArea" name="中心城区" keywords="分析范围,建成区" required="true" />
   <Layer role="MetroMulti" name="" keywords="两线地铁,换乘" />
   <Layer role="Metro" name="" keywords="地铁站,地铁" />

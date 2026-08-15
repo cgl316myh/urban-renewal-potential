@@ -1,6 +1,6 @@
 Microsoft Visual Studio Solution File, Format Version 12.00
-# Visual Studio 2012
-VisualStudioVersion = 11.0.61030.0
+# Visual Studio Version 16
+VisualStudioVersion = 16.0.28729.10
 MinimumVisualStudioVersion = 10.0.40219.1
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "UrbanRenewal.Contracts", "UrbanRenewal.Contracts\UrbanRenewal.Contracts.csproj", "{A1111111-1111-1111-1111-111111111111}"
 EndProject
@@ -95,5 +95,8 @@ Global
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
+	EndGlobalSection
+	GlobalSection(ExtensibilityGlobals) = postSolution
+		SolutionGuid = {960D9443-55FB-453E-AA26-DB3D94C9C44B}
 	EndGlobalSection
 EndGlobal

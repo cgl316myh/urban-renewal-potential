@@ -255,6 +255,76 @@ namespace UrbanRenewal.GIS
             mapControl.CurrentTool = cmd as ITool;
         }
 
+        public static void ActivateSelectFeatures(IMapControl3 mapControl)
+        {
+            if (mapControl == null)
+            {
+                return;
+            }
+            ICommand cmd = new ControlsSelectFeaturesToolClass();
+            cmd.OnCreate(mapControl.Object);
+            mapControl.CurrentTool = cmd as ITool;
+        }
+
+        public static void ClearSelection(IMapControl3 mapControl)
+        {
+            if (mapControl == null)
+            {
+                return;
+            }
+            ICommand cmd = new ControlsClearSelectionCommandClass();
+            cmd.OnCreate(mapControl.Object);
+            cmd.OnClick();
+            try
+            {
+                if (mapControl.ActiveView != null)
+                {
+                    mapControl.ActiveView.PartialRefresh(
+                        esriViewDrawPhase.esriViewGeoSelection, null, null);
+                }
+            }
+            catch
+            {
+                try { mapControl.Refresh(); }
+                catch { }
+            }
+        }
+
+        public static void ActivateIdentify(IMapControl3 mapControl)
+        {
+            if (mapControl == null)
+            {
+                return;
+            }
+            ICommand cmd = new ControlsMapIdentifyToolClass();
+            cmd.OnCreate(mapControl.Object);
+            mapControl.CurrentTool = cmd as ITool;
+        }
+
+        /// <summary>单击加点，双击结束；结果通过 onResult 回传。</summary>
+        public static void ActivateMeasureLength(IMapControl3 mapControl, Action<string> onResult)
+        {
+            if (mapControl == null)
+            {
+                return;
+            }
+            ICommand cmd = new MeasureLengthTool(onResult);
+            cmd.OnCreate(mapControl.Object);
+            mapControl.CurrentTool = cmd as ITool;
+        }
+
+        /// <summary>单击加点，双击结束；结果通过 onResult 回传。</summary>
+        public static void ActivateMeasureArea(IMapControl3 mapControl, Action<string> onResult)
+        {
+            if (mapControl == null)
+            {
+                return;
+            }
+            ICommand cmd = new MeasureAreaTool(onResult);
+            cmd.OnCreate(mapControl.Object);
+            mapControl.CurrentTool = cmd as ITool;
+        }
+
         private static void CollectFeatureClassNames(IWorkspace workspace, List<string> names)
         {
             IEnumDataset enumFc = workspace.get_Datasets(esriDatasetType.esriDTFeatureClass);

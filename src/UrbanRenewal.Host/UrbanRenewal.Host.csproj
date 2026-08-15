@@ -75,6 +75,11 @@
       <Private>False</Private>
       <SpecificVersion>False</SpecificVersion>
     </Reference>
+    <Reference Include="ESRI.ArcGIS.DataSourcesRaster">
+      <HintPath>$(ArcGisDotNetDir)\ESRI.ArcGIS.DataSourcesRaster.dll</HintPath>
+      <Private>False</Private>
+      <SpecificVersion>False</SpecificVersion>
+    </Reference>
     <Reference Include="ESRI.ArcGIS.Display">
       <HintPath>$(ArcGisDotNetDir)\ESRI.ArcGIS.Display.dll</HintPath>
       <Private>False</Private>
@@ -170,6 +175,12 @@
     <Compile Include="Toc\PolygonClassRenderForm.Designer.cs">
       <DependentUpon>PolygonClassRenderForm.cs</DependentUpon>
     </Compile>
+    <Compile Include="Toc\RasterRenderForm.cs">
+      <SubType>Form</SubType>
+    </Compile>
+    <Compile Include="Toc\RasterRenderForm.Designer.cs">
+      <DependentUpon>RasterRenderForm.cs</DependentUpon>
+    </Compile>
   </ItemGroup>
   <ItemGroup>
     <None Include="plugins.config">
@@ -203,6 +214,9 @@
     </EmbeddedResource>
     <EmbeddedResource Include="Toc\PolygonClassRenderForm.resx">
       <DependentUpon>PolygonClassRenderForm.cs</DependentUpon>
+    </EmbeddedResource>
+    <EmbeddedResource Include="Toc\RasterRenderForm.resx">
+      <DependentUpon>RasterRenderForm.cs</DependentUpon>
     </EmbeddedResource>
     <EmbeddedResource Include="Properties\licenses.licx" />
   </ItemGroup>

@@ -15,6 +15,7 @@ namespace UrbanRenewal.Model
             FacilityWeight = 0.25;
             PolicyWeight = 0.25;
             LayerHints = new Dictionary<string, string>();
+            BufferScoreRules = BufferScoreRules.CreateOriginal();
         }
 
         /// <summary>输入工作空间 File GDB。</summary>
@@ -37,6 +38,9 @@ namespace UrbanRenewal.Model
         public double FacilityWeight { get; set; }
 
         public double PolicyWeight { get; set; }
+
+        /// <summary>缓冲赋分规则；空则用现状默认。</summary>
+        public BufferScoreRules BufferScoreRules { get; set; }
 
         /// <summary>
         /// 可选：因子键 → 要素类名（覆盖自动匹配）。

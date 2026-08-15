@@ -20,6 +20,7 @@ namespace UrbanRenewal.Model
             EnvironmentWeight = 0.20;
             FacilityWeight = 0.25;
             PolicyWeight = 0.25;
+            BufferScoreRules = BufferScoreRules.CreateOriginal();
         }
 
         [XmlAttribute("id")]
@@ -48,6 +49,10 @@ namespace UrbanRenewal.Model
 
         [XmlAttribute("policyWeight")]
         public double PolicyWeight { get; set; }
+
+        /// <summary>缓冲距离与赋分规则（交通优化方案等）。</summary>
+        [XmlElement("BufferScoreRules")]
+        public BufferScoreRules BufferScoreRules { get; set; }
 
         [XmlElement("Layer")]
         public List<CityLayerMapping> Layers { get; set; }
@@ -84,6 +89,9 @@ namespace UrbanRenewal.Model
             job.EnvironmentWeight = EnvironmentWeight;
             job.FacilityWeight = FacilityWeight;
             job.PolicyWeight = PolicyWeight;
+            job.BufferScoreRules = BufferScoreRules != null
+                ? BufferScoreRules.Clone()
+                : BufferScoreRules.CreateOriginal();
 
             ApplyLayerHintsToDictionary(job.LayerHints, featureClassNames, messages);
 
@@ -518,6 +526,10 @@ namespace UrbanRenewal.Model
                     if (string.IsNullOrEmpty(profile.Id))
                     {
                         profile.Id = Path.GetFileNameWithoutExtension(path);
+                    }
+                    if (profile.BufferScoreRules == null)
+                    {
+                        profile.BufferScoreRules = BufferScoreRules.CreateOriginal();
                     }
                 }
                 return profile;

@@ -75,6 +75,16 @@ namespace UrbanRenewal.Contracts
 
         void ActivateZoomOutTool();
 
+        void ActivateSelectFeaturesTool();
+
+        void ClearMapSelection();
+
+        void ActivateIdentifyTool();
+
+        void ActivateMeasureLengthTool();
+
+        void ActivateMeasureAreaTool();
+
         /// <summary>
         /// 将栅格结果加载到地图。
         /// </summary>

@@ -86,6 +86,15 @@ namespace UrbanRenewal.GIS
             List<string> rasters = new List<string>();
             for (int i = 0; i < distancesMeters.Length; i++)
             {
+                if (distancesMeters[i] <= 0 || scores[i] <= 0)
+                {
+                    if (onRing != null)
+                    {
+                        onRing("跳过环 " + distancesMeters[i].ToString(CultureInfo.InvariantCulture)
+                            + "m（得分 " + scores[i].ToString(CultureInfo.InvariantCulture) + "）");
+                    }
+                    continue;
+                }
                 if (onRing != null)
                 {
                     onRing("缓冲环 " + distancesMeters[i].ToString(CultureInfo.InvariantCulture)
@@ -93,6 +102,11 @@ namespace UrbanRenewal.GIS
                 }
                 string r = BuildSingle(gp, inFeatureClass, distancesMeters[i], scores[i], outputGdb, namePrefix + i.ToString(), cellSize);
                 rasters.Add(r);
+            }
+
+            if (rasters.Count == 0)
+            {
+                throw new ArgumentException("多环缓冲无有效环（距离与得分均需 > 0）。");
             }
 
             if (rasters.Count == 1)

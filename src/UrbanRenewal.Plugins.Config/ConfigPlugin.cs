@@ -29,7 +29,7 @@ namespace UrbanRenewal.Plugins.Config
             }
             object page = ribbonHost.AddPage("系统配置");
             object group = ribbonHost.AddGroup(page, "参数");
-            ribbonHost.AddButton(group, "权重与皮肤配置", OnOpen);
+            ribbonHost.AddButton(group, "权重与缓冲赋分", OnOpen);
             ribbonHost.AddButton(group, "查看分析日志", OnLog);
         }
 

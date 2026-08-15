@@ -34,10 +34,16 @@ namespace UrbanRenewal.Host
             this.btnMapPan = new DevExpress.XtraBars.BarButtonItem();
             this.btnMapZoomIn = new DevExpress.XtraBars.BarButtonItem();
             this.btnMapZoomOut = new DevExpress.XtraBars.BarButtonItem();
+            this.btnMapSelect = new DevExpress.XtraBars.BarButtonItem();
+            this.btnMapClearSelection = new DevExpress.XtraBars.BarButtonItem();
+            this.btnMapIdentify = new DevExpress.XtraBars.BarButtonItem();
+            this.btnMapMeasureLength = new DevExpress.XtraBars.BarButtonItem();
+            this.btnMapMeasureArea = new DevExpress.XtraBars.BarButtonItem();
             this.btnToggleLog = new DevExpress.XtraBars.BarButtonItem();
             this.barStaticStatus = new DevExpress.XtraBars.BarStaticItem();
             this.ribbonPageMap = new DevExpress.XtraBars.Ribbon.RibbonPage();
             this.ribbonPageGroupView = new DevExpress.XtraBars.Ribbon.RibbonPageGroup();
+            this.ribbonPageGroupSelect = new DevExpress.XtraBars.Ribbon.RibbonPageGroup();
             this.ribbonStatusBar = new DevExpress.XtraBars.Ribbon.RibbonStatusBar();
             this.splitWorkspace = new System.Windows.Forms.SplitContainer();
             this.splitMap = new System.Windows.Forms.SplitContainer();
@@ -54,6 +60,7 @@ namespace UrbanRenewal.Host
             this.menuTocViewTable = new System.Windows.Forms.ToolStripMenuItem();
             this.menuTocClassRender = new System.Windows.Forms.ToolStripMenuItem();
             this.menuTocUniqueRender = new System.Windows.Forms.ToolStripMenuItem();
+            this.menuTocRasterRender = new System.Windows.Forms.ToolStripMenuItem();
             this.menuTocZoomToLayer = new System.Windows.Forms.ToolStripMenuItem();
             this.menuTocRemoveLayer = new System.Windows.Forms.ToolStripMenuItem();
             ((System.ComponentModel.ISupportInitialize)(this.ribbonControl)).BeginInit();
@@ -82,10 +89,15 @@ namespace UrbanRenewal.Host
             this.btnMapPan,
             this.btnMapZoomIn,
             this.btnMapZoomOut,
+            this.btnMapSelect,
+            this.btnMapClearSelection,
+            this.btnMapIdentify,
+            this.btnMapMeasureLength,
+            this.btnMapMeasureArea,
             this.btnToggleLog,
             this.barStaticStatus});
             this.ribbonControl.Location = new System.Drawing.Point(0, 0);
-            this.ribbonControl.MaxItemId = 7;
+            this.ribbonControl.MaxItemId = 12;
             this.ribbonControl.Name = "ribbonControl";
             this.ribbonControl.Pages.AddRange(new DevExpress.XtraBars.Ribbon.RibbonPage[] {
             this.ribbonPageMap});
@@ -121,6 +133,41 @@ namespace UrbanRenewal.Host
             this.btnMapZoomOut.Name = "btnMapZoomOut";
             this.btnMapZoomOut.ItemClick += new DevExpress.XtraBars.ItemClickEventHandler(this.btnMapZoomOut_ItemClick);
             // 
+            // btnMapSelect
+            // 
+            this.btnMapSelect.Caption = "选择";
+            this.btnMapSelect.Id = 7;
+            this.btnMapSelect.Name = "btnMapSelect";
+            this.btnMapSelect.ItemClick += new DevExpress.XtraBars.ItemClickEventHandler(this.btnMapSelect_ItemClick);
+            // 
+            // btnMapClearSelection
+            // 
+            this.btnMapClearSelection.Caption = "取消选择";
+            this.btnMapClearSelection.Id = 8;
+            this.btnMapClearSelection.Name = "btnMapClearSelection";
+            this.btnMapClearSelection.ItemClick += new DevExpress.XtraBars.ItemClickEventHandler(this.btnMapClearSelection_ItemClick);
+            // 
+            // btnMapIdentify
+            // 
+            this.btnMapIdentify.Caption = "识别";
+            this.btnMapIdentify.Id = 9;
+            this.btnMapIdentify.Name = "btnMapIdentify";
+            this.btnMapIdentify.ItemClick += new DevExpress.XtraBars.ItemClickEventHandler(this.btnMapIdentify_ItemClick);
+            // 
+            // btnMapMeasureLength
+            // 
+            this.btnMapMeasureLength.Caption = "长度测量";
+            this.btnMapMeasureLength.Id = 10;
+            this.btnMapMeasureLength.Name = "btnMapMeasureLength";
+            this.btnMapMeasureLength.ItemClick += new DevExpress.XtraBars.ItemClickEventHandler(this.btnMapMeasureLength_ItemClick);
+            // 
+            // btnMapMeasureArea
+            // 
+            this.btnMapMeasureArea.Caption = "面积测量";
+            this.btnMapMeasureArea.Id = 11;
+            this.btnMapMeasureArea.Name = "btnMapMeasureArea";
+            this.btnMapMeasureArea.ItemClick += new DevExpress.XtraBars.ItemClickEventHandler(this.btnMapMeasureArea_ItemClick);
+            // 
             // btnToggleLog
             // 
             this.btnToggleLog.Caption = "隐藏日志";
@@ -139,7 +186,8 @@ namespace UrbanRenewal.Host
             // ribbonPageMap
             // 
             this.ribbonPageMap.Groups.AddRange(new DevExpress.XtraBars.Ribbon.RibbonPageGroup[] {
-            this.ribbonPageGroupView});
+            this.ribbonPageGroupView,
+            this.ribbonPageGroupSelect});
             this.ribbonPageMap.Name = "ribbonPageMap";
             this.ribbonPageMap.Text = "地图";
             // 
@@ -152,6 +200,16 @@ namespace UrbanRenewal.Host
             this.ribbonPageGroupView.ItemLinks.Add(this.btnToggleLog);
             this.ribbonPageGroupView.Name = "ribbonPageGroupView";
             this.ribbonPageGroupView.Text = "视图";
+            // 
+            // ribbonPageGroupSelect
+            // 
+            this.ribbonPageGroupSelect.ItemLinks.Add(this.btnMapSelect);
+            this.ribbonPageGroupSelect.ItemLinks.Add(this.btnMapClearSelection);
+            this.ribbonPageGroupSelect.ItemLinks.Add(this.btnMapIdentify);
+            this.ribbonPageGroupSelect.ItemLinks.Add(this.btnMapMeasureLength);
+            this.ribbonPageGroupSelect.ItemLinks.Add(this.btnMapMeasureArea);
+            this.ribbonPageGroupSelect.Name = "ribbonPageGroupSelect";
+            this.ribbonPageGroupSelect.Text = "选择与量测";
             // 
             // ribbonStatusBar
             // 
@@ -296,10 +354,11 @@ namespace UrbanRenewal.Host
             this.menuTocViewTable,
             this.menuTocClassRender,
             this.menuTocUniqueRender,
+            this.menuTocRasterRender,
             this.menuTocZoomToLayer,
             this.menuTocRemoveLayer});
             this.contextMenuToc.Name = "contextMenuToc";
-            this.contextMenuToc.Size = new System.Drawing.Size(137, 114);
+            this.contextMenuToc.Size = new System.Drawing.Size(137, 136);
             // 
             // menuTocViewTable
             // 
@@ -321,6 +380,13 @@ namespace UrbanRenewal.Host
             this.menuTocUniqueRender.Size = new System.Drawing.Size(136, 22);
             this.menuTocUniqueRender.Text = "唯一值渲染";
             this.menuTocUniqueRender.Click += new System.EventHandler(this.menuTocUniqueRender_Click);
+            // 
+            // menuTocRasterRender
+            // 
+            this.menuTocRasterRender.Name = "menuTocRasterRender";
+            this.menuTocRasterRender.Size = new System.Drawing.Size(136, 22);
+            this.menuTocRasterRender.Text = "栅格渲染";
+            this.menuTocRasterRender.Click += new System.EventHandler(this.menuTocRasterRender_Click);
             // 
             // menuTocZoomToLayer
             // 
@@ -378,10 +444,16 @@ namespace UrbanRenewal.Host
         private DevExpress.XtraBars.BarButtonItem btnMapPan;
         private DevExpress.XtraBars.BarButtonItem btnMapZoomIn;
         private DevExpress.XtraBars.BarButtonItem btnMapZoomOut;
+        private DevExpress.XtraBars.BarButtonItem btnMapSelect;
+        private DevExpress.XtraBars.BarButtonItem btnMapClearSelection;
+        private DevExpress.XtraBars.BarButtonItem btnMapIdentify;
+        private DevExpress.XtraBars.BarButtonItem btnMapMeasureLength;
+        private DevExpress.XtraBars.BarButtonItem btnMapMeasureArea;
         private DevExpress.XtraBars.BarButtonItem btnToggleLog;
         private DevExpress.XtraBars.BarStaticItem barStaticStatus;
         private DevExpress.XtraBars.Ribbon.RibbonPage ribbonPageMap;
         private DevExpress.XtraBars.Ribbon.RibbonPageGroup ribbonPageGroupView;
+        private DevExpress.XtraBars.Ribbon.RibbonPageGroup ribbonPageGroupSelect;
         private DevExpress.XtraBars.Ribbon.RibbonStatusBar ribbonStatusBar;
         private System.Windows.Forms.SplitContainer splitWorkspace;
         private System.Windows.Forms.SplitContainer splitMap;
@@ -398,6 +470,7 @@ namespace UrbanRenewal.Host
         private System.Windows.Forms.ToolStripMenuItem menuTocViewTable;
         private System.Windows.Forms.ToolStripMenuItem menuTocClassRender;
         private System.Windows.Forms.ToolStripMenuItem menuTocUniqueRender;
+        private System.Windows.Forms.ToolStripMenuItem menuTocRasterRender;
         private System.Windows.Forms.ToolStripMenuItem menuTocZoomToLayer;
         private System.Windows.Forms.ToolStripMenuItem menuTocRemoveLayer;
     }

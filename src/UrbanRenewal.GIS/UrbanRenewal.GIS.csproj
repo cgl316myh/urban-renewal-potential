@@ -1,4 +1,4 @@
-<?xml version="1.0" encoding="utf-8"?>
+﻿<?xml version="1.0" encoding="utf-8"?>
 <Project ToolsVersion="4.0" DefaultTargets="Build" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
   <Import Project="$(MSBuildExtensionsPath)\$(MSBuildToolsVersion)\Microsoft.Common.props" Condition="Exists('$(MSBuildExtensionsPath)\$(MSBuildToolsVersion)\Microsoft.Common.props')" />
   <Import Project="..\ArcGisPaths.props" Condition="Exists('..\ArcGisPaths.props')" />
@@ -129,6 +129,7 @@
     </Reference>
     <Reference Include="System" />
     <Reference Include="System.Core" />
+    <Reference Include="System.Drawing" />
     <Reference Include="System.Windows.Forms" />
   </ItemGroup>
   <ItemGroup>
@@ -148,6 +149,7 @@
     <Compile Include="GeoprocessorHelper.cs" />
     <Compile Include="LiveMessageList.cs" />
     <Compile Include="MapWorkspaceService.cs" />
+    <Compile Include="MapMeasureTools.cs" />
     <Compile Include="MapDocumentHelper.cs" />
     <Compile Include="MapExportHelper.cs" />
     <Compile Include="NetworkDatasetHelper.cs" />
@@ -157,6 +159,7 @@
     <Compile Include="ParcelZonalLinker.cs" />
     <Compile Include="PotentialOverlayBuilder.cs" />
     <Compile Include="RasterLayerHelper.cs" />
+    <Compile Include="RasterOutlineHelper.cs" />
     <Compile Include="ResultsExporter.cs" />
     <Compile Include="RoadNetworkAccessibilityBuilder.cs" />
     <Compile Include="SpatialReferenceAudit.cs" />

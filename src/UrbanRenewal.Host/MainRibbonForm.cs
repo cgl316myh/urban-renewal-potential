@@ -52,6 +52,11 @@ namespace UrbanRenewal.Host
             RibbonHostImpl.ApplyLargeImage(this.btnMapPan, this.btnMapPan.Caption);
             RibbonHostImpl.ApplyLargeImage(this.btnMapZoomIn, this.btnMapZoomIn.Caption);
             RibbonHostImpl.ApplyLargeImage(this.btnMapZoomOut, this.btnMapZoomOut.Caption);
+            RibbonHostImpl.ApplyLargeImage(this.btnMapSelect, this.btnMapSelect.Caption);
+            RibbonHostImpl.ApplyLargeImage(this.btnMapClearSelection, this.btnMapClearSelection.Caption);
+            RibbonHostImpl.ApplyLargeImage(this.btnMapIdentify, this.btnMapIdentify.Caption);
+            RibbonHostImpl.ApplyLargeImage(this.btnMapMeasureLength, this.btnMapMeasureLength.Caption);
+            RibbonHostImpl.ApplyLargeImage(this.btnMapMeasureArea, this.btnMapMeasureArea.Caption);
             RibbonHostImpl.ApplyLargeImage(this.btnToggleLog, this.btnToggleLog.Caption);
         }
 
@@ -260,6 +265,75 @@ namespace UrbanRenewal.Host
             AppendLog("INFO", "当前工具: 缩小");
         }
 
+        private void btnMapSelect_ItemClick(object sender, ItemClickEventArgs e)
+        {
+            if (_axMapControl == null)
+            {
+                AppendLog("WARN", "地图控件未就绪。");
+                return;
+            }
+            MapWorkspaceService.ActivateSelectFeatures((IMapControl3)_axMapControl.Object);
+            AppendLog("INFO", "当前工具: 选择");
+        }
+
+        private void btnMapClearSelection_ItemClick(object sender, ItemClickEventArgs e)
+        {
+            if (_axMapControl == null)
+            {
+                AppendLog("WARN", "地图控件未就绪。");
+                return;
+            }
+            MapWorkspaceService.ClearSelection((IMapControl3)_axMapControl.Object);
+            AppendLog("INFO", "已取消选择。");
+        }
+
+        private void btnMapIdentify_ItemClick(object sender, ItemClickEventArgs e)
+        {
+            if (_axMapControl == null)
+            {
+                AppendLog("WARN", "地图控件未就绪。");
+                return;
+            }
+            MapWorkspaceService.ActivateIdentify((IMapControl3)_axMapControl.Object);
+            AppendLog("INFO", "当前工具: 识别");
+        }
+
+        private void btnMapMeasureLength_ItemClick(object sender, ItemClickEventArgs e)
+        {
+            if (_axMapControl == null)
+            {
+                AppendLog("WARN", "地图控件未就绪。");
+                return;
+            }
+            MapWorkspaceService.ActivateMeasureLength(
+                (IMapControl3)_axMapControl.Object,
+                OnMapMeasureResult);
+            AppendLog("INFO", "当前工具: 长度测量（单击加点，双击结束，Esc 取消）");
+        }
+
+        private void btnMapMeasureArea_ItemClick(object sender, ItemClickEventArgs e)
+        {
+            if (_axMapControl == null)
+            {
+                AppendLog("WARN", "地图控件未就绪。");
+                return;
+            }
+            MapWorkspaceService.ActivateMeasureArea(
+                (IMapControl3)_axMapControl.Object,
+                OnMapMeasureResult);
+            AppendLog("INFO", "当前工具: 面积测量（单击加点，双击结束，Esc 取消）");
+        }
+
+        private void OnMapMeasureResult(string message)
+        {
+            if (string.IsNullOrEmpty(message))
+            {
+                return;
+            }
+            AppendLog("INFO", message);
+            SetStatus(message);
+        }
+
         private void btnToggleLog_ItemClick(object sender, ItemClickEventArgs e)
         {
             ToggleLogPanel();
@@ -387,8 +461,45 @@ namespace UrbanRenewal.Host
             }
             this.menuTocClassRender.Enabled = isPolygon;
             this.menuTocUniqueRender.Enabled = isVectorGeom;
+            this.menuTocRasterRender.Enabled = layer is IRasterLayer;
 
             this.contextMenuToc.Show(_axTocControl, new System.Drawing.Point(e.x, e.y));
+        }
+
+        private void menuTocRasterRender_Click(object sender, EventArgs e)
+        {
+            if (_tocContextLayer == null)
+            {
+                return;
+            }
+
+            IRasterLayer rasterLayer = _tocContextLayer as IRasterLayer;
+            if (rasterLayer == null || rasterLayer.Raster == null)
+            {
+                MessageBox.Show(this, "仅支持对栅格图层进行渲染。", "提示",
+                    MessageBoxButtons.OK, MessageBoxIcon.Information);
+                return;
+            }
+
+            try
+            {
+                using (RasterRenderForm form = new RasterRenderForm(rasterLayer, _axMapControl.Map))
+                {
+                    if (form.ShowDialog(this) == DialogResult.OK && form.Applied)
+                    {
+                        // 栅格渲染器变更后需整图刷新，PartialRefresh 有时不重绘色带
+                        _axMapControl.ActiveView.ContentsChanged();
+                        _axMapControl.ActiveView.Refresh();
+                        _axTocControl.Update();
+                        AppendLog("INFO", "已应用栅格渲染: " + _tocContextLayer.Name);
+                    }
+                }
+            }
+            catch (Exception ex)
+            {
+                MessageBox.Show(this, "栅格渲染失败：\r\n" + ex.Message, "错误",
+                    MessageBoxButtons.OK, MessageBoxIcon.Error);
+            }
         }
 
         private void menuTocUniqueRender_Click(object sender, EventArgs e)

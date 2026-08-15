@@ -34,6 +34,26 @@ namespace UrbanRenewal.Host
             {
                 return GetLarge("map_zoomin");
             }
+            if (caption.IndexOf("取消选择", StringComparison.Ordinal) >= 0)
+            {
+                return GetLarge("map_clear_sel");
+            }
+            if (caption.IndexOf("选择", StringComparison.Ordinal) >= 0)
+            {
+                return GetLarge("map_select");
+            }
+            if (caption.IndexOf("识别", StringComparison.Ordinal) >= 0)
+            {
+                return GetLarge("map_identify");
+            }
+            if (caption.IndexOf("面积", StringComparison.Ordinal) >= 0)
+            {
+                return GetLarge("map_measure_area");
+            }
+            if (caption.IndexOf("长度", StringComparison.Ordinal) >= 0 || caption.IndexOf("测量", StringComparison.Ordinal) >= 0)
+            {
+                return GetLarge("map_measure_len");
+            }
             if (caption.IndexOf("新建工程", StringComparison.Ordinal) >= 0)
             {
                 return GetLarge("new_project");
@@ -170,6 +190,54 @@ namespace UrbanRenewal.Host
                             g.DrawEllipse(p, 6, 6, 14, 14);
                             g.DrawLine(p, 18, 18, 26, 26);
                             g.DrawLine(p, 10, 13, 16, 13);
+                        }
+                        break;
+                    case "map_select":
+                        DrawRoundRect(g, bounds, Color.FromArgb(40, 120, 160), Color.FromArgb(70, 160, 200));
+                        using (Pen p = new Pen(Color.White, 2f))
+                        {
+                            g.DrawRectangle(p, 8, 8, 12, 12);
+                            g.DrawLine(p, 20, 20, 26, 26);
+                            g.DrawLine(p, 20, 26, 26, 20);
+                        }
+                        break;
+                    case "map_clear_sel":
+                        DrawRoundRect(g, bounds, Color.FromArgb(140, 70, 70), Color.FromArgb(190, 110, 110));
+                        using (Pen p = new Pen(Color.White, 2.5f))
+                        {
+                            g.DrawRectangle(p, 8, 8, 16, 16);
+                            g.DrawLine(p, 10, 10, 22, 22);
+                            g.DrawLine(p, 22, 10, 10, 22);
+                        }
+                        break;
+                    case "map_identify":
+                        DrawRoundRect(g, bounds, Color.FromArgb(60, 100, 150), Color.FromArgb(100, 140, 190));
+                        using (Pen p = new Pen(Color.White, 2f))
+                        {
+                            g.DrawEllipse(p, 10, 6, 12, 12);
+                            g.DrawLine(p, 16, 18, 16, 26);
+                        }
+                        using (Brush b = new SolidBrush(Color.White))
+                        {
+                            g.FillEllipse(b, 14, 10, 4, 4);
+                        }
+                        break;
+                    case "map_measure_len":
+                        DrawRoundRect(g, bounds, Color.FromArgb(50, 130, 90), Color.FromArgb(90, 170, 130));
+                        using (Pen p = new Pen(Color.White, 2f))
+                        {
+                            g.DrawLine(p, 7, 24, 25, 8);
+                            g.DrawEllipse(p, 5, 22, 5, 5);
+                            g.DrawEllipse(p, 22, 6, 5, 5);
+                        }
+                        break;
+                    case "map_measure_area":
+                        DrawRoundRect(g, bounds, Color.FromArgb(40, 110, 100), Color.FromArgb(80, 150, 140));
+                        using (Pen p = new Pen(Color.White, 2f))
+                        {
+                            g.DrawPolygon(p, new Point[] {
+                                new Point(8, 22), new Point(10, 8), new Point(24, 10), new Point(22, 24)
+                            });
                         }
                         break;
                     case "global_settings":

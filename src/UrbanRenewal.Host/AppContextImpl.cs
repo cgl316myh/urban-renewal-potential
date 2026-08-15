@@ -504,6 +504,60 @@ namespace UrbanRenewal.Host
             }
         }
 
+        public void ActivateSelectFeaturesTool()
+        {
+            if (_form.MapControl != null && _form.MapControl.Object != null)
+            {
+                MapWorkspaceService.ActivateSelectFeatures((IMapControl3)_form.MapControl.Object);
+            }
+        }
+
+        public void ClearMapSelection()
+        {
+            if (_form.MapControl != null && _form.MapControl.Object != null)
+            {
+                MapWorkspaceService.ClearSelection((IMapControl3)_form.MapControl.Object);
+            }
+        }
+
+        public void ActivateIdentifyTool()
+        {
+            if (_form.MapControl != null && _form.MapControl.Object != null)
+            {
+                MapWorkspaceService.ActivateIdentify((IMapControl3)_form.MapControl.Object);
+            }
+        }
+
+        public void ActivateMeasureLengthTool()
+        {
+            if (_form.MapControl != null && _form.MapControl.Object != null)
+            {
+                MapWorkspaceService.ActivateMeasureLength(
+                    (IMapControl3)_form.MapControl.Object,
+                    ReportMeasure);
+            }
+        }
+
+        public void ActivateMeasureAreaTool()
+        {
+            if (_form.MapControl != null && _form.MapControl.Object != null)
+            {
+                MapWorkspaceService.ActivateMeasureArea(
+                    (IMapControl3)_form.MapControl.Object,
+                    ReportMeasure);
+            }
+        }
+
+        private void ReportMeasure(string message)
+        {
+            if (string.IsNullOrEmpty(message))
+            {
+                return;
+            }
+            LogInfo(message);
+            _form.SetStatus(message);
+        }
+
         public bool AddRasterLayer(string rasterPath, string layerName, out string message)
         {
             if (_form.MapControl == null || _form.MapControl.Object == null)

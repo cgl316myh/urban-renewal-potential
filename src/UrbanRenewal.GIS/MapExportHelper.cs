@@ -12,17 +12,26 @@ namespace UrbanRenewal.GIS
     /// </summary>
     public static class MapExportHelper
     {
+        /// <summary>导出分辨率（DPI）。默认 300，避免按屏幕 96 DPI 导出过小。</summary>
+        public const int DefaultExportDpi = 300;
+
+        /// <summary>假定屏幕 DPI，用于换算输出像素尺寸。</summary>
+        private const int ScreenDpi = 96;
+
+        /// <summary>长边最小像素，防止地图窗口过小时输出仍偏小。</summary>
+        private const int MinLongEdgePixels = 2400;
+
         public static bool ExportToPdf(object mapControl, string filePath, out string message)
         {
-            return Export(mapControl, filePath, true, out message);
+            return Export(mapControl, filePath, true, DefaultExportDpi, out message);
         }
 
         public static bool ExportToTiff(object mapControl, string filePath, out string message)
         {
-            return Export(mapControl, filePath, false, out message);
+            return Export(mapControl, filePath, false, DefaultExportDpi, out message);
         }
 
-        private static bool Export(object mapControl, string filePath, bool pdf, out string message)
+        private static bool Export(object mapControl, string filePath, bool pdf, int dpi, out string message)
         {
             message = null;
             IMapControl3 map = ResolveMap(mapControl);
@@ -35,6 +44,10 @@ namespace UrbanRenewal.GIS
             {
                 message = "导出路径无效。";
                 return false;
+            }
+            if (dpi < 72)
+            {
+                dpi = DefaultExportDpi;
             }
 
             try
@@ -53,20 +66,58 @@ namespace UrbanRenewal.GIS
                 }
                 else
                 {
-                    export = new ExportTIFFClass();
+                    ExportTIFFClass tiff = new ExportTIFFClass();
+                    // 无压缩，保证画质；GeoTIFF 便于叠加
+                    try
+                    {
+                        tiff.CompressionType = esriTIFFCompression.esriTIFFCompressionNone;
+                    }
+                    catch
+                    {
+                    }
+                    export = tiff;
                 }
+
                 export.ExportFileName = filePath;
+                export.Resolution = dpi;
 
-                tagRECT exportRECT = activeView.ExportFrame;
-                IEnvelope envelope = activeView.Extent;
-                export.PixelBounds = RectToEnvelope(exportRECT);
+                tagRECT screenRECT = activeView.ExportFrame;
+                int screenW = Math.Max(1, screenRECT.right - screenRECT.left);
+                int screenH = Math.Max(1, screenRECT.bottom - screenRECT.top);
 
+                // 按 DPI 放大，再保证长边不少于 MinLongEdgePixels
+                double scale = (double)dpi / (double)ScreenDpi;
+                int outW = Math.Max(1, (int)Math.Round(screenW * scale));
+                int outH = Math.Max(1, (int)Math.Round(screenH * scale));
+                int longEdge = Math.Max(outW, outH);
+                if (longEdge < MinLongEdgePixels)
+                {
+                    double boost = (double)MinLongEdgePixels / (double)longEdge;
+                    outW = Math.Max(1, (int)Math.Round(outW * boost));
+                    outH = Math.Max(1, (int)Math.Round(outH * boost));
+                    // 与放大后的像素尺寸匹配的有效 DPI
+                    dpi = Math.Max(DefaultExportDpi, (int)Math.Round(ScreenDpi * ((double)outW / (double)screenW)));
+                    export.Resolution = dpi;
+                }
+
+                tagRECT exportRECT;
+                exportRECT.left = 0;
+                exportRECT.top = 0;
+                exportRECT.right = outW;
+                exportRECT.bottom = outH;
+
+                IEnvelope pixelBounds = new EnvelopeClass();
+                pixelBounds.PutCoords(exportRECT.left, exportRECT.top, exportRECT.right, exportRECT.bottom);
+                export.PixelBounds = pixelBounds;
+
+                IEnvelope mapExtent = activeView.Extent;
                 int hDC = export.StartExporting();
-                activeView.Output(hDC, (int)export.Resolution, ref exportRECT, envelope, null);
+                activeView.Output(hDC, (int)export.Resolution, ref exportRECT, mapExtent, null);
                 export.FinishExporting();
                 export.Cleanup();
 
-                message = (pdf ? "已导出 PDF: " : "已导出 TIFF: ") + filePath;
+                message = (pdf ? "已导出 PDF: " : "已导出 TIFF: ") + filePath
+                    + "（" + outW + "×" + outH + " @ " + dpi + " DPI）";
                 return true;
             }
             catch (Exception ex)
@@ -74,13 +125,6 @@ namespace UrbanRenewal.GIS
                 message = "地图导出失败: " + ex.Message;
                 return false;
             }
-        }
-
-        private static IEnvelope RectToEnvelope(tagRECT rect)
-        {
-            IEnvelope env = new EnvelopeClass();
-            env.PutCoords(rect.left, rect.bottom, rect.right, rect.top);
-            return env;
         }
 
         private static IMapControl3 ResolveMap(object mapControl)
