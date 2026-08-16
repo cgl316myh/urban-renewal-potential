@@ -1,7 +1,9 @@
 using System;
 using System.Collections.Generic;
 using System.Globalization;
+using System.Runtime.ExceptionServices;
 using System.Runtime.InteropServices;
+using System.Security;
 using System.Text;
 using ESRI.ArcGIS.Carto;
 using ESRI.ArcGIS.DataManagementTools;
@@ -72,6 +74,11 @@ namespace UrbanRenewal.GIS
                 featureDatasetName, networkName, impedanceAttribute, cellSize, messages, null);
         }
 
+        /// <summary>
+        /// 捕获层必须带 HandleProcessCorruptedStateExceptions，否则 AV 会直接杀进程。
+        /// </summary>
+        [HandleProcessCorruptedStateExceptions]
+        [SecurityCritical]
         private static string BuildCore(
             GeoprocessorHelper gp,
             string sourceGdbPath,
@@ -127,6 +134,16 @@ namespace UrbanRenewal.GIS
                 saRaster = BuildServiceAreaRaster(
                     gp, nd, facilities, outputGdb, impedance, cellSize, messages);
             }
+            catch (AccessViolationException exAv)
+            {
+                AddMsg(messages, "服务区分析发生内存访问异常（已捕获）: " + exAv.Message);
+                saRaster = null;
+            }
+            catch (SEHException exSeh)
+            {
+                AddMsg(messages, "服务区分析发生原生异常（已捕获）: " + exSeh.Message);
+                saRaster = null;
+            }
             catch (Exception ex)
             {
                 AddMsg(messages, "服务区分析失败: " + ex.Message);
@@ -138,11 +155,123 @@ namespace UrbanRenewal.GIS
                 return saRaster;
             }
 
-            AddMsg(messages, "路网可达性：服务区失败，回退欧氏距离近似。");
-            return BuildEuclideanFallback(gp, facilities, outputGdb, cellSize, messages);
+            // 已有预建路网时不回退欧氏：避免结果口径变化；由重试/预热尽量把 NA 求解做稳
+            AddMsg(messages, "路网可达性：服务区失败（已有预建路网，不回退欧氏距离）。");
+            return null;
         }
 
+        /// <summary>
+        /// HandleProcessCorruptedStateExceptions：允许捕获 AccessViolation（NA/GP 原生崩溃常见）。
+        /// </summary>
+        [HandleProcessCorruptedStateExceptions]
+        [SecurityCritical]
         private static string BuildServiceAreaRaster(
+            GeoprocessorHelper gp,
+            INetworkDataset networkDataset,
+            string facilitiesPath,
+            string outputGdb,
+            string impedance,
+            double cellSize,
+            IList<string> messages)
+        {
+            // 本机现象：首次求解/导出易失败或 AccessViolation，再跑同一流程往往成功。
+            // 因此：先冷启动预热一次，再正式求解；失败则整段自动重试。
+            const int maxAttempts = 3;
+            for (int attempt = 1; attempt <= maxAttempts; attempt++)
+            {
+                if (attempt > 1)
+                {
+                    AddMsg(messages, "路网服务区第 " + attempt + " 次尝试（针对冷启动/导出偶发失败）...");
+                    TryComCleanup();
+                }
+                else
+                {
+                    WarmUpServiceAreaSolve(networkDataset, facilitiesPath, impedance, messages);
+                    TryComCleanup();
+                }
+
+                string raster = null;
+                try
+                {
+                    raster = TryBuildServiceAreaOnce(
+                        gp, networkDataset, facilitiesPath, outputGdb, impedance, cellSize, messages);
+                }
+                catch (AccessViolationException exAv)
+                {
+                    AddMsg(messages, "第 " + attempt + " 次服务区尝试发生内存访问异常: " + exAv.Message);
+                    raster = null;
+                }
+                catch (SEHException exSeh)
+                {
+                    AddMsg(messages, "第 " + attempt + " 次服务区尝试发生原生异常: " + exSeh.Message);
+                    raster = null;
+                }
+
+                if (!string.IsNullOrEmpty(raster))
+                {
+                    return raster;
+                }
+            }
+
+            return null;
+        }
+
+        /// <summary>
+        /// 丢弃式预热求解：不读 Shape、不导出。用于避开首次 NA 求解后的不稳定态。
+        /// </summary>
+        [HandleProcessCorruptedStateExceptions]
+        [SecurityCritical]
+        private static void WarmUpServiceAreaSolve(
+            INetworkDataset networkDataset,
+            string facilitiesPath,
+            string impedance,
+            IList<string> messages)
+        {
+            AddMsg(messages, "路网服务区冷启动预热（首次求解后导出不稳定时常见）...");
+            INAContext ctx = null;
+            try
+            {
+                ctx = CreateServiceAreaContext(networkDataset, impedance);
+                if (ctx == null)
+                {
+                    return;
+                }
+                int loaded = LoadFacilities(ctx, facilitiesPath);
+                if (loaded <= 0)
+                {
+                    return;
+                }
+                IGPMessages gpMessages = new GPMessagesClass();
+                try
+                {
+                    ctx.Solver.Solve(ctx, gpMessages, null);
+                }
+                catch
+                {
+                    // 预热失败可忽略，正式求解仍会重试
+                }
+            }
+            catch (AccessViolationException)
+            {
+                AddMsg(messages, "冷启动预热遇到内存访问异常，将继续正式求解。");
+            }
+            catch (SEHException)
+            {
+                AddMsg(messages, "冷启动预热遇到原生异常，将继续正式求解。");
+            }
+            catch (Exception ex)
+            {
+                AddMsg(messages, "冷启动预热跳过: " + ex.Message);
+            }
+            finally
+            {
+                ReleaseCom(ctx);
+            }
+        }
+
+        [HandleProcessCorruptedStateExceptions]
+        [SecurityCritical]
+        private static string TryBuildServiceAreaOnce(
             GeoprocessorHelper gp,
             INetworkDataset networkDataset,
             string facilitiesPath,
@@ -158,65 +287,169 @@ namespace UrbanRenewal.GIS
                 return null;
             }
 
-            int loaded = LoadFacilities(naContext, facilitiesPath);
-            AddMsg(messages, "服务区设施加载: " + loaded + " 个");
-            if (loaded <= 0)
-            {
-                AddMsg(messages, "设施未能定位到路网，请检查设施与路网是否同坐标系且空间邻近。");
-                return null;
-            }
-
-            AddMsg(messages, "正在求解路网服务区（打断 1/2/3/5/8 km，耗时可能较长）...");
-            IGPMessages gpMessages = new GPMessagesClass();
-            bool ok = false;
             try
             {
-                ok = naContext.Solver.Solve(naContext, gpMessages, null);
-            }
-            catch (Exception exSolve)
-            {
-                AddMsg(messages, "NA Solve 异常: " + exSolve.Message);
-            }
-            LogGpMessages(gpMessages, messages);
+                int loaded = LoadFacilities(naContext, facilitiesPath);
+                AddMsg(messages, "服务区设施加载: " + loaded + " 个");
+                if (loaded <= 0)
+                {
+                    AddMsg(messages, "设施未能定位到路网，请检查设施与路网是否同坐标系且空间邻近。");
+                    return null;
+                }
+                LogFacilityLocateStatus(naContext, messages);
 
-            INAClass saClass = naContext.NAClasses.get_ItemByName("SAPolygons") as INAClass;
-            IFeatureClass saFc = saClass as IFeatureClass;
-            int polyCount = (saFc == null) ? 0 : saFc.FeatureCount(null);
-            // Engine 上 Solve 常返回 false 且无 GP 消息，但仍可能已写出 SAPolygons
-            if (polyCount <= 0)
-            {
+                AddMsg(messages, "正在求解路网服务区（打断 1/2/3/5/8 km，耗时可能较长）...");
+                IGPMessages gpMessages = new GPMessagesClass();
+                bool ok = false;
+                try
+                {
+                    ok = naContext.Solver.Solve(naContext, gpMessages, null);
+                }
+                catch (Exception exSolve)
+                {
+                    AddMsg(messages, "NA Solve 异常: " + exSolve.Message);
+                    ok = false;
+                }
+                LogGpMessages(gpMessages, messages);
+
+                INAClass saClass = naContext.NAClasses.get_ItemByName("SAPolygons") as INAClass;
+                IFeatureClass saFc = saClass as IFeatureClass;
+                int polyCount = 0;
+                try
+                {
+                    polyCount = (saFc == null) ? 0 : saFc.FeatureCount(null);
+                }
+                catch (Exception exCnt)
+                {
+                    AddMsg(messages, "读取服务区多边形失败: " + exCnt.Message);
+                    return null;
+                }
+
+                // Esri：部分设施未落网或仅有警告时 Solve 常返回 false，但仍可能生成完整打断环。
+                // 本地日志常见：55 设施 × 5 环 = 275，Solve==false 仍可用。
                 if (!ok)
                 {
-                    AddMsg(messages, "NA Solve 返回失败，且未生成服务区多边形。");
+                    int expected = loaded * DefaultBreaksMeters.Length;
+                    if (polyCount <= 0)
+                    {
+                        AddMsg(messages, "NA Solve 返回 false，且未生成服务区多边形。");
+                        return null;
+                    }
+                    AddMsg(messages, "NA Solve 返回 false（常见于警告/部分未落网），但已生成服务区多边形 "
+                        + polyCount + " 个"
+                        + (polyCount == expected ? "（与设施×打断数一致，视为可用）" : "")
+                        + "，继续导出。");
+                }
+                else if (polyCount <= 0)
+                {
+                    AddMsg(messages, "服务区未生成多边形。");
+                    return null;
                 }
                 else
                 {
-                    AddMsg(messages, "服务区未生成多边形。");
+                    AddMsg(messages, "服务区多边形: " + polyCount + " 个");
                 }
-                return null;
-            }
-            if (!ok)
-            {
-                AddMsg(messages, "NA Solve 返回 false，但已生成服务区多边形 " + polyCount + " 个，继续使用。");
-            }
-            else
-            {
-                AddMsg(messages, "服务区多边形: " + polyCount + " 个");
-            }
 
-            string polyOut = OutputGdbHelper.DatasetPath(outputGdb, "road_sa_poly");
-            OutputGdbHelper.TryDeleteDataset(gp, polyOut);
-            if (!ExportFeatureClass(gp, saFc, polyOut, messages))
-            {
-                return null;
-            }
+                string polyOut = OutputGdbHelper.DatasetPath(outputGdb, "road_sa_poly");
+                OutputGdbHelper.TryDeleteDataset(gp, polyOut);
+                AddMsg(messages, "导出服务区多边形到输出库...");
+                if (!ExportFeatureClass(gp, saFc, polyOut, messages))
+                {
+                    return null;
+                }
+                AddMsg(messages, "服务区多边形已导出: " + polyOut);
 
-            AssignScoresByToBreak(gp, polyOut, DefaultBreaksMeters, DefaultScores);
-            string raster = OutputGdbHelper.DatasetPath(outputGdb, "road_access");
-            OutputGdbHelper.TryDeleteDataset(gp, raster);
-            FeatureToRasterScore(gp, polyOut, raster, cellSize);
-            AddMsg(messages, "路网可达性（服务区）栅格: " + raster);
-            return raster;
+                AssignScoresByToBreak(gp, polyOut, DefaultBreaksMeters, DefaultScores);
+                string raster = OutputGdbHelper.DatasetPath(outputGdb, "road_access");
+                OutputGdbHelper.TryDeleteDataset(gp, raster);
+                FeatureToRasterScore(gp, polyOut, raster, cellSize);
+                AddMsg(messages, "路网可达性（服务区）栅格: " + raster);
+                return raster;
+            }
+            finally
+            {
+                ReleaseCom(naContext);
+            }
+        }
+
+        private static void LogFacilityLocateStatus(INAContext naContext, IList<string> messages)
+        {
+            try
+            {
+                INAClass facClass = naContext.NAClasses.get_ItemByName("Facilities") as INAClass;
+                IFeatureClass fc = facClass as IFeatureClass;
+                if (fc == null)
+                {
+                    return;
+                }
+                int statusIdx = fc.FindField("Status");
+                if (statusIdx < 0)
+                {
+                    return;
+                }
+                int ok = 0;
+                int bad = 0;
+                IFeatureCursor cur = fc.Search(null, true);
+                try
+                {
+                    IFeature f;
+                    while ((f = cur.NextFeature()) != null)
+                    {
+                        object v = f.get_Value(statusIdx);
+                        int code = 0;
+                        if (v != null && v != DBNull.Value)
+                        {
+                            code = Convert.ToInt32(v);
+                        }
+                        // 0 = OK (esriNAObjectStatusOK)
+                        if (code == 0)
+                        {
+                            ok++;
+                        }
+                        else
+                        {
+                            bad++;
+                        }
+                    }
+                }
+                finally
+                {
+                    Marshal.FinalReleaseComObject(cur);
+                }
+                AddMsg(messages, "设施落网状态: 成功 " + ok + " / 异常 " + bad);
+            }
+            catch (Exception ex)
+            {
+                AddMsg(messages, "读取设施落网状态失败: " + ex.Message);
+            }
+        }
+
+        private static void TryComCleanup()
+        {
+            try
+            {
+                GC.Collect();
+                GC.WaitForPendingFinalizers();
+                GC.Collect();
+            }
+            catch
+            {
+            }
+        }
+
+        private static void ReleaseCom(object com)
+        {
+            if (com == null)
+            {
+                return;
+            }
+            try
+            {
+                Marshal.FinalReleaseComObject(com);
+            }
+            catch
+            {
+            }
         }
 
         private static INAContext CreateServiceAreaContext(INetworkDataset networkDataset, string impedance)
@@ -305,14 +538,44 @@ namespace UrbanRenewal.GIS
             return rowsLocated;
         }
 
+        [HandleProcessCorruptedStateExceptions]
+        [SecurityCritical]
         private static bool ExportFeatureClass(
             GeoprocessorHelper gp,
             IFeatureClass source,
             string outPath,
             IList<string> messages)
         {
+            // 优先 GP；失败再试游标。禁止在未捕获 AV 的情况下让进程直接崩掉。
             try
             {
+                AddMsg(messages, "服务区导出: CopyFeatures...");
+                IFeatureLayer layer = new FeatureLayerClass();
+                layer.FeatureClass = source;
+                layer.Name = "SAPolygons";
+                CopyFeatures copy = new CopyFeatures();
+                copy.in_features = layer;
+                copy.out_feature_class = outPath;
+                gp.Execute(copy, "Copy-SAPolygons");
+                AddMsg(messages, "服务区导出成功（CopyFeatures）。");
+                return true;
+            }
+            catch (AccessViolationException exAv)
+            {
+                AddMsg(messages, "CopyFeatures 内存访问异常: " + exAv.Message);
+            }
+            catch (SEHException exSeh)
+            {
+                AddMsg(messages, "CopyFeatures 原生异常: " + exSeh.Message);
+            }
+            catch (Exception ex)
+            {
+                AddMsg(messages, "CopyFeatures 服务区失败: " + ex.Message);
+            }
+
+            try
+            {
+                AddMsg(messages, "服务区导出: FeatureClassToFeatureClass...");
                 IFeatureLayer layer = new FeatureLayerClass();
                 layer.FeatureClass = source;
                 layer.Name = "SAPolygons";
@@ -323,39 +586,43 @@ namespace UrbanRenewal.GIS
                 convert.out_path = System.IO.Path.GetDirectoryName(outPath);
                 convert.out_name = System.IO.Path.GetFileName(outPath);
                 gp.Execute(convert, "Export-SAPolygons");
+                AddMsg(messages, "服务区导出成功（FeatureClassToFeatureClass）。");
                 return true;
+            }
+            catch (AccessViolationException exAv)
+            {
+                AddMsg(messages, "FeatureClassToFeatureClass 内存访问异常: " + exAv.Message);
+            }
+            catch (SEHException exSeh)
+            {
+                AddMsg(messages, "FeatureClassToFeatureClass 原生异常: " + exSeh.Message);
             }
             catch (Exception ex)
             {
-                AddMsg(messages, "导出服务区失败: " + ex.Message);
-                try
-                {
-                    IFeatureLayer layer = new FeatureLayerClass();
-                    layer.FeatureClass = source;
-                    CopyFeatures copy = new CopyFeatures();
-                    copy.in_features = layer;
-                    copy.out_feature_class = outPath;
-                    gp.Execute(copy, "Copy-SAPolygons");
-                    return true;
-                }
-                catch (Exception ex2)
-                {
-                    AddMsg(messages, "CopyFeatures 服务区失败: " + ex2.Message);
-                    return CopyFeaturesByCursor(source, outPath, messages);
-                }
+                AddMsg(messages, "FeatureClassToFeatureClass 失败: " + ex.Message);
             }
+
+            // 本机第二次运行时游标导出曾成功；作为末位兜底（仍包在 AV 捕获内）
+            return TryExportByCursor(source, outPath, messages);
         }
 
-        private static bool CopyFeaturesByCursor(IFeatureClass source, string outPath, IList<string> messages)
+        [HandleProcessCorruptedStateExceptions]
+        [SecurityCritical]
+        private static bool TryExportByCursor(IFeatureClass source, string outPath, IList<string> messages)
         {
             try
             {
+                AddMsg(messages, "服务区导出: 游标复制...");
+                if (source == null || string.IsNullOrEmpty(outPath))
+                {
+                    return false;
+                }
+
                 string gdb = System.IO.Path.GetDirectoryName(outPath);
                 string name = System.IO.Path.GetFileName(outPath);
                 IWorkspaceFactory factory = new ESRI.ArcGIS.DataSourcesGDB.FileGDBWorkspaceFactoryClass();
                 IFeatureWorkspace fws = (IFeatureWorkspace)factory.OpenFromFile(gdb, 0);
 
-                // 删除已存在
                 try
                 {
                     IFeatureClass existing = fws.OpenFeatureClass(name);
@@ -365,71 +632,66 @@ namespace UrbanRenewal.GIS
                 {
                 }
 
-                IFieldsEdit fieldsEdit = new FieldsClass();
-                IFieldEdit oid = new FieldClass();
-                oid.Name_2 = "OBJECTID";
-                oid.Type_2 = esriFieldType.esriFieldTypeOID;
-                fieldsEdit.AddField(oid);
+                IFields fields = source.Fields;
+                IFeatureClass outFc = fws.CreateFeatureClass(
+                    name, fields, null, null, esriFeatureType.esriFTSimple, source.ShapeFieldName, "");
 
-                IGeometryDefEdit geomDef = new GeometryDefClass();
-                geomDef.GeometryType_2 = esriGeometryType.esriGeometryPolygon;
-                geomDef.SpatialReference_2 = ((IGeoDataset)source).SpatialReference;
-                geomDef.HasZ_2 = false;
-                geomDef.HasM_2 = false;
-
-                IFieldEdit shape = new FieldClass();
-                shape.Name_2 = "SHAPE";
-                shape.Type_2 = esriFieldType.esriFieldTypeGeometry;
-                shape.GeometryDef_2 = geomDef;
-                fieldsEdit.AddField(shape);
-
-                IFieldEdit toBreak = new FieldClass();
-                toBreak.Name_2 = "ToBreak";
-                toBreak.Type_2 = esriFieldType.esriFieldTypeDouble;
-                fieldsEdit.AddField(toBreak);
-
-                IFieldEdit score = new FieldClass();
-                score.Name_2 = "SCORE";
-                score.Type_2 = esriFieldType.esriFieldTypeSmallInteger;
-                fieldsEdit.AddField(score);
-
-                IFeatureClass target = fws.CreateFeatureClass(
-                    name, fieldsEdit, null, null, esriFeatureType.esriFTSimple, "SHAPE", "");
-
-                int srcToBreak = source.FindField("ToBreak");
-                int dstToBreak = target.FindField("ToBreak");
-                int dstScore = target.FindField("SCORE");
-
-                IFeatureCursor srcCur = source.Search(null, false);
-                IFeatureCursor dstCur = target.Insert(true);
+                IFeatureCursor inCur = source.Search(null, false);
+                IFeatureCursor outCur = outFc.Insert(true);
                 try
                 {
+                    IFeatureBuffer buf = outFc.CreateFeatureBuffer();
                     IFeature f;
-                    while ((f = srcCur.NextFeature()) != null)
+                    int n = 0;
+                    while ((f = inCur.NextFeature()) != null)
                     {
-                        IFeatureBuffer buf = target.CreateFeatureBuffer();
                         buf.Shape = f.ShapeCopy;
-                        double tb = 0;
-                        if (srcToBreak >= 0 && f.get_Value(srcToBreak) != null && f.get_Value(srcToBreak) != DBNull.Value)
+                        for (int i = 0; i < fields.FieldCount; i++)
                         {
-                            tb = Convert.ToDouble(f.get_Value(srcToBreak), CultureInfo.InvariantCulture);
-                            buf.set_Value(dstToBreak, tb);
+                            IField field = fields.get_Field(i);
+                            if (!field.Editable || field.Type == esriFieldType.esriFieldTypeGeometry
+                                || field.Type == esriFieldType.esriFieldTypeOID)
+                            {
+                                continue;
+                            }
+                            int outIdx = outFc.FindField(field.Name);
+                            if (outIdx >= 0)
+                            {
+                                buf.set_Value(outIdx, f.get_Value(i));
+                            }
                         }
-                        buf.set_Value(dstScore, ScoreFromToBreak(tb, DefaultBreaksMeters, DefaultScores));
-                        dstCur.InsertFeature(buf);
+                        outCur.InsertFeature(buf);
+                        n++;
                     }
-                    dstCur.Flush();
+                    outCur.Flush();
+                    AddMsg(messages, "服务区导出成功（游标，" + n + " 个）。");
+                    return n > 0;
                 }
                 finally
                 {
-                    if (srcCur != null) Marshal.FinalReleaseComObject(srcCur);
-                    if (dstCur != null) Marshal.FinalReleaseComObject(dstCur);
+                    if (inCur != null)
+                    {
+                        Marshal.FinalReleaseComObject(inCur);
+                    }
+                    if (outCur != null)
+                    {
+                        Marshal.FinalReleaseComObject(outCur);
+                    }
                 }
-                return true;
+            }
+            catch (AccessViolationException exAv)
+            {
+                AddMsg(messages, "游标导出内存访问异常: " + exAv.Message);
+                return false;
+            }
+            catch (SEHException exSeh)
+            {
+                AddMsg(messages, "游标导出原生异常: " + exSeh.Message);
+                return false;
             }
             catch (Exception ex)
             {
-                AddMsg(messages, "游标复制服务区失败: " + ex.Message);
+                AddMsg(messages, "游标导出失败: " + ex.Message);
                 return false;
             }
         }

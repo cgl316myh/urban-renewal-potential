@@ -46,6 +46,7 @@
     <Compile Include="OverlayJob.cs" />
     <Compile Include="ParcelLinkJob.cs" />
     <Compile Include="PotentialLevel.cs" />
+    <Compile Include="SessionLogWriter.cs" />
     <Compile Include="ValidationJob.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
   </ItemGroup>

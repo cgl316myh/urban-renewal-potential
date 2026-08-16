@@ -34,3 +34,6 @@ Desktop.ini
 *.log
 *.tmp
 ~$*
+
+# Installer build output (large binaries)
+setup/output/

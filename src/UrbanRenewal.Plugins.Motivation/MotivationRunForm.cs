@@ -155,7 +155,12 @@ namespace UrbanRenewal.Plugins.Motivation
             _context.LogInfo("输出 GDB: " + outGdb);
             _context.LogInfo("像元大小: " + job.CellSize + " 米");
 
-            // 不再清空地图：靠「输入=clip.gdb、输出=分析库」分库避免 schema lock
+            // 上次结果栅格若仍在地图上，会锁住 traf10mx 等 VAT，导致 CellStatistics 000871
+            int removed = _context.RemoveMapLayersFromGdb(outGdb);
+            if (removed > 0)
+            {
+                _context.LogInfo("已从地图移除输出库相关图层 " + removed + " 个（释放 schema lock）");
+            }
 
             StaBackgroundRunner.Run(
                 this,

@@ -1,5 +1,6 @@
 using System;
 using System.ComponentModel;
+using System.Drawing;
 using System.IO;
 using System.Text;
 using System.Windows.Forms;
@@ -33,13 +34,68 @@ namespace UrbanRenewal.Host
         public MainRibbonForm()
         {
             InitializeComponent();
+            ApplyAppLogo();
             ApplyRibbonLargeImages();
 
             // 设计器打开时不创建 AO 对象、不加载插件
             if (LicenseManager.UsageMode != LicenseUsageMode.Designtime)
             {
+                // 仅当已配置输入 GDB 时落盘；否则只显示在界面
+                string logPath = SessionLogWriter.StartNewSession();
+                if (!string.IsNullOrEmpty(logPath))
+                {
+                    AppendLog("INFO", "运行日志文件: " + logPath);
+                }
+                else
+                {
+                    AppendLog("INFO", "未配置输入 GDB，运行日志仅显示在界面，不写入本地文件。配置输入 GDB 后将立即落盘到 GDB 同目录。");
+                }
                 CreateArcEngineControls();
                 LoadPlugins();
+            }
+            if(_axTocControl!=null)
+            _axTocControl.EnableLayerDragDrop = true;
+        }
+
+        /// <summary>
+        /// 窗体图标与 Ribbon 应用按钮 Logo（应用按钮仅用小图，避免占满整条 Ribbon）。
+        /// </summary>
+        private void ApplyAppLogo()
+        {
+            try
+            {
+                string baseDir = AppDomain.CurrentDomain.BaseDirectory;
+                string icoPath = IOPath.Combine(baseDir, "Resources", "UrbanRenewal.ico");
+                if (!File.Exists(icoPath))
+                {
+                    icoPath = IOPath.Combine(baseDir, "UrbanRenewal.ico");
+                }
+                if (File.Exists(icoPath))
+                {
+                    this.Icon = new Icon(icoPath);
+                }
+
+                string pngPath = IOPath.Combine(baseDir, "Resources", "urban-renewal-logo.png");
+                if (File.Exists(pngPath) && this.ribbonControl != null)
+                {
+                    // DevExpress 13.1 ApplicationIcon 会按原图像素铺开；必须缩到按钮尺寸
+                    const int ribbonIconSize = 32;
+                    using (Bitmap src = new Bitmap(pngPath))
+                    {
+                        Bitmap small = new Bitmap(ribbonIconSize, ribbonIconSize);
+                        using (Graphics g = Graphics.FromImage(small))
+                        {
+                            g.Clear(Color.Transparent);
+                            g.InterpolationMode = System.Drawing.Drawing2D.InterpolationMode.HighQualityBicubic;
+                            g.DrawImage(src, 0, 0, ribbonIconSize, ribbonIconSize);
+                        }
+                        this.ribbonControl.ApplicationIcon = small;
+                    }
+                }
+            }
+            catch
+            {
+                // Logo 缺失不影响启动
             }
         }
 
@@ -86,6 +142,7 @@ namespace UrbanRenewal.Host
                 ((ISupportInitialize)_axTocControl).BeginInit();
                 _axTocControl.Dock = DockStyle.Fill;
                 _axTocControl.Name = "axTocControl";
+               
                 this.panelToc.Controls.Clear();
                 this.panelToc.Controls.Add(_axTocControl);
                 ((ISupportInitialize)_axTocControl).EndInit();
@@ -167,6 +224,7 @@ namespace UrbanRenewal.Host
             {
                 this.listBoxLog.EndUpdate();
             }
+            SessionLogWriter.Append(line);
             // 频繁 Refresh 会拖死 UI 消息泵；批量后再重绘
             _logPaintCounter++;
             if (_logPaintCounter >= 8)
@@ -217,6 +275,7 @@ namespace UrbanRenewal.Host
             {
                 _pluginManager.UnloadAll();
             }
+            SessionLogWriter.Close();
             ArcEngineBootstrap.Shutdown();
             base.OnFormClosing(e);
         }

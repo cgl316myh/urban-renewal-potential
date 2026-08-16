@@ -1,0 +1,15 @@
+【安装前请确认】
+
+本程序依赖以下环境（需自行安装，本安装包不包含）：
+
+1. Microsoft .NET Framework 4.5 或更高版本
+2. ArcGIS Engine Runtime 或 ArcGIS Desktop（与本机开发环境一致的主版本，
+   如 10.2 / 10.8）。程序为 32 位（x86），请安装对应的 32 位 GIS 运行时。
+3. 有效的 ArcGIS 许可（Engine 或 Desktop），否则地图功能不可用。
+
+安装完成后：
+- 程序目录下 Config\Cities 为城市配置模板；首次运行会复制到
+  %LocalAppData%\UrbanRenewal\Config
+- 请通过「数据管理 → 全局设置」指定输入/输出 File GDB
+
+若启动失败，请检查是否已安装 ArcGIS，以及是否缺少 Visual C++ 运行库。

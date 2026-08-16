@@ -115,6 +115,7 @@ namespace UrbanRenewal.GIS
             }
 
             string outRaster = OutputGdbHelper.DatasetPath(outputGdb, ShortName(namePrefix) + "mx");
+            OutputGdbHelper.TryDeleteDataset(gp, outRaster);
             CellStatistics stats = new CellStatistics();
             stats.in_rasters_or_constants = string.Join(";", rasters.ToArray());
             stats.out_raster = outRaster;
@@ -160,13 +161,28 @@ namespace UrbanRenewal.GIS
             }
 
             string outRaster = OutputGdbHelper.DatasetPath(outputGdb, ShortName(namePrefix) + "mx");
+            OutputGdbHelper.TryDeleteDataset(gp, outRaster);
             CellStatistics stats = new CellStatistics();
             stats.in_rasters_or_constants = string.Join(";", ToArray(rasters));
             stats.out_raster = outRaster;
             stats.statistics_type = "MAXIMUM";
             stats.ignore_nodata = "DATA";
-            gp.Execute(stats, "CellStatistics-MAX-" + namePrefix);
-            return outRaster;
+            try
+            {
+                gp.Execute(stats, "CellStatistics-MAX-" + namePrefix);
+                return outRaster;
+            }
+            catch (Exception)
+            {
+                // 输出名被锁时改用旁路名再写一次（避免整次分析因 000871 失败）
+                string alt = OutputGdbHelper.DatasetPath(
+                    outputGdb,
+                    ShortName(namePrefix) + "mx" + DateTime.Now.ToString("HHmmss"));
+                OutputGdbHelper.TryDeleteDataset(gp, alt);
+                stats.out_raster = alt;
+                gp.Execute(stats, "CellStatistics-MAX-" + namePrefix + "-retry");
+                return alt;
+            }
         }
 
         /// <summary>

@@ -95,6 +95,11 @@ namespace UrbanRenewal.Contracts
         /// </summary>
         bool AddFeatureLayer(string featureClassPath, string layerName, out string message);
 
+        /// <summary>
+        /// 移除地图中引用指定 File GDB 的图层（分析前释放结果栅格 schema lock）。
+        /// </summary>
+        int RemoveMapLayersFromGdb(string gdbPath);
+
         /// <summary>综合潜力叠置：动力性权重（默认 0.7）。</summary>
         double MotivationWeight { get; set; }
 

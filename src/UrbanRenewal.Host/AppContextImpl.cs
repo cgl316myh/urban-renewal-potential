@@ -47,7 +47,20 @@ namespace UrbanRenewal.Host
             set
             {
                 EnsureSettings();
+                string old = _settings.InputGdbPath;
                 _settings.InputGdbPath = value;
+                if (!string.Equals(old, value, StringComparison.OrdinalIgnoreCase))
+                {
+                    string logPath = SessionLogWriter.EnsureDirectoryMatchesSettings(_settings);
+                    if (!string.IsNullOrEmpty(logPath))
+                    {
+                        LogInfo("已配置输入 GDB，运行日志立即落盘: " + logPath);
+                    }
+                    else if (!string.IsNullOrEmpty(old))
+                    {
+                        LogInfo("输入 GDB 已清除，运行日志停止写入本地文件。");
+                    }
+                }
             }
         }
 
@@ -218,6 +231,8 @@ namespace UrbanRenewal.Host
             {
                 CityProfileStore.RememberId(_settings.ActiveCityProfileId);
             }
+            string logBefore = SessionLogWriter.CurrentFilePath;
+            string logAfter = SessionLogWriter.EnsureDirectoryMatchesSettings(_settings);
             LogInfo("全局设置已保存: " + GlobalAppSettingsStore.GetSettingsFilePath()
                 + "；输出GDB=" + (_settings.OutputGdbPath ?? "(空)")
                 + "；输入GDB=" + (_settings.InputGdbPath ?? "(空)")
@@ -225,6 +240,17 @@ namespace UrbanRenewal.Host
                 + "；像元=" + CellSize + "米"
                 + "；SpatialRef=" + (_settings.SpatialRefName ?? "(自动)")
                 + "；工程MXD=" + (_settings.ProjectMxdPath ?? "(未保存)"));
+            if (string.IsNullOrEmpty(logAfter))
+            {
+                if (!string.IsNullOrEmpty(logBefore))
+                {
+                    LogInfo("未配置输入 GDB，已停止本地日志落盘。");
+                }
+            }
+            else if (!string.Equals(logBefore, logAfter, StringComparison.OrdinalIgnoreCase))
+            {
+                LogInfo("运行日志已落盘到输入 GDB 同目录: " + logAfter);
+            }
             RefreshStatusBar();
         }
 
@@ -305,6 +331,12 @@ namespace UrbanRenewal.Host
             message = "工程已保存（已持久化到本地）。\r\n"
                 + "全局配置: " + GlobalAppSettingsStore.GetSettingsFilePath()
                 + "\r\n地图文档: " + mxdPath
+                + "\r\n运行日志: "
+                + (string.IsNullOrEmpty(SessionLogWriter.CurrentFilePath)
+                    ? (string.IsNullOrEmpty(_settings.InputGdbPath)
+                        ? "未配置输入 GDB，不落盘"
+                        : "(待写入)")
+                    : SessionLogWriter.CurrentFilePath)
                 + "\r\n下次启动将自动加载该 MXD。";
             LogInfo(mxdMsg);
             RefreshStatusBar();
@@ -586,6 +618,19 @@ namespace UrbanRenewal.Host
                 featureClassPath,
                 layerName,
                 out message);
+        }
+
+        public int RemoveMapLayersFromGdb(string gdbPath)
+        {
+            if (_form.MapControl == null || _form.MapControl.Object == null
+                || string.IsNullOrEmpty(gdbPath))
+            {
+                return 0;
+            }
+
+            return MapWorkspaceService.RemoveLayersReferencingGdb(
+                (IMapControl3)_form.MapControl.Object,
+                gdbPath);
         }
 
         public void LogInfo(string message)

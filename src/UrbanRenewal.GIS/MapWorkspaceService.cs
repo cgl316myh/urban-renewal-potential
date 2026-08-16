@@ -4,6 +4,7 @@ using System.Text;
 using ESRI.ArcGIS.Carto;
 using ESRI.ArcGIS.Controls;
 using ESRI.ArcGIS.DataSourcesGDB;
+using ESRI.ArcGIS.DataSourcesRaster;
 using ESRI.ArcGIS.esriSystem;
 using ESRI.ArcGIS.Geodatabase;
 using ESRI.ArcGIS.SystemUI;
@@ -129,6 +130,175 @@ namespace UrbanRenewal.GIS
             }
 
             FileGdbLockHelper.ForceComRelease();
+        }
+
+        /// <summary>
+        /// 仅移除引用指定 File GDB 的图层（含结果栅格），保留其它图层。
+        /// 再分析前调用，避免 traf10mx 等 VAT schema lock 导致 CellStatistics 000871。
+        /// </summary>
+        public static int RemoveLayersReferencingGdb(IMapControl3 mapControl, string gdbPath)
+        {
+            if (mapControl == null || string.IsNullOrEmpty(gdbPath))
+            {
+                return 0;
+            }
+
+            string target;
+            try
+            {
+                target = System.IO.Path.GetFullPath(gdbPath).TrimEnd('\\', '/');
+            }
+            catch
+            {
+                return 0;
+            }
+
+            int removed = 0;
+            try
+            {
+                for (int i = mapControl.LayerCount - 1; i >= 0; i--)
+                {
+                    ILayer layer = null;
+                    try
+                    {
+                        layer = mapControl.get_Layer(i);
+                        if (!LayerReferencesGdb(layer, target))
+                        {
+                            continue;
+                        }
+
+                        IFeatureLayer fl = layer as IFeatureLayer;
+                        if (fl != null)
+                        {
+                            try { fl.FeatureClass = null; }
+                            catch { }
+                        }
+                        mapControl.DeleteLayer(i);
+                        removed++;
+                    }
+                    catch
+                    {
+                    }
+                }
+
+                try
+                {
+                    if (mapControl.ActiveView != null)
+                    {
+                        mapControl.ActiveView.ContentsChanged();
+                        mapControl.ActiveView.Refresh();
+                    }
+                    else
+                    {
+                        mapControl.Refresh();
+                    }
+                }
+                catch
+                {
+                }
+            }
+            catch
+            {
+            }
+
+            FileGdbLockHelper.ForceComRelease();
+            return removed;
+        }
+
+        private static bool LayerReferencesGdb(ILayer layer, string gdbFullPath)
+        {
+            if (layer == null || string.IsNullOrEmpty(gdbFullPath))
+            {
+                return false;
+            }
+
+            try
+            {
+                IFeatureLayer fl = layer as IFeatureLayer;
+                if (fl != null && fl.FeatureClass != null)
+                {
+                    return WorkspacePathEquals(((IDataset)fl.FeatureClass).Workspace, gdbFullPath);
+                }
+            }
+            catch
+            {
+            }
+
+            try
+            {
+                IRasterLayer rl = layer as IRasterLayer;
+                if (rl != null && rl.Raster != null)
+                {
+                    IRasterBandCollection bands = rl.Raster as IRasterBandCollection;
+                    if (bands != null && bands.Count > 0)
+                    {
+                        IRasterBand band = bands.Item(0);
+                        IRasterDataset rds = band.RasterDataset;
+                        IDataset ds = rds as IDataset;
+                        if (ds != null)
+                        {
+                            return WorkspacePathEquals(ds.Workspace, gdbFullPath);
+                        }
+                    }
+                }
+            }
+            catch
+            {
+            }
+
+            try
+            {
+                IDataLayer dataLayer = layer as IDataLayer;
+                if (dataLayer != null)
+                {
+                    IName n = dataLayer.DataSourceName;
+                    IDatasetName dn = n as IDatasetName;
+                    if (dn != null && dn.WorkspaceName != null)
+                    {
+                        string path = dn.WorkspaceName.PathName;
+                        return PathsEqual(path, gdbFullPath);
+                    }
+                }
+            }
+            catch
+            {
+            }
+
+            return false;
+        }
+
+        private static bool WorkspacePathEquals(IWorkspace workspace, string gdbFullPath)
+        {
+            if (workspace == null)
+            {
+                return false;
+            }
+            try
+            {
+                return PathsEqual(workspace.PathName, gdbFullPath);
+            }
+            catch
+            {
+                return false;
+            }
+        }
+
+        private static bool PathsEqual(string a, string b)
+        {
+            if (string.IsNullOrEmpty(a) || string.IsNullOrEmpty(b))
+            {
+                return false;
+            }
+            try
+            {
+                string fa = System.IO.Path.GetFullPath(a).TrimEnd('\\', '/');
+                string fb = System.IO.Path.GetFullPath(b).TrimEnd('\\', '/');
+                return string.Equals(fa, fb, StringComparison.OrdinalIgnoreCase);
+            }
+            catch
+            {
+                return false;
+            }
         }
 
         /// <summary>
