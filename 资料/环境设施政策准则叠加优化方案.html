@@ -1,0 +1,607 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>环境·设施·政策准则叠加优化方案</title>
+  <style>
+    :root {
+      --primary: #1a5276;
+      --primary-light: #2e86c1;
+      --accent: #e67e22;
+      --bg: #f4f6f9;
+      --card: #ffffff;
+      --border: #d5dbdb;
+      --text: #2c3e50;
+      --muted: #7f8c8d;
+      --danger: #c0392b;
+      --success: #1e8449;
+    }
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body {
+      font-family: "Microsoft YaHei", "PingFang SC", "Segoe UI", sans-serif;
+      background: var(--bg);
+      color: var(--text);
+      line-height: 1.75;
+      font-size: 15px;
+    }
+    .header {
+      background: linear-gradient(135deg, var(--primary) 0%, var(--primary-light) 100%);
+      color: #fff;
+      padding: 44px 36px 32px;
+      text-align: center;
+    }
+    .header h1 { font-size: 24px; margin-bottom: 8px; }
+    .header .subtitle { opacity: 0.92; font-size: 14px; }
+    .header .tags { margin-top: 16px; display: flex; justify-content: center; gap: 8px; flex-wrap: wrap; }
+    .header .tag {
+      background: rgba(255,255,255,0.18);
+      border: 1px solid rgba(255,255,255,0.35);
+      padding: 3px 12px;
+      border-radius: 16px;
+      font-size: 12px;
+    }
+    .container { max-width: 1000px; margin: 0 auto; padding: 28px 20px 56px; }
+    .toc {
+      background: var(--card);
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      padding: 20px 24px;
+      margin-bottom: 24px;
+    }
+    .toc h2 { font-size: 16px; color: var(--primary); margin-bottom: 10px; }
+    .toc ol { padding-left: 22px; }
+    .toc li { margin: 5px 0; }
+    .toc a { color: var(--primary-light); text-decoration: none; }
+    section {
+      background: var(--card);
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      padding: 24px 28px;
+      margin-bottom: 22px;
+    }
+    section > h2 {
+      font-size: 18px;
+      color: var(--primary);
+      border-left: 4px solid var(--accent);
+      padding-left: 12px;
+      margin-bottom: 16px;
+    }
+    h3 { font-size: 15px; color: var(--primary-light); margin: 18px 0 10px; }
+    h4 { font-size: 14px; margin: 14px 0 8px; }
+    p { margin-bottom: 10px; }
+    ul, ol { padding-left: 22px; margin-bottom: 10px; }
+    li { margin: 4px 0; }
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      margin: 12px 0 16px;
+      font-size: 13.5px;
+    }
+    th, td {
+      border: 1px solid var(--border);
+      padding: 7px 10px;
+      text-align: left;
+      vertical-align: top;
+    }
+    th { background: #eaf2f8; color: var(--primary); font-weight: 600; }
+    tr:nth-child(even) { background: #f8fafc; }
+    .formula {
+      background: #eaf2f8;
+      border-left: 4px solid var(--primary-light);
+      padding: 12px 16px;
+      margin: 12px 0;
+      font-family: Consolas, "Courier New", monospace;
+      font-size: 13px;
+      line-height: 1.7;
+      overflow-x: auto;
+    }
+    .warn {
+      background: #fef5e7;
+      border-left: 4px solid var(--accent);
+      padding: 11px 14px;
+      margin: 12px 0;
+      font-size: 14px;
+    }
+    .ok {
+      background: #eafaf1;
+      border-left: 4px solid var(--success);
+      padding: 11px 14px;
+      margin: 12px 0;
+      font-size: 14px;
+    }
+    .bad {
+      background: #fdedec;
+      border-left: 4px solid var(--danger);
+      padding: 11px 14px;
+      margin: 12px 0;
+      font-size: 14px;
+    }
+    .rec {
+      background: #f4f6f9;
+      border: 1px dashed var(--primary-light);
+      border-radius: 8px;
+      padding: 14px 16px;
+      margin: 12px 0;
+    }
+    .rec strong { color: var(--primary); }
+    .muted { color: var(--muted); font-size: 13px; }
+    .badge {
+      display: inline-block;
+      padding: 1px 8px;
+      border-radius: 10px;
+      font-size: 12px;
+      background: #eaf2f8;
+      color: var(--primary);
+    }
+    .swatches { display: flex; gap: 6px; margin: 10px 0 14px; flex-wrap: wrap; }
+    .swatch {
+      width: 64px; height: 36px; border-radius: 4px;
+      display: flex; align-items: center; justify-content: center;
+      color: #fff; font-size: 11px; font-weight: 600;
+    }
+    .flow {
+      display: flex; flex-wrap: wrap; align-items: center; gap: 8px;
+      margin: 14px 0; font-size: 13px;
+    }
+    .flow .box {
+      background: #eaf2f8; border: 1px solid var(--border);
+      padding: 8px 12px; border-radius: 6px;
+    }
+    .flow .arrow { color: var(--muted); font-weight: bold; }
+    footer {
+      text-align: center;
+      color: var(--muted);
+      font-size: 12px;
+      padding-bottom: 32px;
+    }
+    code { background: #eef2f7; padding: 1px 5px; border-radius: 3px; font-size: 13px; }
+  </style>
+</head>
+<body>
+  <div class="header">
+    <h1>环境舒适度 · 设施完善度 · 政策支持度</h1>
+    <p class="subtitle">准则内子图层由 MAX 合并改为 SUM 叠加，形成 1–5 自然梯度</p>
+    <div class="tags">
+      <span class="tag">仅方案 · 不改代码</span>
+      <span class="tag">待评审后落地</span>
+      <span class="tag">交通便捷度保持现状（MAX）</span>
+    </div>
+  </div>
+
+  <div class="container">
+    <div class="toc">
+      <h2>目录</h2>
+      <ol>
+        <li><a href="#goal">目标与可行性结论</a></li>
+        <li><a href="#current">现状：MAX 合并的问题</a></li>
+        <li><a href="#proposed">推荐方案：SUM 叠加 + 1–5 梯度</a></li>
+        <li><a href="#detail">三项准则子图层与分值设计</a></li>
+        <li><a href="#algo">算法与代码改动要点（落地清单）</a></li>
+        <li><a href="#impact">对动力性总分与下游的影响</a></li>
+        <li><a href="#compare">MAX vs SUM 对比示例</a></li>
+        <li><a href="#risk">风险与对策</a></li>
+        <li><a href="#plan">分档落地计划</a></li>
+        <li><a href="#verify">验收建议</a></li>
+      </ol>
+    </div>
+
+    <!-- Goal -->
+    <section id="goal">
+      <h2>1. 目标与可行性结论</h2>
+
+      <h3>1.1 诉求</h3>
+      <p>将动力性分析中<strong>环境舒适度、设施完善度、政策支持度</strong>三项准则，由当前「多子图层取最大值（MAX）」改为「多子图层得分相加（SUM）」，使准则层原始分值自然分布在 <strong>0～5</strong>，并可映射为 <strong>1～5 档</strong>梯度，增强图面层次与空间差异表达。</p>
+
+      <div class="ok">
+        <strong>结论：可行。</strong>三项准则的子图层分值本身即为小整数（1～2 分/层），SUM 后天然形成 0～5 量级，与交通便捷度（理论满分 5）在数量级上对齐；仅需将准则内合并方式由 <code>CellStatistics MAXIMUM</code> 改为 <code>SUM</code>，并同步更新理论满分与标准化分母。
+      </div>
+
+      <h3>1.2 范围说明</h3>
+      <table>
+        <tr><th>准则</th><th>是否纳入本次改造</th><th>说明</th></tr>
+        <tr><td>交通便捷度</td><td>否</td><td>含路网五档 + 地铁多环 MAX，逻辑独立；维持现状</td></tr>
+        <tr><td>环境舒适度</td><td><strong>是</strong></td><td>生态廊道 + 开敞空间 + 绿地 → SUM</td></tr>
+        <tr><td>设施完善度</td><td><strong>是</strong></td><td>市级公服 + 便民 + 商业 → SUM</td></tr>
+        <tr><td>政策支持度</td><td><strong>是</strong></td><td>发展圈带 + 战略片区 + 近期重点 → SUM</td></tr>
+      </table>
+    </section>
+
+    <!-- Current -->
+    <section id="current">
+      <h2>2. 现状：MAX 合并的问题</h2>
+
+      <h3>2.1 当前实现路径</h3>
+      <div class="flow">
+        <span class="box">子图层缓冲/栅格化<br/>各得 1～2 分</span>
+        <span class="arrow">→</span>
+        <span class="box">CellStatistics<br/><strong>MAXIMUM</strong></span>
+        <span class="arrow">→</span>
+        <span class="box">准则原始分<br/>理论满分 = <strong>2</strong></span>
+        <span class="arrow">→</span>
+        <span class="box">÷2 ×100<br/>标准化 0–100</span>
+        <span class="arrow">→</span>
+        <span class="box">四准则加权<br/>mot_score</span>
+      </div>
+      <p class="muted">对应代码：<code>MotivationAnalysisEngine.BuildEnvironment/BuildFacility/BuildPolicy</code> 末尾调用 <code>BufferScoreRasterBuilder.MaxCombine</code>；<code>MotivationScoreScale</code> 中 EnvironmentMax / FacilityMax / PolicyMax 均为 2.0。</p>
+
+      <h3>2.2 MAX 带来的局限</h3>
+      <table>
+        <tr><th>现象</th><th>机制</th></tr>
+        <tr>
+          <td>准则内只有 2～3 个有效档位</td>
+          <td>三层叠加取 MAX 后，像元值只能是 {0, 1, 2}，无法区分「仅一种设施」与「三种设施齐备」</td>
+        </tr>
+        <tr>
+          <td>图面斑块单调</td>
+          <td>缓冲圈重叠区与非重叠区得分相同（都被 MAX 封顶为 2），空间梯度弱</td>
+        </tr>
+        <tr>
+          <td>与交通五档不对等</td>
+          <td>交通理论满分 5、环境/设施/政策满分 2，标准化后三项「容易顶满」，区分度不足</td>
+        </tr>
+        <tr>
+          <td>政策区叠加无增量</td>
+          <td>同时落在「发展圈带(1) + 战略片区(1) + 近期重点(2)」的像元，MAX 后仍为 2，政策强度被低估</td>
+        </tr>
+      </table>
+
+      <div class="bad">
+        示例：某像元同时靠近生态廊道(2)、开敞空间(2)、公园绿地(1)。<br/>
+        <strong>MAX → 2</strong>；<strong>SUM → 5</strong>。后者更能表达「环境要素富集」。
+      </div>
+    </section>
+
+    <!-- Proposed -->
+    <section id="proposed">
+      <h2>3. 推荐方案：SUM 叠加 + 1–5 梯度</h2>
+
+      <h3>3.1 核心公式</h3>
+      <div class="formula">
+环境_raw = SUM( 生态廊道缓冲分, 开敞空间缓冲分, 绿地缓冲分 )<br/>
+设施_raw = SUM( 市级公服缓冲分, 便民设施缓冲分, 商业设施缓冲分 )<br/>
+政策_raw = SUM( 发展圈带分, 战略片区分, 近期重点区分 )<br/>
+<br/>
+准则标准化（与现逻辑一致，仅改分母）：<br/>
+　准则_100 = (准则_raw / 理论满分) × 100<br/>
+<br/>
+动力性总分（不变）：<br/>
+　mot_score = Σ (准则_100 × 权重) / Σ权重
+      </div>
+
+      <h3>3.2 理论满分调整</h3>
+      <table>
+        <tr><th>准则</th><th>现理论满分</th><th>改后理论满分</th><th>依据</th></tr>
+        <tr>
+          <td>环境舒适度</td><td>2</td><td><strong>5</strong></td>
+          <td>2 + 2 + 1 = 5（沿用现有缓冲赋分，无需改分）</td>
+        </tr>
+        <tr>
+          <td>设施完善度</td><td>2</td><td><strong>5</strong></td>
+          <td>见 4.2：建议商业设施 1→2，使 2+1+2=5；或保持 4 为满分</td>
+        </tr>
+        <tr>
+          <td>政策支持度</td><td>2</td><td><strong>4 或 5</strong></td>
+          <td>现 1+1+2=4；建议近期重点 2→3 对齐五档，或接受 1–4 自然梯度</td>
+        </tr>
+        <tr>
+          <td>交通便捷度</td><td>5</td><td>5</td><td>不变</td>
+        </tr>
+      </table>
+
+      <h3>3.3 准则层 1–5 档（展示用，可选输出）</h3>
+      <p>准则原始分 SUM 后可直接按整数映射为五级，便于专题图与汇报（与 <code>pot_level</code> 语义平行，但作用于单项准则）：</p>
+      <div class="formula">
+准则_level =<br/>
+　0  → 无（或 NoData，不参与展示）<br/>
+　1  → 1 档（偏弱）<br/>
+　2  → 2 档（较低）<br/>
+　3  → 3 档（中等）<br/>
+　4  → 4 档（较高）<br/>
+　≥5 → 5 档（富集/极强，封顶）
+      </div>
+      <div class="swatches">
+        <div class="swatch" style="background:#bdc3c7;color:#333">0 无</div>
+        <div class="swatch" style="background:#2980b9">1 档</div>
+        <div class="swatch" style="background:#3498db">2 档</div>
+        <div class="swatch" style="background:#27ae60">3 档</div>
+        <div class="swatch" style="background:#f39c12">4 档</div>
+        <div class="swatch" style="background:#c0392b">5 档</div>
+      </div>
+      <p class="muted">说明：0 档可不设色；1–5 为<strong>准则内相对强度</strong>，与最终 <code>pot_level</code> 的 0–100 等距断点无关。建议成果中同时保留连续值（标准化 0–100）与五级专题图。</p>
+
+      <div class="rec">
+        <strong>推荐采用方案 B（对齐五档）：</strong><br/>
+        ① 三项准则内合并统一改为 <strong>SUM</strong>；<br/>
+        ② 理论满分：环境=5、设施=5（商业调为 2 分）、政策=5（近期重点调为 3 分）；<br/>
+        ③ 输出中间栅格：<code>env_raw</code> / <code>fac_raw</code> / <code>pol_raw</code>（0–5）及可选 <code>env_lvl</code> / <code>fac_lvl</code> / <code>pol_lvl</code>（1–5）；<br/>
+        ④ 标准化分母同步改为 5，再进入现有四准则加权流程。
+      </div>
+    </section>
+
+    <!-- Detail -->
+    <section id="detail">
+      <h2>4. 三项准则子图层与分值设计</h2>
+
+      <h3>4.1 环境舒适度（SUM 后满分 5，无需调分）</h3>
+      <table>
+        <tr><th>角色</th><th>缓冲/规则（默认）</th><th>单层得分</th><th>图层类型</th></tr>
+        <tr><td>EcoCorridor</td><td>500 m → 2</td><td>2</td><td>线/面</td></tr>
+        <tr><td>OpenSpace</td><td>500 m → 2</td><td>2</td><td>面</td></tr>
+        <tr><td>Green</td><td>300 m → 1</td><td>1</td><td>面</td></tr>
+        <tr><td colspan="2"><strong>SUM 理论满分</strong></td><td colspan="2"><strong>5</strong></td></tr>
+      </table>
+      <p>梯度含义：仅绿地=1；廊道或湖泊=2；两种叠加=3～4；三者叠加=5。</p>
+
+      <h3>4.2 设施完善度（建议微调商业分对齐五档）</h3>
+      <table>
+        <tr><th>方案</th><th>市级公服</th><th>便民</th><th>商业</th><th>SUM 满分</th><th>说明</th></tr>
+        <tr>
+          <td><span class="badge">现配置</span></td>
+          <td>2（1000 m）</td><td>1（300 m）</td><td>1（1000 m）</td><td>4</td>
+          <td>自然 1–4 档，顶格略低于环境/交通</td>
+        </tr>
+        <tr>
+          <td><span class="badge">推荐 B</span></td>
+          <td>2</td><td>1</td><td><strong>2</strong></td><td>5</td>
+          <td>商业与公服同级，表达「商服集聚」；与五档对齐</td>
+        </tr>
+      </table>
+
+      <h3>4.3 政策支持度（面要素直接赋分后 SUM）</h3>
+      <table>
+        <tr><th>角色</th><th>现得分</th><th>推荐 B</th><th>语义</th></tr>
+        <tr><td>PolicyBelt（发展圈带）</td><td>1</td><td>1</td><td>宏观政策覆盖</td></tr>
+        <tr><td>PolicyStrategy（战略片区）</td><td>1</td><td>1</td><td>战略定位加强</td></tr>
+        <tr><td>PolicyKey（近期重点）</td><td>2</td><td><strong>3</strong></td><td>实施优先级最高</td></tr>
+        <tr><td colspan="2"><strong>SUM 满分</strong></td><td colspan="2"><strong>5</strong>（现配置为 4）</td></tr>
+      </table>
+      <div class="warn">
+        政策面可能<strong>空间嵌套</strong>（近期重点 ⊂ 战略片区 ⊂ 发展圈带）。SUM 会累计嵌套得分，这符合「政策叠加、优先级累加」的业务直觉；若担心重复计分，可改为「仅取最高政策层」或「嵌套区只计最内层」——见第 7 节风险对策。
+      </div>
+    </section>
+
+    <!-- Algo -->
+    <section id="algo">
+      <h2>5. 算法与代码改动要点（落地清单）</h2>
+      <p class="muted">以下为评审通过后的开发任务，<strong>当前不执行</strong>。</p>
+
+      <h3>5.1 GIS 层（UrbanRenewal.GIS）</h3>
+      <table>
+        <tr><th>文件</th><th>改动</th></tr>
+        <tr>
+          <td><code>BufferScoreRasterBuilder.cs</code></td>
+          <td>
+            新增 <code>SumCombine(gp, rasters, outputGdb, namePrefix)</code>，实现与 <code>MaxCombine</code> 对称，<code>statistics_type = "SUM"</code>，输出后缀建议 <code>*sm</code>（与 <code>*mx</code> 区分）<br/>
+            NoData 处理与 MAX 保持一致：<code>ignore_nodata = "DATA"</code>，缺失子层视为 0
+          </td>
+        </tr>
+      </table>
+
+      <h3>5.2 分析引擎（UrbanRenewal.Analysis）</h3>
+      <table>
+        <tr><th>文件</th><th>改动</th></tr>
+        <tr>
+          <td><code>MotivationAnalysisEngine.cs</code></td>
+          <td>
+            <code>BuildEnvironment</code>：<code>MaxCombine</code> → <code>SumCombine</code>，日志改为「环境·准则层 SUM 合并」<br/>
+            <code>BuildFacility</code>、<code>BuildPolicy</code>：同上<br/>
+            可选：写出 <code>env_lvl</code> / <code>fac_lvl</code> / <code>pol_lvl</code>（Raster Calculator：<code>Min(5, Int(raw))</code> 或分档 Con）
+          </td>
+        </tr>
+        <tr>
+          <td><code>MotivationScoreScale.cs</code></td>
+          <td>
+            <code>EnvironmentMax</code>：2.0 → <strong>5.0</strong><br/>
+            <code>FacilityMax</code>：2.0 → <strong>5.0</strong>（或 4.0 若保留现赋分）<br/>
+            <code>PolicyMax</code>：2.0 → <strong>5.0</strong>（或 4.0）
+          </td>
+        </tr>
+      </table>
+
+      <h3>5.3 配置与界面（可选增强）</h3>
+      <table>
+        <tr><th>位置</th><th>建议</th></tr>
+        <tr>
+          <td><code>BufferScoreRules</code> / 城市 XML</td>
+          <td>若采用方案 B，更新 <code>Commercial.score</code>、<code>PolicyKey</code> 面赋分（或新增 <code>PolicyKeyScore</code> 配置项）</td>
+        </tr>
+        <tr>
+          <td>系统配置窗体</td>
+          <td>可选：准则内合并方式 MAX/SUM 下拉（默认 SUM）；便于 A/B 对比与回退</td>
+        </tr>
+        <tr>
+          <td>动力性运行窗体</td>
+          <td>日志中打印三项准则 raw 值域（min/max/直方图摘要），便于验收</td>
+        </tr>
+      </table>
+
+      <h3>5.4 不需改动的部分</h3>
+      <ul>
+        <li>四准则加权合成 <code>WeightedSum</code> → <code>mot_score</code> 逻辑不变</li>
+        <li>叠置评价 <code>OverlayAnalysisEngine</code>、可行度、宗地关联、成果导出流程不变</li>
+        <li>交通便捷度内部仍用 MAX（含地铁多环 MAX）</li>
+      </ul>
+    </section>
+
+    <!-- Impact -->
+    <section id="impact">
+      <h2>6. 对动力性总分与下游的影响</h2>
+
+      <h3>6.1 标准化分母变化</h3>
+      <div class="formula">
+改前：环境像元 raw=2 → 环境_100 = 2/2×100 = 100（易顶满）<br/>
+改后：环境像元 raw=2 → 环境_100 = 2/5×100 = 40（中等偏上）<br/>
+改后：环境像元 raw=5 → 环境_100 = 5/5×100 = 100（需多要素叠加才顶满）
+      </div>
+      <p>三项准则「顶满」难度提高，<strong>mot_score 整体可能略降</strong>，空间对比度增强。若与历史项目对比，需在报告中注明算法版本。</p>
+
+      <h3>6.2 对 pot_score 的间接影响</h3>
+      <p>动力性权重默认 70%，环境/设施/政策各占动力性 20%～25% 量级。SUM 后：</p>
+      <ul>
+        <li>要素富集区（老城中心、政策叠加区）动力性抬升更明显</li>
+        <li>单一要素边缘区不再轻易拿到准则满分，与交通/可行度形成更合理梯度</li>
+        <li>最终 <code>pot_level</code> 五色分布可能改善（中间档减少「虚假顶满」）</li>
+      </ul>
+
+      <h3>6.3 历史结果可比性</h3>
+      <div class="warn">
+        改算法后 <code>mot_score</code> 数值不可与旧版直接对比。建议：保留旧版 GDB 备份；新版导出时文件名或元数据标注 <code>mot_v2_sum</code>；验收阶段做同范围新旧直方图对照。
+      </div>
+    </section>
+
+    <!-- Compare -->
+    <section id="compare">
+      <h2>7. MAX vs SUM 对比示例</h2>
+
+      <table>
+        <tr>
+          <th>场景</th>
+          <th>子层得分</th>
+          <th>MAX（现）</th>
+          <th>SUM（改）</th>
+          <th>标准化/5×100</th>
+        </tr>
+        <tr>
+          <td>仅公园绿地缓冲内</td>
+          <td>0+0+1</td>
+          <td>1</td>
+          <td>1</td>
+          <td>20</td>
+        </tr>
+        <tr>
+          <td>湖泊 + 绿地</td>
+          <td>0+2+1</td>
+          <td>2</td>
+          <td>3</td>
+          <td>60</td>
+        </tr>
+        <tr>
+          <td>廊道 + 湖泊 + 绿地</td>
+          <td>2+2+1</td>
+          <td>2</td>
+          <td>5</td>
+          <td>100</td>
+        </tr>
+        <tr>
+          <td>仅市级公服</td>
+          <td>2+0+0</td>
+          <td>2</td>
+          <td>2</td>
+          <td>40</td>
+        </tr>
+        <tr>
+          <td>公服 + 便民 + 商业（方案 B）</td>
+          <td>2+1+2</td>
+          <td>2</td>
+          <td>5</td>
+          <td>100</td>
+        </tr>
+        <tr>
+          <td>三重政策区叠加（方案 B）</td>
+          <td>1+1+3</td>
+          <td>3*</td>
+          <td>5</td>
+          <td>100</td>
+        </tr>
+      </table>
+      <p class="muted">* 政策现配置 MAX 上限为 2（近期重点 2 分），三重叠加仍只得 2。</p>
+
+      <div class="ok">
+        SUM 的核心价值：<strong>区分「有一项」与「多项齐备」</strong>，使准则层像元值从 {0,1,2} 扩展为 {0,1,2,3,4,5}，图面自然出现五级色带。
+      </div>
+    </section>
+
+    <!-- Risk -->
+    <section id="risk">
+      <h2>8. 风险与对策</h2>
+
+      <table>
+        <tr><th>风险</th><th>说明</th><th>对策</th></tr>
+        <tr>
+          <td>缓冲圈大面积重叠</td>
+          <td>同一准则内多个点/面缓冲相交，SUM 可能普遍偏高</td>
+          <td>保持现有缓冲半径；验收时看 raw 直方图；必要时对 SUM 结果 <code>Min(5, raw)</code> 封顶</td>
+        </tr>
+        <tr>
+          <td>政策面嵌套重复计分</td>
+          <td>重点区落在圈带内，三层分全加</td>
+          <td>
+            <strong>默认保留 SUM</strong>（政策意图为叠加）；<br/>
+            备选：按优先级只取最高层（等效 MAX，不推荐）；<br/>
+            或：内层计全分、外层计差分（需改面处理逻辑）
+          </td>
+        </tr>
+        <tr>
+          <td>设施/政策满分不到 5</td>
+          <td>若不调分，满分分别为 4</td>
+          <td>标准化分母用实际满分 4；或按方案 B 微调单层分至合计 5</td>
+        </tr>
+        <tr>
+          <td>与旧成果不可比</td>
+          <td>mot_score 数值整体下移或分布改变</td>
+          <td>版本标注 + 同范围 A/B 报告；对外用相对分级（pot_level）时说明断点口径</td>
+        </tr>
+        <tr>
+          <td>缺子图层时满分缩水</td>
+          <td>如某城无战略片区，政策 SUM 满分仅 4 或更低</td>
+          <td>标准化分母按<strong>本次实际参与子层之和</strong>动态计算（进阶）；或日志明确提示「理论满分已调整为 X」</td>
+        </tr>
+      </table>
+    </section>
+
+    <!-- Plan -->
+    <section id="plan">
+      <h2>9. 分档落地计划</h2>
+
+      <h3>第一档 · 最小改动（推荐先做）</h3>
+      <ol>
+        <li>实现 <code>SumCombine</code>，环境/设施/政策三处 <code>MaxCombine</code> 替换为 <code>SumCombine</code></li>
+        <li><code>MotivationScoreScale</code>：EnvironmentMax=5；FacilityMax=4；PolicyMax=4（沿用现赋分，不改 XML）</li>
+        <li>同范围跑一版苏州 GDB，对比准则栅格直方图与 mot_score 分布</li>
+      </ol>
+
+      <h3>第二档 · 对齐五档（方案 B）</h3>
+      <ol>
+        <li>商业缓冲分 1→2；近期重点面赋分 2→3</li>
+        <li>FacilityMax、PolicyMax 统一为 5</li>
+        <li>可选输出 <code>env_lvl</code> / <code>fac_lvl</code> / <code>pol_lvl</code> 五级专题栅格</li>
+      </ol>
+
+      <h3>第三档 · 可配置与表达（按需）</h3>
+      <ol>
+        <li>系统配置增加准则内 MAX/SUM 开关（默认 SUM）</li>
+        <li>成果导出增加准则五级图例与面积统计表</li>
+        <li>动态理论满分（按实际参与子层合计）</li>
+      </ol>
+
+      <h3>预期效果</h3>
+      <table>
+        <tr><th>诉求</th><th>预期</th></tr>
+        <tr><td>准则内 1–5 梯度</td><td>raw 值 0–5 连续分布，可映射五级专题图</td></tr>
+        <tr><td>区分多要素叠加</td><td>富集区得分显著高于单一要素边缘区</td></tr>
+        <tr><td>与交通五档对等</td><td>四项准则理论满分均可为 5，标准化口径一致</td></tr>
+        <tr><td>下游 pot 图层次</td><td>减少环境/设施/政策「虚假顶满」，空间对比更细腻</td></tr>
+      </table>
+    </section>
+
+    <!-- Verify -->
+    <section id="verify">
+      <h2>10. 验收建议</h2>
+      <ol>
+        <li><strong>准则 raw 直方图：</strong>环境/设施/政策 SUM 后应出现 0～5（或 0～4）多个峰值，而非仅集中在 2</li>
+        <li><strong>目视检查：</strong>多要素叠加区（如公园+河道+绿地、公服+商业集聚、政策三重区）颜色应明显深于单一要素区</li>
+        <li><strong>顶满面积：</strong>raw=5 的像元占比应合理（不宜 &gt;30% 全城，否则检查缓冲半径或嵌套计分）</li>
+        <li><strong>mot_score 对比：</strong>新旧版同范围均值/分位数变化在可解释范围内；附对照表</li>
+        <li><strong>五级专题（若输出）：</strong>env_lvl / fac_lvl / pol_lvl 各级面积均 &gt; 0</li>
+        <li><strong>回归：</strong>交通便捷度、叠置、导出流程无变化；缺图层时仍优雅跳过</li>
+      </ol>
+      <p class="muted">本文为方案说明，<strong>不修改程序</strong>。请评审确认采用「第一档 / 第二档 / 是否调分 / 政策嵌套是否 SUM」后，再下达开发指令。</p>
+    </section>
+  </div>
+
+  <footer>
+    城市更新潜力评价与验证系统 · 环境·设施·政策准则叠加优化方案（仅文档）· 2026-08-24
+  </footer>
+</body>
+</html>

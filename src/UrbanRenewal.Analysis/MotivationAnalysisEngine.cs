@@ -6,9 +6,7 @@ using UrbanRenewal.Model;
 
 namespace UrbanRenewal.Analysis
 {
-    /// <summary>
-    /// 动力性分析引擎：四准则层缓冲赋分 + 加权叠置。
-    /// </summary>
+    /// <summary>动力性四准则缓冲赋分与加权叠置。</summary>
     public class MotivationAnalysisEngine
     {
         private GeoprocessorHelper _gp;
@@ -30,7 +28,7 @@ namespace UrbanRenewal.Analysis
                 return result;
             }
 
-            // 解析输出 GDB：优先 OutputGdbPath；兼容旧 WorkDirectory（若为 *.gdb）
+            // 兼容旧 WorkDirectory 作输出 GDB
             if (string.IsNullOrEmpty(job.OutputGdbPath)
                 && !string.IsNullOrEmpty(job.WorkDirectory)
                 && OutputGdbHelper.IsFileGdbPath(job.WorkDirectory))
@@ -56,7 +54,7 @@ namespace UrbanRenewal.Analysis
             List<string> names = WorkspaceCatalog.ListFeatureClassNames(job.GdbPath);
             Note(result, "GDB 要素类数量: " + names.Count);
 
-            // 空间参考：仅校验本次分析用到的图层（避免未用宗地等阻断）
+            // 仅校验分析图层
             Report(progress, result, "检查空间参考一致性...", 8);
             List<string> usedLayers = SpatialReferenceAudit.CollectMotivationLayerNames(job.LayerHints, names);
             SpatialReferenceAuditResult srAudit = usedLayers.Count > 0
@@ -82,8 +80,6 @@ namespace UrbanRenewal.Analysis
             job.WorkDirectory = outGdb;
             result.OutputGdbPath = outGdb;
             Note(result, "输出 GDB: " + outGdb);
-            // 全局路径记忆由宿主 SaveGlobalSettings 统一负责
-
             string studyLayer = Resolve(job, names, "StudyArea", "中心城区", "分析范围");
             string extentPath = null;
             if (!string.IsNullOrEmpty(studyLayer))
@@ -94,7 +90,7 @@ namespace UrbanRenewal.Analysis
             }
             if (_targetSr == null)
             {
-                // 回退：优先投影坐标系图层（如 CBD）
+                // 无分析范围时取 CBD 等图层坐标系
                 string fallback = Resolve(job, names, "CBD", "开发强度高", "CBD", "宗地", "公园绿地");
                 if (!string.IsNullOrEmpty(fallback))
                 {
@@ -218,7 +214,7 @@ namespace UrbanRenewal.Analysis
                 return _preparedPaths[layerName];
             }
 
-            // 空间参考已在 Run 入口校验统一，直接使用源图层路径
+            // 空间参考已在 Run 校验
             string src = WorkspaceCatalog.ToFeatureClassPath(_job.GdbPath, layerName);
             _preparedPaths[layerName] = src;
             return src;
@@ -281,7 +277,7 @@ namespace UrbanRenewal.Analysis
                 }
             }
 
-            // 路网可达性（须预先构建 Network Dataset，如 roadNet\roadNet_ND）
+            // 须预建 Network Dataset
             Report(_progress, result, "交通·路网可达性（服务区求解）...", 27);
             string roadAccess = BuildRoadAccessibility(job, cbd, study, metro, result);
             if (!string.IsNullOrEmpty(roadAccess))
@@ -331,9 +327,7 @@ namespace UrbanRenewal.Analysis
             rule.GetActiveRings(out distances, out scores);
         }
 
-        /// <summary>
-        /// 到城市中心的路网可达性（1–5 分）。路网数据集须事先建好。
-        /// </summary>
+        /// <summary>路网可达性（1–5 分）；须预建 ND。</summary>
         private string BuildRoadAccessibility(
             MotivationJob job,
             string cbdLayer,
@@ -363,7 +357,7 @@ namespace UrbanRenewal.Analysis
             Note(result, "路网可达性：中心设施=" + facilityLayer
                 + "；网络=" + fdName + "\\" + ndName + "（须预先构建）");
 
-            // AddMsg 已写入 Messages；此处仅推进度，避免重复入列表
+            // 仅推进度，不重复入 Messages
             Action<string> live = delegate(string t)
             {
                 if (_progress != null)
@@ -448,8 +442,8 @@ namespace UrbanRenewal.Analysis
                 Note(result, "环境准则：未匹配到可用图层，已跳过。");
                 return null;
             }
-            Report(_progress, result, "环境·准则层 MAX 合并...", 50);
-            return BufferScoreRasterBuilder.MaxCombine(_gp, parts, OutGdb, "environment");
+            Report(_progress, result, "环境·准则层 SUM 合并...", 50);
+            return BufferScoreRasterBuilder.SumCombine(_gp, parts, OutGdb, "environment");
         }
 
         private string BuildFacility(MotivationJob job, List<string> names, MotivationResult result)
@@ -501,8 +495,8 @@ namespace UrbanRenewal.Analysis
                 Note(result, "设施准则：未匹配到可用图层，已跳过。");
                 return null;
             }
-            Report(_progress, result, "设施·准则层 MAX 合并...", 72);
-            return BufferScoreRasterBuilder.MaxCombine(_gp, parts, OutGdb, "facility");
+            Report(_progress, result, "设施·准则层 SUM 合并...", 72);
+            return BufferScoreRasterBuilder.SumCombine(_gp, parts, OutGdb, "facility");
         }
 
         private string BuildPolicy(MotivationJob job, List<string> names, MotivationResult result)
@@ -541,8 +535,8 @@ namespace UrbanRenewal.Analysis
                 Note(result, "政策准则：未匹配到可用图层，已跳过。");
                 return null;
             }
-            Report(_progress, result, "政策·准则层 MAX 合并...", 84);
-            return BufferScoreRasterBuilder.MaxCombine(_gp, parts, OutGdb, "policy");
+            Report(_progress, result, "政策·准则层 SUM 合并...", 84);
+            return BufferScoreRasterBuilder.SumCombine(_gp, parts, OutGdb, "policy");
         }
 
         private static string Resolve(MotivationJob job, List<string> names, string hintKey, params string[] keywords)

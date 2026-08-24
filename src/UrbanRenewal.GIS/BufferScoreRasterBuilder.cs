@@ -37,7 +37,7 @@ namespace UrbanRenewal.GIS
             string buf = OutputGdbHelper.DatasetPath(outputGdb, shortName + "_b");
             string raster = OutputGdbHelper.DatasetPath(outputGdb, shortName);
 
-            // 上次运行残留 + schema lock 时 Overwrite 仍会 000258，先强制删
+            // schema lock / 000258：Overwrite 前强制删
             OutputGdbHelper.TryDeleteDataset(gp, buf);
             OutputGdbHelper.TryDeleteDataset(gp, raster);
 
@@ -174,13 +174,49 @@ namespace UrbanRenewal.GIS
             }
             catch (Exception)
             {
-                // 输出名被锁时改用旁路名再写一次（避免整次分析因 000871 失败）
+                // 000871 输出被锁：旁路文件名再写
                 string alt = OutputGdbHelper.DatasetPath(
                     outputGdb,
                     ShortName(namePrefix) + "mx" + DateTime.Now.ToString("HHmmss"));
                 OutputGdbHelper.TryDeleteDataset(gp, alt);
                 stats.out_raster = alt;
                 gp.Execute(stats, "CellStatistics-MAX-" + namePrefix + "-retry");
+                return alt;
+            }
+        }
+
+        /// <summary>多栅格像元求和（NoData 视为不计，与 MAX 一致 ignore_nodata=DATA）。</summary>
+        public static string SumCombine(GeoprocessorHelper gp, IList<string> rasters, string outputGdb, string namePrefix)
+        {
+            if (rasters == null || rasters.Count == 0)
+            {
+                return null;
+            }
+            if (rasters.Count == 1)
+            {
+                return rasters[0];
+            }
+
+            string outRaster = OutputGdbHelper.DatasetPath(outputGdb, ShortName(namePrefix) + "sm");
+            OutputGdbHelper.TryDeleteDataset(gp, outRaster);
+            CellStatistics stats = new CellStatistics();
+            stats.in_rasters_or_constants = string.Join(";", ToArray(rasters));
+            stats.out_raster = outRaster;
+            stats.statistics_type = "SUM";
+            stats.ignore_nodata = "DATA";
+            try
+            {
+                gp.Execute(stats, "CellStatistics-SUM-" + namePrefix);
+                return outRaster;
+            }
+            catch (Exception)
+            {
+                string alt = OutputGdbHelper.DatasetPath(
+                    outputGdb,
+                    ShortName(namePrefix) + "sm" + DateTime.Now.ToString("HHmmss"));
+                OutputGdbHelper.TryDeleteDataset(gp, alt);
+                stats.out_raster = alt;
+                gp.Execute(stats, "CellStatistics-SUM-" + namePrefix + "-retry");
                 return alt;
             }
         }
@@ -207,7 +243,7 @@ namespace UrbanRenewal.GIS
             string outRaster = OutputGdbHelper.DatasetPath(outputGdb, ShortName(namePrefix) + "n");
             OutputGdbHelper.TryDeleteDataset(gp, outRaster);
 
-            // Con(IsNull(r),0,r) / max * 100
+            // Con(IsNull)/max*100
             string expr = "(Float(Con(IsNull(\"" + inRaster + "\"),0,\"" + inRaster
                 + "\")) / " + theoreticalMax.ToString(CultureInfo.InvariantCulture) + ") * 100";
 
@@ -250,7 +286,7 @@ namespace UrbanRenewal.GIS
                 {
                     expr.Append(" + ");
                 }
-                // 再保险：加权前空值填 0，避免某一准则 NoData 污染整幅
+                // NoData→0，避免污染加权和
                 expr.Append("(Con(IsNull(\"");
                 expr.Append(rasters[i]);
                 expr.Append("\"),0,\"");
