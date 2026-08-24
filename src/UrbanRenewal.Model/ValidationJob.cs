@@ -2,15 +2,13 @@ using System.Collections.Generic;
 
 namespace UrbanRenewal.Model
 {
-    /// <summary>
-    /// 验证校核作业：已更新宗地 vs 评价结果潜力等级分布。
-    /// </summary>
+    /// <summary>验证校核作业：已更新宗地 vs 评价结果潜力等级分布。</summary>
     public class ValidationJob
     {
         public ValidationJob()
         {
-            HighLevelThreshold = 60; // 高/极高：得分≥60
-            PassHighRatio = 0.6;     // 已更新地块落在高等级占比 ≥60% 视为通过
+            HighLevelThreshold = 60;
+            PassHighRatio = 0.6;
             ScoredParcelName = "parcel_pot";
             DiffFeatureClassName = "valid_diff";
             LayerHints = new Dictionary<string, string>();
@@ -31,7 +29,6 @@ namespace UrbanRenewal.Model
         /// <summary>高等级占比达到该值则判定通过。</summary>
         public double PassHighRatio { get; set; }
 
-        /// <summary>审核意见（写入报告）。</summary>
         public string ReviewComment { get; set; }
 
         /// <summary>角色：UpdatedParcel。</summary>

@@ -4,9 +4,7 @@ using UrbanRenewal.Contracts;
 
 namespace UrbanRenewal.Plugins.Feasibility
 {
-    /// <summary>
-    /// M3 可行度分析（潜力分析流程第 2 步）。
-    /// </summary>
+    /// <summary>可行度分析插件。</summary>
     public sealed class FeasibilityPlugin : IModulePlugin
     {
         private IAppContext _context;

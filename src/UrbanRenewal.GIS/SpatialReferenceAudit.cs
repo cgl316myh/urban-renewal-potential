@@ -7,9 +7,7 @@ using ESRI.ArcGIS.Geometry;
 
 namespace UrbanRenewal.GIS
 {
-    /// <summary>
-    /// 单图层空间参考检查项。
-    /// </summary>
+    /// <summary>单图层空间参考检查项。</summary>
     public sealed class SpatialReferenceLayerInfo
     {
         public string LayerName { get; set; }
@@ -19,9 +17,7 @@ namespace UrbanRenewal.GIS
         public bool IsProjected { get; set; }
     }
 
-    /// <summary>
-    /// GDB 空间参考一致性审计结果。
-    /// </summary>
+    /// <summary>GDB 空间参考一致性审计结果。</summary>
     public sealed class SpatialReferenceAuditResult
     {
         public SpatialReferenceAuditResult()
@@ -31,24 +27,14 @@ namespace UrbanRenewal.GIS
         }
 
         public bool Success { get; set; }
-
         public bool IsUnified { get; set; }
-
         public string ReferenceLayerName { get; set; }
-
         public string ReferenceSpatialReferenceName { get; set; }
-
         public bool ReferenceIsProjected { get; set; }
-
         public List<SpatialReferenceLayerInfo> Layers { get; private set; }
-
         public List<SpatialReferenceLayerInfo> MismatchedLayers { get; private set; }
-
         public string ErrorMessage { get; set; }
 
-        /// <summary>
-        /// 生成完整性检查用的警告/通过文本。
-        /// </summary>
         public string ToCheckReport()
         {
             StringBuilder sb = new StringBuilder();
@@ -101,9 +87,6 @@ namespace UrbanRenewal.GIS
             return sb.ToString();
         }
 
-        /// <summary>
-        /// 生成动力性分析阻断说明。
-        /// </summary>
         public string ToBlockMessage()
         {
             if (Success && IsUnified)
@@ -137,30 +120,20 @@ namespace UrbanRenewal.GIS
         }
     }
 
-    /// <summary>
-    /// 扫描 File GDB 要素类空间参考一致性。
-    /// </summary>
+    /// <summary>扫描 File GDB 要素类空间参考一致性。</summary>
     public static class SpatialReferenceAudit
     {
-        /// <summary>
-        /// 审计 GDB 内全部要素类。基准优先：全局配置 → 中心城区/分析范围 → 首个投影坐标系 → 首个可读坐标系。
-        /// </summary>
+        /// <summary>基准优先：全局配置 → 分析范围 → 首个投影坐标系 → 首个可读坐标系。</summary>
         public static SpatialReferenceAuditResult Audit(string gdbPath)
         {
             return Audit(gdbPath, null, null, null);
         }
 
-        /// <summary>
-        /// 审计指定要素类；onlyLayerNames 为空则审计全部。
-        /// </summary>
         public static SpatialReferenceAuditResult Audit(string gdbPath, IList<string> onlyLayerNames)
         {
             return Audit(gdbPath, onlyLayerNames, null, null);
         }
 
-        /// <summary>
-        /// 审计指定要素类，并优先使用全局配置的基准坐标系（来自 Shapefile 或 GDB 图层）。
-        /// </summary>
         public static SpatialReferenceAuditResult Audit(
             string gdbPath,
             IList<string> onlyLayerNames,
@@ -185,7 +158,6 @@ namespace UrbanRenewal.GIS
                 ISpatialReference referenceSr = null;
                 string referenceLayer = null;
 
-                // 0) 全局配置的基准坐标系
                 if (!string.IsNullOrEmpty(preferredSourcePath))
                 {
                     ISpatialReference cfgSr;
@@ -214,7 +186,6 @@ namespace UrbanRenewal.GIS
                     }
                 }
 
-                // 1) 优先分析范围
                 if (referenceSr == null)
                 {
                     string preferred = WorkspaceCatalog.FindByKeywords(names, "中心城区", "分析范围");
@@ -228,7 +199,6 @@ namespace UrbanRenewal.GIS
                     }
                 }
 
-                // 2) 首个投影坐标系
                 if (referenceSr == null)
                 {
                     for (int i = 0; i < names.Count; i++)
@@ -243,7 +213,6 @@ namespace UrbanRenewal.GIS
                     }
                 }
 
-                // 3) 任意可读
                 if (referenceSr == null)
                 {
                     for (int i = 0; i < names.Count; i++)
@@ -304,9 +273,7 @@ namespace UrbanRenewal.GIS
             }
         }
 
-        /// <summary>
-        /// 从可行度作业 LayerHints 收集待校验要素类（不含 DEM/人口等栅格）。
-        /// </summary>
+        /// <summary>可行度 LayerHints 中的要素类（不含 DEM/人口栅格）。</summary>
         public static List<string> CollectFeasibilityLayerNames(
             IDictionary<string, string> layerHints,
             IList<string> gdbFeatureClassNames)
@@ -332,7 +299,6 @@ namespace UrbanRenewal.GIS
                 }
             }
 
-            // 无显式提示时，至少尝试匹配分析范围与宗地关键词
             if (list.Count == 0 && gdbFeatureClassNames != null)
             {
                 string study = WorkspaceCatalog.FindByKeywords(gdbFeatureClassNames, "中心城区", "分析范围", "建成区");
@@ -344,9 +310,7 @@ namespace UrbanRenewal.GIS
             return list;
         }
 
-        /// <summary>
-        /// 从动力性作业 LayerHints 收集待校验图层名（含路网边要素）。
-        /// </summary>
+        /// <summary>动力性 LayerHints 图层名（含路网边要素）。</summary>
         public static List<string> CollectMotivationLayerNames(
             IDictionary<string, string> layerHints,
             IList<string> gdbFeatureClassNames)
@@ -372,7 +336,6 @@ namespace UrbanRenewal.GIS
                 AddIfPresent(list, gdbFeatureClassNames, kv.Value);
             }
 
-            // 预建路网边要素（通常名为 road）
             if (layerHints.ContainsKey("RoadFeatureDataset")
                 || layerHints.ContainsKey("RoadNetwork"))
             {

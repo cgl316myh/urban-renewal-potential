@@ -10,9 +10,7 @@ using ESRI.ArcGIS.Geometry;
 
 namespace UrbanRenewal.GIS
 {
-    /// <summary>
-    /// 宗地斑块形状指数 SI / 破碎度 FS→PD 得分，并转栅格。
-    /// </summary>
+    /// <summary>宗地 SI/破碎度 FS→PD 得分并转栅格。</summary>
     public static class ParcelAnalyzer
     {
         private static readonly string[] LandcodeCandidates = new string[]
@@ -20,9 +18,7 @@ namespace UrbanRenewal.GIS
             "landcode", "LANDCODE", "LandCode", "DLBM", "dlbm", "地类编码", "YDYHFLDM", "ydyhfldm"
         };
 
-        /// <summary>
-        /// 计算 SI 并映射得分：SI≤1.3 → 0；SI≥3.0 → -1；中间约半阈值起扣。面转栅格。
-        /// </summary>
+        /// <summary>SI≤1.3→0；SI≥3.0→-1；中间约半阈值起扣。面转栅格。</summary>
         public static string BuildSiScoreRaster(
             GeoprocessorHelper gp,
             string inFeatureClass,
@@ -110,10 +106,7 @@ namespace UrbanRenewal.GIS
             return raster;
         }
 
-        /// <summary>
-        /// 按地类（landcode）汇总 ASI/FS，映射为 PD 破碎度得分（0～-2），写回斑块后转栅格。
-        /// 无地类字段时按全局一套 FS。
-        /// </summary>
+        /// <summary>按 landcode 汇总 ASI/FS→PD（0～-2）；无地类字段则全局一套 FS。</summary>
         public static string BuildFragmentationScoreRaster(
             GeoprocessorHelper gp,
             string inFeatureClass,

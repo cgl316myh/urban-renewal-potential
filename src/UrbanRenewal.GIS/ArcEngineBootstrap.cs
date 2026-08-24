@@ -5,9 +5,7 @@ using ESRI.ArcGIS.esriSystem;
 
 namespace UrbanRenewal.GIS
 {
-    /// <summary>
-    /// ArcGIS Engine / Desktop 运行时绑定与许可初始化。
-    /// </summary>
+    /// <summary>ArcGIS Engine/Desktop 运行时绑定与许可初始化。</summary>
     public static class ArcEngineBootstrap
     {
         private static IAoInitialize _aoInit;
@@ -18,9 +16,7 @@ namespace UrbanRenewal.GIS
             get { return _initialized; }
         }
 
-        /// <summary>
-        /// 绑定运行时并初始化许可。须在创建任何 AO 对象之前调用。
-        /// </summary>
+        /// <summary>须在创建任何 AO 对象之前调用。</summary>
         public static bool TryInitialize(out string message)
         {
             message = null;
@@ -31,7 +27,7 @@ namespace UrbanRenewal.GIS
 
             try
             {
-                // 避免 PATH 中 64 位 GDAL 插件被 x86 ArcEngine 加载导致崩溃
+                // 避免 PATH 中 64 位 GDAL 被 x86 ArcEngine 加载导致崩溃
                 try
                 {
                     Environment.SetEnvironmentVariable("GDAL_DRIVER_PATH", "");
@@ -68,9 +64,8 @@ namespace UrbanRenewal.GIS
                     return false;
                 }
 
-                // 动力性分析需要 Spatial Analyst（缓冲转栅格、像元统计、栅格计算）
+                // Spatial Analyst（缓冲转栅格 / 像元统计 / 栅格计算）
                 esriLicenseProductCode usedProduct = esriLicenseProductCode.esriLicenseProductCodeEngine;
-                // 以最后成功签出的产品为准：再次探测可用产品
                 if (_aoInit.IsProductCodeAvailable(esriLicenseProductCode.esriLicenseProductCodeAdvanced) == esriLicenseStatus.esriLicenseAvailable
                     || _aoInit.InitializedProduct() == esriLicenseProductCode.esriLicenseProductCodeAdvanced)
                 {
@@ -90,7 +85,7 @@ namespace UrbanRenewal.GIS
                 }
                 bool hasSa = ext == esriLicenseStatus.esriLicenseCheckedOut;
 
-                // 路网可达性需要 Network Analyst（枚举名在 10.2 为 Network；无许可时引擎回退欧氏距离）
+                // Network Analyst（10.2 枚举名 Network）
                 esriLicenseStatus naExt = _aoInit.IsExtensionCodeAvailable(
                     usedProduct,
                     esriLicenseExtensionCode.esriLicenseExtensionCodeNetwork);

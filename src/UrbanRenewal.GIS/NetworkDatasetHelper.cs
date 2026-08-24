@@ -6,9 +6,7 @@ using ESRI.ArcGIS.Geodatabase;
 
 namespace UrbanRenewal.GIS
 {
-    /// <summary>
-    /// 打开已预建的网络数据集（不负责构建路网）。
-    /// </summary>
+    /// <summary>打开已预建的网络数据集（不负责构建路网）。</summary>
     public static class NetworkDatasetHelper
     {
         public const string DefaultFeatureDataset = "roadNet";
@@ -97,9 +95,7 @@ namespace UrbanRenewal.GIS
             return preferred;
         }
 
-        /// <summary>
-        /// 枚举 GDB 中的网络数据集（featureDataset\networkName）。
-        /// </summary>
+        /// <summary>枚举 GDB 中的网络数据集（featureDataset\networkName）。</summary>
         public static List<string> ListNetworkDatasets(string gdbPath)
         {
             List<string> list = new List<string>();

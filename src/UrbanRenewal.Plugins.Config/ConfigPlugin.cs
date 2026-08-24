@@ -4,6 +4,7 @@ using UrbanRenewal.Contracts;
 
 namespace UrbanRenewal.Plugins.Config
 {
+    /// <summary>系统配置插件。</summary>
     public sealed class ConfigPlugin : IModulePlugin
     {
         private IAppContext _context;

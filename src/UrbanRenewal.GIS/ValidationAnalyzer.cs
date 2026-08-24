@@ -12,9 +12,7 @@ using UrbanRenewal.Model;
 
 namespace UrbanRenewal.GIS
 {
-    /// <summary>
-    /// 已更新宗地与评价结果对标：空间连接、等级分布、差异标注、验证报告。
-    /// </summary>
+    /// <summary>已更新宗地与评价结果对标：空间连接、等级分布、差异标注、验证报告。</summary>
     public static class ValidationAnalyzer
     {
         public static ValidationResult Run(
@@ -180,7 +178,6 @@ namespace UrbanRenewal.GIS
                     : "验证结论: 未通过（建议调整权重后重新评价）");
             }
 
-            // 差异：已更新但得分偏低
             string diff = OutputGdbHelper.DatasetPath(outputGdb, string.IsNullOrEmpty(diffName) ? "valid_diff" : diffName);
             try
             {

@@ -4,9 +4,7 @@ using System.Collections.Generic;
 
 namespace UrbanRenewal.GIS
 {
-    /// <summary>
-    /// 包装消息列表：每次 Add 时同步触发回调，便于分析过程实时写主窗体日志。
-    /// </summary>
+    /// <summary>包装消息列表：每次 Add 时同步触发回调，便于分析过程实时写主窗体日志。</summary>
     public sealed class LiveMessageList : IList<string>
     {
         private readonly IList<string> _inner;

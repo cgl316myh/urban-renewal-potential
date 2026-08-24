@@ -6,9 +6,7 @@ using System.Xml.Serialization;
 
 namespace UrbanRenewal.Model
 {
-    /// <summary>
-    /// 城市分析配置：换城市时复制模板改图层名即可。
-    /// </summary>
+    /// <summary>城市分析配置：换城市时复制模板改图层名即可。</summary>
     [XmlRoot("CityProfile")]
     public class CityProfile
     {
@@ -74,9 +72,7 @@ namespace UrbanRenewal.Model
             return Id ?? base.ToString();
         }
 
-        /// <summary>
-        /// 将配置写入作业：权重、像元、图层提示（仅当 GDB 中能匹配到时写入）。
-        /// </summary>
+        /// <summary>将配置写入作业：权重、图层提示（GDB 能匹配到时写入）。</summary>
         public void ApplyToJob(MotivationJob job, IList<string> featureClassNames, IList<string> messages)
         {
             if (job == null)
@@ -84,7 +80,7 @@ namespace UrbanRenewal.Model
                 return;
             }
 
-            // 像元大小由全局设置统一指定，此处不再覆盖
+            // 像元大小由全局设置统一指定
             job.TrafficWeight = TrafficWeight;
             job.EnvironmentWeight = EnvironmentWeight;
             job.FacilityWeight = FacilityWeight;
@@ -120,9 +116,7 @@ namespace UrbanRenewal.Model
             }
         }
 
-        /// <summary>
-        /// 将配置写入可行度作业：像元、图层提示（要素 + 栅格名列表均可匹配）。
-        /// </summary>
+        /// <summary>将配置写入可行度作业：图层提示（要素 + 栅格均可匹配）。</summary>
         public void ApplyToFeasibilityJob(
             FeasibilityJob job,
             IList<string> featureClassNames,
@@ -133,8 +127,6 @@ namespace UrbanRenewal.Model
             {
                 return;
             }
-
-            // 像元大小由全局设置统一指定，此处不再覆盖
 
             if (job.LayerHints == null)
             {
@@ -288,9 +280,7 @@ namespace UrbanRenewal.Model
             return sb.ToString();
         }
 
-        /// <summary>
-        /// 检查 required=true 的角色是否都能在 GDB 中解析到。
-        /// </summary>
+        /// <summary>检查 required=true 的角色是否都能在 GDB 中解析到。</summary>
         public bool ValidateRequired(IList<string> featureClassNames, out string message)
         {
             StringBuilder sb = new StringBuilder();
@@ -319,9 +309,7 @@ namespace UrbanRenewal.Model
             return ok;
         }
 
-        /// <summary>
-        /// 按通用角色关键词，从 GDB 图层名自动草拟城市配置（换城时少改即可）。
-        /// </summary>
+        /// <summary>按通用角色关键词从 GDB 图层名草拟城市配置。</summary>
         public static CityProfile CreateDraft(string id, string displayName, IList<string> featureClassNames)
         {
             CityProfile profile = new CityProfile();
@@ -354,13 +342,12 @@ namespace UrbanRenewal.Model
             AddDraftLayer(profile, featureClassNames, "Population", false, "人口", "人口密度", "population");
             AddDraftLayer(profile, featureClassNames, "Slope", false, "坡度", "Slope");
 
-            // 默认路网命名（须用户预先在 GDB 中构建；分析不会自动创建）
+            // 默认路网命名（须预先构建；分析不会自动创建）
             profile.NetworkDataset = new CityNetworkDataset();
             profile.NetworkDataset.FeatureDataset = "roadNet";
             profile.NetworkDataset.Name = "roadNet_ND";
             profile.NetworkDataset.ImpedanceAttribute = "Length";
 
-            // 建议坐标系：优先分析范围图层的名称提示，留给用户填写 preferredCrsName
             return profile;
         }
 
@@ -449,9 +436,7 @@ namespace UrbanRenewal.Model
         public bool Required { get; set; }
     }
 
-    /// <summary>
-    /// 城市预建路网配置（分析程序只打开、不构建）。
-    /// </summary>
+    /// <summary>城市预建路网配置（分析只打开、不构建）。</summary>
     public class CityNetworkDataset
     {
         [XmlAttribute("featureDataset")]
@@ -464,9 +449,7 @@ namespace UrbanRenewal.Model
         public string ImpedanceAttribute { get; set; }
     }
 
-    /// <summary>
-    /// 从 Config/Cities/*.xml 加载城市配置。
-    /// </summary>
+    /// <summary>从 Config/Cities/*.xml 加载城市配置。</summary>
     public static class CityProfileStore
     {
         public static string GetCitiesDirectory()
@@ -492,7 +475,6 @@ namespace UrbanRenewal.Model
                 string name = Path.GetFileName(files[i]);
                 if (name != null && name.StartsWith("_", StringComparison.Ordinal))
                 {
-                    // _Template.xml 等以下划线开头的不作为可选城市
                     continue;
                 }
                 try

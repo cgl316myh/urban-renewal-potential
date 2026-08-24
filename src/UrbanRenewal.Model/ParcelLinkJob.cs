@@ -2,9 +2,7 @@ using System.Collections.Generic;
 
 namespace UrbanRenewal.Model
 {
-    /// <summary>
-    /// 宗地关联作业：Zonal Statistics 将潜力/动力/可行栅格均值写入宗地面。
-    /// </summary>
+    /// <summary>宗地关联作业：Zonal Statistics 将潜力/动力/可行栅格均值写入宗地面。</summary>
     public class ParcelLinkJob
     {
         public ParcelLinkJob()
@@ -30,7 +28,6 @@ namespace UrbanRenewal.Model
 
         public string FeasibilityRasterName { get; set; }
 
-        /// <summary>输出宗地要素类名（写入输出 GDB）。</summary>
         public string OutputFeatureClassName { get; set; }
 
         /// <summary>角色提示：Parcel、StudyArea。</summary>
@@ -48,7 +45,6 @@ namespace UrbanRenewal.Model
 
         public string OutputGdbPath { get; set; }
 
-        /// <summary>已写入潜力字段的宗地面路径。</summary>
         public string ParcelFeatureClassPath { get; set; }
 
         public int ParcelCount { get; set; }

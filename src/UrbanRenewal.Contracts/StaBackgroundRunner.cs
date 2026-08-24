@@ -4,9 +4,7 @@ using System.Windows.Forms;
 
 namespace UrbanRenewal.Contracts
 {
-    /// <summary>
-    /// 在 STA 后台线程执行耗时分析（ArcObjects/GP 要求），完成后再回到 UI 线程。
-    /// </summary>
+    /// <summary>在 STA 后台线程执行耗时分析（ArcObjects/GP 要求），完成后再回到 UI 线程。</summary>
     public static class StaBackgroundRunner
     {
         public static void Run<T>(

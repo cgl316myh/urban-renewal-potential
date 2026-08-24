@@ -4,6 +4,7 @@ using UrbanRenewal.Contracts;
 
 namespace UrbanRenewal.Plugins.Output
 {
+    /// <summary>成果输出插件。</summary>
     public sealed class OutputPlugin : IModulePlugin
     {
         private IAppContext _context;

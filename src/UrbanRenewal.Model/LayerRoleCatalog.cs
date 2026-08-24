@@ -2,20 +2,16 @@ using System.Collections.Generic;
 
 namespace UrbanRenewal.Model
 {
-    /// <summary>
-    /// 系统标准图层角色目录（数据配置界面与城市模板共用）。
-    /// </summary>
+    /// <summary>系统标准图层角色（数据配置与城市模板共用）。</summary>
     public sealed class LayerRoleDefinition
     {
         public string Role { get; set; }
 
-        /// <summary>界面中文名。</summary>
         public string DisplayNameZh { get; set; }
 
-        /// <summary>期望几何：Point / Polyline / Polygon / Raster / 任意。</summary>
+        /// <summary>Point / Polyline / Polygon / Raster / 任意。</summary>
         public string GeometryType { get; set; }
 
-        /// <summary>数据配置中是否必填。</summary>
         public bool Required { get; set; }
 
         public bool IsRaster { get; set; }

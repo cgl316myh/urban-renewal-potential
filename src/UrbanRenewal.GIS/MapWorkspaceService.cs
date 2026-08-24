@@ -77,7 +77,7 @@ namespace UrbanRenewal.GIS
             }
         }
 
-        /// <summary>清空地图图层，释放对 File GDB 要素类的占用（替换图层前建议调用）。</summary>
+        /// <summary>清空地图图层并释放 File GDB COM 占用。</summary>
         public static void ClearLayers(IMapControl3 mapControl)
         {
             if (mapControl == null)
@@ -86,7 +86,6 @@ namespace UrbanRenewal.GIS
             }
             try
             {
-                // 先断开 FeatureClass 引用，再删层，避免 ClearLayers 后 RCW 仍占 File GDB 锁
                 for (int i = mapControl.LayerCount - 1; i >= 0; i--)
                 {
                     try
@@ -98,7 +97,6 @@ namespace UrbanRenewal.GIS
                             try { fl.FeatureClass = null; }
                             catch { }
                         }
-                        // IMapControl3.DeleteLayer 参数为图层索引（int），不是 ILayer
                         mapControl.DeleteLayer(i);
                     }
                     catch
@@ -132,10 +130,7 @@ namespace UrbanRenewal.GIS
             FileGdbLockHelper.ForceComRelease();
         }
 
-        /// <summary>
-        /// 仅移除引用指定 File GDB 的图层（含结果栅格），保留其它图层。
-        /// 再分析前调用，避免 traf10mx 等 VAT schema lock 导致 CellStatistics 000871。
-        /// </summary>
+        /// <summary>移除引用指定 GDB 的图层（含栅格 VAT），避免 CellStatistics 000871。</summary>
         public static int RemoveLayersReferencingGdb(IMapControl3 mapControl, string gdbPath)
         {
             if (mapControl == null || string.IsNullOrEmpty(gdbPath))

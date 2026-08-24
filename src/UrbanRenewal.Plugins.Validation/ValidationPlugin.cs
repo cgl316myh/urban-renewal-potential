@@ -4,9 +4,7 @@ using UrbanRenewal.Contracts;
 
 namespace UrbanRenewal.Plugins.Validation
 {
-    /// <summary>
-    /// M6 验证校核（潜力分析流程第 5 步）。
-    /// </summary>
+    /// <summary>验证校核插件。</summary>
     public sealed class ValidationPlugin : IModulePlugin
     {
         private IAppContext _context;

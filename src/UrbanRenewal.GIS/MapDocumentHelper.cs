@@ -7,12 +7,10 @@ using UrbanRenewal.Model;
 
 namespace UrbanRenewal.GIS
 {
-    /// <summary>
-    /// 工程地图文档（*.mxd）保存与加载。
-    /// </summary>
+    /// <summary>工程 MXD 保存与加载。</summary>
     public static class MapDocumentHelper
     {
-        /// <summary>默认工程 MXD：与 app_settings.xml 同目录下的 CurrentProject.mxd</summary>
+        /// <summary>默认：Config 目录下 CurrentProject.mxd</summary>
         public static string GetDefaultProjectMxdPath()
         {
             string configDir = GlobalAppSettingsStore.GetConfigDirectory();
@@ -20,9 +18,6 @@ namespace UrbanRenewal.GIS
             return Path.Combine(configDir, "CurrentProject.mxd");
         }
 
-        /// <summary>
-        /// 保存当前地图到 MXD。可传入 AxMapControl 或 IMapControl3。
-        /// </summary>
         public static bool SaveMapToMxd(object mapControlOrAx, string mxdPath, out string message)
         {
             message = null;
@@ -76,7 +71,6 @@ namespace UrbanRenewal.GIS
                 }
                 else
                 {
-                    // 回退：逐层复制到新文档
                     if (!CopyLayersToMapDocument(mapControl, mapDoc, out message))
                     {
                         return false;
@@ -199,7 +193,7 @@ namespace UrbanRenewal.GIS
             {
             }
 
-            // AxMapControl 本身有时也可作为 IMxdContents
+            // AxMapControl 有时也可作 IMxdContents
             if (contents == null)
             {
                 contents = mapControl as IMxdContents;

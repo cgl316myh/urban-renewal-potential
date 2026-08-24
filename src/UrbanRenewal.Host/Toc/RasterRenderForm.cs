@@ -11,9 +11,6 @@ using Cursor = System.Windows.Forms.Cursor;
 
 namespace UrbanRenewal.Host
 {
-    /// <summary>
-    /// 栅格图层渲染：拉伸 / 分级 / 唯一值；分级与唯一值可叠加边线（栅格转面）。
-    /// </summary>
     public partial class RasterRenderForm : Form
     {
         private const int ModeStretch = 0;
@@ -224,9 +221,7 @@ namespace UrbanRenewal.Host
             }
         }
 
-        /// <summary>
-        /// 栅格渲染器本身不画 Outline；勾选边线时转面叠加空心面图层。
-        /// </summary>
+        // 勾选边线时转面叠加空心面图层（栅格渲染器本身不画 Outline）
         private void SyncOutlineOverlay(bool modeSupportsOutline)
         {
             if (_map == null || _rasterLayer == null)
@@ -258,9 +253,7 @@ namespace UrbanRenewal.Host
             }
         }
 
-        /// <summary>
-        /// 按 ESRI 官方顺序：Update → BandIndex/ColorRamp → StretchType → 再 Update → 赋给图层。
-        /// </summary>
+        // Update → BandIndex/ColorRamp/StretchType → Update → 赋图层
         private void ApplyStretch(Color low, Color high)
         {
             IColorRamp colorRamp = CreateColorRamp(low, high, 255);
@@ -349,7 +342,7 @@ namespace UrbanRenewal.Host
         }
 
         /// <summary>
-        /// 唯一值（离散等级）：用分级渲染器「一类一值」实现。
+        /// 唯一值用分级渲染器「一类一值」。
         /// RasterUniqueValueRenderer 在 AE 下易因类型/Update 匹配失败变成灰或透明；
         /// 分级路径已验证可正确 set_Symbol 上色。
         /// </summary>
@@ -372,7 +365,7 @@ namespace UrbanRenewal.Host
                     uniques.Count, MaxUniqueValues));
             }
 
-            // 在相邻唯一值中点处分隔，使每个整型等级独占一类
+            // 相邻唯一值中点分隔，使每级独占一类
             double[] breaks = new double[uniques.Count + 1];
             breaks[0] = uniques[0].SortKey - 0.5;
             for (int i = 0; i < uniques.Count - 1; i++)
@@ -458,7 +451,7 @@ namespace UrbanRenewal.Host
         {
             fieldName = "Value";
 
-            // 1) 引擎原生唯一值（类型与像元一致，优先）
+            // 1) 引擎原生唯一值（像元类型一致）
             if (engineUniques != null && engineUniques.Count > 0)
             {
                 List<UniqueValueItem> fromEngine = new List<UniqueValueItem>();
@@ -502,7 +495,7 @@ namespace UrbanRenewal.Host
                 }
             }
 
-            // 2) VAT / 采样回退（VAT 用原始 Variant，不做强制装箱）
+            // 2) VAT / 采样回退（VAT 用原始 Variant）
             return CollectUniqueValueItems(out fieldName);
         }
 
@@ -533,7 +526,7 @@ namespace UrbanRenewal.Host
             ramp.CreateRamp(out ok);
             if (!ok)
             {
-                // CIELab 失败时退回 HSV
+                // CIELab 失败退回 HSV
                 ramp.Algorithm = esriColorRampAlgorithm.esriHSVAlgorithm;
                 ramp.CreateRamp(out ok);
             }

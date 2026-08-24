@@ -8,9 +8,7 @@ using ESRI.ArcGIS.Geodatabase;
 
 namespace UrbanRenewal.GIS
 {
-    /// <summary>
-    /// File GDB 要素类/栅格枚举与按关键词匹配。
-    /// </summary>
+    /// <summary>File GDB 要素类/栅格枚举与按关键词匹配。</summary>
     public static class WorkspaceCatalog
     {
         public static List<string> ListFeatureClassNames(string gdbPath)

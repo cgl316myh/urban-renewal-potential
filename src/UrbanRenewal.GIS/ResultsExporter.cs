@@ -12,9 +12,7 @@ using UrbanRenewal.Model;
 
 namespace UrbanRenewal.GIS
 {
-    /// <summary>
-    /// 成果导出：TIFF 栅格、SHP、CSV 报表。
-    /// </summary>
+    /// <summary>成果导出：TIFF 栅格、SHP、CSV 报表。</summary>
     public static class ResultsExporter
     {
         public static OutputResult Export(
@@ -77,7 +75,6 @@ namespace UrbanRenewal.GIS
                 }
             }
 
-            // 简单 HTML 说明（两套专题图清单）
             string indexHtml = Path.Combine(folder, "export_index_" + stamp + ".html");
             File.WriteAllText(indexHtml, BuildIndexHtml(result), Encoding.UTF8);
             result.ExportedFiles.Add(indexHtml);

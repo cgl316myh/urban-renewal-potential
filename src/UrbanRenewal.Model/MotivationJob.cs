@@ -2,9 +2,7 @@ using System.Collections.Generic;
 
 namespace UrbanRenewal.Model
 {
-    /// <summary>
-    /// 动力性分析作业参数。
-    /// </summary>
+    /// <summary>动力性分析作业参数。</summary>
     public class MotivationJob
     {
         public MotivationJob()
@@ -18,15 +16,11 @@ namespace UrbanRenewal.Model
             BufferScoreRules = BufferScoreRules.CreateOriginal();
         }
 
-        /// <summary>输入工作空间 File GDB。</summary>
         public string GdbPath { get; set; }
 
-        /// <summary>
-        /// 输出 File GDB：全部中间要素/栅格与最终结果写入此库。
-        /// </summary>
         public string OutputGdbPath { get; set; }
 
-        /// <summary>兼容旧字段；若未设 OutputGdbPath 且本字段为 *.gdb 则当作输出库。</summary>
+        /// <summary>兼容旧字段；未设 OutputGdbPath 且本字段为 *.gdb 时当作输出库。</summary>
         public string WorkDirectory { get; set; }
 
         public double CellSize { get; set; }
@@ -42,9 +36,7 @@ namespace UrbanRenewal.Model
         /// <summary>缓冲赋分规则；空则用现状默认。</summary>
         public BufferScoreRules BufferScoreRules { get; set; }
 
-        /// <summary>
-        /// 可选：因子键 → 要素类名（覆盖自动匹配）。
-        /// </summary>
+        /// <summary>因子键 → 要素类名（覆盖自动匹配）。</summary>
         public Dictionary<string, string> LayerHints { get; set; }
     }
 

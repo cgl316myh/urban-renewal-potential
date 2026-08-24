@@ -270,7 +270,7 @@ namespace UrbanRenewal.Host
             _settings.ClearWorkspaceSettings();
             GlobalAppSettingsStore.Save(_settings);
 
-            // 清除活动城市记忆文件，避免 ResolveActive 仍读到旧城市
+            // 避免 ResolveActive 读到旧城市
             try
             {
                 string activeFile = Path.Combine(CityProfileStore.GetCitiesDirectory(), "_active_city.txt");
@@ -307,7 +307,6 @@ namespace UrbanRenewal.Host
                 return false;
             }
 
-            // 先持久化当前全局配置
             GlobalAppSettingsStore.Save(_settings);
 
             string mxdPath = _settings.ProjectMxdPath;
@@ -316,7 +315,6 @@ namespace UrbanRenewal.Host
                 mxdPath = MapDocumentHelper.GetDefaultProjectMxdPath();
             }
 
-            // 传入 AxMapControl，便于解析 IMxdContents
             string mxdMsg;
             if (!MapDocumentHelper.SaveMapToMxd(_form.MapControl, mxdPath, out mxdMsg))
             {
@@ -349,7 +347,6 @@ namespace UrbanRenewal.Host
             string mxdPath = _settings.ProjectMxdPath;
             if (string.IsNullOrEmpty(mxdPath) || !System.IO.File.Exists(mxdPath))
             {
-                // 兼容：仅有默认 MXD 时也尝试加载
                 string def = MapDocumentHelper.GetDefaultProjectMxdPath();
                 if (System.IO.File.Exists(def))
                 {
@@ -650,7 +647,6 @@ namespace UrbanRenewal.Host
 
         public void ShowProgress(string caption, int percent)
         {
-            // 仅更新状态栏；明细日志由各窗体 OnProgress → LogInfo，避免重复刷列表卡 UI
             string line = "[" + percent + "%] " + (caption ?? string.Empty);
             _form.SetStatus(line);
             _form.EnsureLogPanelVisible();

@@ -4,9 +4,7 @@ using UrbanRenewal.Contracts;
 
 namespace UrbanRenewal.Plugins.DataManage
 {
-    /// <summary>
-    /// M1 数据管理插件：新建/保存工程、全局设置、数据配置、完整性检查、预处理。
-    /// </summary>
+    /// <summary>数据管理插件。</summary>
     public sealed class DataManagePlugin : IModulePlugin
     {
         private IAppContext _context;
@@ -108,7 +106,7 @@ namespace UrbanRenewal.Plugins.DataManage
                 return;
             }
 
-            // 确保内存中的全局设置已落盘
+            // 落盘全局设置
             _context.SaveGlobalSettings();
 
             string message;

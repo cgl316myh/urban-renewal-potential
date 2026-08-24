@@ -9,7 +9,7 @@ using UrbanRenewal.Model;
 
 namespace UrbanRenewal.Plugins.Output
 {
-    /// <summary>成果输出；导出在 STA 后台线程执行。</summary>
+    /// <summary>成果导出；STA 后台。</summary>
     public partial class OutputRunForm : Form
     {
         private readonly IAppContext _context;

@@ -2,9 +2,7 @@ using System.Collections.Generic;
 
 namespace UrbanRenewal.Model
 {
-    /// <summary>
-    /// 综合潜力叠置作业：动力性 × W动力 + 可行度 × W可行。
-    /// </summary>
+    /// <summary>综合潜力叠置作业：动力性 × W动力 + 可行度 × W可行。</summary>
     public class OverlayJob
     {
         public OverlayJob()

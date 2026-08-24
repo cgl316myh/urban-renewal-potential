@@ -9,7 +9,7 @@ using UrbanRenewal.Model;
 
 namespace UrbanRenewal.Plugins.Overlay
 {
-    /// <summary>宗地关联；分析在 STA 后台线程执行。</summary>
+    /// <summary>宗地关联；STA 后台。</summary>
     public partial class ParcelLinkRunForm : Form
     {
         private readonly IAppContext _context;

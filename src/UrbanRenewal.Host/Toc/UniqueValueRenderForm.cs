@@ -9,9 +9,7 @@ using ESRI.ArcGIS.Geometry;
 
 namespace UrbanRenewal.Host
 {
-    /// <summary>
-    /// 点/线/面图层唯一值渲染（UniqueValueRenderer）。
-    /// </summary>
+    /// <summary>唯一值渲染。</summary>
     public partial class UniqueValueRenderForm : Form
     {
         private readonly IFeatureLayer _featureLayer;

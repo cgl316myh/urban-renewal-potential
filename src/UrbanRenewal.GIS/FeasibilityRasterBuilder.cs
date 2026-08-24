@@ -7,9 +7,7 @@ using ESRI.ArcGIS.SpatialAnalystTools;
 
 namespace UrbanRenewal.GIS
 {
-    /// <summary>
-    /// 可行度相关栅格工具：坡度、阈值重分类、人口分级、加性叠置与区间标准化。
-    /// </summary>
+    /// <summary>可行度栅格工具：坡度、重分类、人口分级、加性叠置与区间标准化。</summary>
     public static class FeasibilityRasterBuilder
     {
         /// <summary>由 DEM 生成坡度栅格（度）。</summary>
@@ -35,9 +33,7 @@ namespace UrbanRenewal.GIS
             return outSlope;
         }
 
-        /// <summary>
-        /// 阈值重分类：值 &gt; threshold → aboveScore，否则 → belowScore。
-        /// </summary>
+        /// <summary>阈值重分类：值 &gt; threshold → aboveScore，否则 → belowScore。</summary>
         public static string ReclassifyAboveThreshold(
             GeoprocessorHelper gp,
             string inRaster,
@@ -55,7 +51,6 @@ namespace UrbanRenewal.GIS
             string outRaster = OutputGdbHelper.DatasetPath(outputGdb, ShortName(namePrefix));
             OutputGdbHelper.TryDeleteDataset(gp, outRaster);
 
-            // Remap: (-inf, thr] → below; (thr, +inf) → above
             string remap = string.Format(
                 CultureInfo.InvariantCulture,
                 "-100000000 {0} {1};{0} 100000000 {2}",
@@ -73,10 +68,7 @@ namespace UrbanRenewal.GIS
             return outRaster;
         }
 
-        /// <summary>
-        /// 按区间重分类（breaks 升序，scores.Length = breaks.Length + 1）。
-        /// 区间：(-inf,b0]、 (b0,b1]、…、(bLast,+inf)。
-        /// </summary>
+        /// <summary>区间重分类：breaks 升序，scores.Length = breaks.Length + 1。</summary>
         public static string ReclassifyByBreaks(
             GeoprocessorHelper gp,
             string inRaster,
@@ -125,10 +117,7 @@ namespace UrbanRenewal.GIS
             return outRaster;
         }
 
-        /// <summary>
-        /// 人口密度五级等分：最高级 +2，次高 +1，其余 0。
-        /// 若无法读取统计则按相对高值区（假定值域）回退。
-        /// </summary>
+        /// <summary>人口密度五级：最高 +2，次高 +1，其余 0；无统计时回退。</summary>
         public static string BuildPopulationScore(
             GeoprocessorHelper gp,
             string populationRaster,
@@ -139,7 +128,6 @@ namespace UrbanRenewal.GIS
         {
             if (maxValue <= minValue)
             {
-                // 无法分级时：有值区域给 +1
                 return ReclassifyAboveThreshold(gp, populationRaster, minValue, 1, 0, outputGdb, namePrefix);
             }
 
@@ -148,7 +136,6 @@ namespace UrbanRenewal.GIS
             double b2 = minValue + span * 0.4;
             double b3 = minValue + span * 0.6;
             double b4 = minValue + span * 0.8;
-            // 低→高：0,0,1,1,2
             return ReclassifyByBreaks(
                 gp,
                 populationRaster,
@@ -191,9 +178,7 @@ namespace UrbanRenewal.GIS
             return outRaster;
         }
 
-        /// <summary>
-        /// 将 [rawMin, rawMax] 线性映射到 0–100；NoData 视为 rawMin 对应 0。
-        /// </summary>
+        /// <summary>[rawMin, rawMax] 线性映射到 0–100；NoData 按 rawMin→0。</summary>
         public static string NormalizeRangeTo100(
             GeoprocessorHelper gp,
             string inRaster,
@@ -216,7 +201,6 @@ namespace UrbanRenewal.GIS
 
             string span = (rawMax - rawMin).ToString(CultureInfo.InvariantCulture);
             string minS = rawMin.ToString(CultureInfo.InvariantCulture);
-            // (Con(IsNull(r), rawMin, r) - rawMin) / span * 100
             string expr = "((Float(Con(IsNull(\"" + inRaster + "\")," + minS + ",\"" + inRaster
                 + "\")) - " + minS + ") / " + span + ") * 100";
 
@@ -227,7 +211,6 @@ namespace UrbanRenewal.GIS
             return outRaster;
         }
 
-        /// <summary>复制栅格到输出 GDB（便于统一路径与后续处理）。</summary>
         public static string CopyRasterToGdb(
             GeoprocessorHelper gp,
             string inRaster,
@@ -244,7 +227,6 @@ namespace UrbanRenewal.GIS
             return outRaster;
         }
 
-        /// <summary>将栅格另存为固定数据集名（如 fea_score）。</summary>
         public static string SaveAs(
             GeoprocessorHelper gp,
             string inRaster,

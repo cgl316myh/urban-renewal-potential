@@ -4,9 +4,7 @@ using UrbanRenewal.Contracts;
 
 namespace UrbanRenewal.Plugins.Overlay
 {
-    /// <summary>
-    /// M4 叠置评价 + M5 宗地关联（潜力分析流程第 3–4 步）。
-    /// </summary>
+    /// <summary>叠置评价与宗地关联插件。</summary>
     public sealed class OverlayPlugin : IModulePlugin
     {
         private IAppContext _context;

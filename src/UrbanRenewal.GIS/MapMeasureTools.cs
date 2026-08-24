@@ -7,9 +7,7 @@ using ESRI.ArcGIS.SystemUI;
 
 namespace UrbanRenewal.GIS
 {
-    /// <summary>
-    /// 长度测量：单击加点，双击结束；Esc 取消。
-    /// </summary>
+    /// <summary>长度测量：单击加点，双击结束；Esc 取消。</summary>
     public sealed class MeasureLengthTool : ICommand, ITool
     {
         private IMapControl3 _mapControl;
@@ -121,7 +119,6 @@ namespace UrbanRenewal.GIS
 
         public void OnKeyDown(int keyCode, int shift)
         {
-            // Esc
             if (keyCode == 27)
             {
                 CancelFeedback();
@@ -220,9 +217,7 @@ namespace UrbanRenewal.GIS
         }
     }
 
-    /// <summary>
-    /// 面积测量：单击加点，双击结束；Esc 取消。
-    /// </summary>
+    /// <summary>面积测量：单击加点，双击结束；Esc 取消。</summary>
     public sealed class MeasureAreaTool : ICommand, ITool
     {
         private IMapControl3 _mapControl;

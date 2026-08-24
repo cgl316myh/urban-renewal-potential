@@ -2,9 +2,7 @@ using System.Globalization;
 
 namespace UrbanRenewal.Model
 {
-    /// <summary>
-    /// 更新潜力五级划分（标准化 0–100）。
-    /// </summary>
+    /// <summary>更新潜力五级划分（标准化 0–100）。</summary>
     public static class PotentialLevel
     {
         public const string Extreme = "极高";

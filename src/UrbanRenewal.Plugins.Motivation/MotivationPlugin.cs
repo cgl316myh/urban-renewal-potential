@@ -4,9 +4,7 @@ using UrbanRenewal.Contracts;
 
 namespace UrbanRenewal.Plugins.Motivation
 {
-    /// <summary>
-    /// M2 动力性分析（潜力分析流程第 1 步）。
-    /// </summary>
+    /// <summary>动力性分析插件。</summary>
     public sealed class MotivationPlugin : IModulePlugin
     {
         private IAppContext _context;

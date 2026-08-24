@@ -8,7 +8,7 @@ using UrbanRenewal.Model;
 
 namespace UrbanRenewal.Plugins.Overlay
 {
-    /// <summary>叠置评价；分析在 STA 后台线程执行。</summary>
+    /// <summary>叠置评价；STA 后台。</summary>
     public partial class OverlayRunForm : Form
     {
         private readonly IAppContext _context;

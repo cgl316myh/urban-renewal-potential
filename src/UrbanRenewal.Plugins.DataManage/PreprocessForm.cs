@@ -8,9 +8,7 @@ using UrbanRenewal.Model;
 
 namespace UrbanRenewal.Plugins.DataManage
 {
-    /// <summary>
-    /// 投影/裁剪预处理：全局输入 → clip.gdb；不改原库、不改分析输出、不清空地图。
-    /// </summary>
+    /// <summary>投影/裁剪预处理，输出 clip.gdb。</summary>
     public partial class PreprocessForm : Form
     {
         private readonly IAppContext _context;

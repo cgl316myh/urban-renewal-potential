@@ -10,9 +10,7 @@ using UrbanRenewal.Model;
 
 namespace UrbanRenewal.GIS
 {
-    /// <summary>
-    /// 将潜力/动力/可行栅格通过 Zonal Statistics 写入宗地面字段。
-    /// </summary>
+    /// <summary>将潜力/动力/可行栅格通过 Zonal Statistics 写入宗地面字段。</summary>
     public static class ParcelZonalLinker
     {
         public const string FieldPotentialScore = "POTENTIAL_SCORE";

@@ -6,9 +6,6 @@ using ESRI.ArcGIS.Display;
 
 namespace UrbanRenewal.Host
 {
-    /// <summary>
-    /// 自定义矢量符号设置窗体（点/线/面）。
-    /// </summary>
     public partial class SymbolForm : Form
     {
         private enum SymbolKind
@@ -65,8 +62,12 @@ namespace UrbanRenewal.Host
                 lblOutlineWidth.Visible = false;
                 numOutlineWidth.Visible = false;
                 chkDrawOutline.Visible = false;
+
+                ApplySymbolUiFooter();
+                return;
             }
-            else if (symbol is ILineSymbol)
+
+            if (symbol is ILineSymbol)
             {
                 _kind = SymbolKind.Line;
                 ILineSymbol line = (ILineSymbol)symbol;
@@ -94,8 +95,12 @@ namespace UrbanRenewal.Host
                 lblOutlineWidth.Visible = false;
                 numOutlineWidth.Visible = false;
                 chkDrawOutline.Visible = false;
+
+                ApplySymbolUiFooter();
+                return;
             }
-            else if (symbol is IFillSymbol)
+
+            if (symbol is IFillSymbol)
             {
                 _kind = SymbolKind.Fill;
                 IFillSymbol fill = (IFillSymbol)symbol;
@@ -110,7 +115,11 @@ namespace UrbanRenewal.Host
                 if (simpleFill != null)
                 {
                     cboStyle.SelectedIndex = FillStyleToIndex(simpleFill.Style);
-                    if (simpleFill.Outline != null)
+                    if (simpleFill.Outline == null)
+                    {
+                        hasOutline = false;
+                    }
+                    else
                     {
                         ISimpleLineSymbol simpleOutline = simpleFill.Outline as ISimpleLineSymbol;
                         if (simpleOutline != null && simpleOutline.Style == esriSimpleLineStyle.esriSLSNull)
@@ -122,10 +131,6 @@ namespace UrbanRenewal.Host
                             _outlineColor = ToSystemColor(simpleFill.Outline.Color);
                             _outlineWidth = simpleFill.Outline.Width > 0 ? simpleFill.Outline.Width : 1;
                         }
-                    }
-                    else
-                    {
-                        hasOutline = false;
                     }
                 }
 
@@ -141,13 +146,18 @@ namespace UrbanRenewal.Host
                 numOutlineWidth.Visible = true;
                 numOutlineWidth.Value = ClampDecimal((decimal)_outlineWidth, numOutlineWidth.Minimum, numOutlineWidth.Maximum);
                 UpdateOutlineControlsEnabled();
-            }
-            else
-            {
-                _kind = SymbolKind.Unknown;
-                MessageBox.Show("当前图例符号类型暂不支持自定义编辑。", "提示");
+
+                ApplySymbolUiFooter();
+                return;
             }
 
+            _kind = SymbolKind.Unknown;
+            MessageBox.Show("当前图例符号类型暂不支持自定义编辑。", "提示");
+            ApplySymbolUiFooter();
+        }
+
+        private void ApplySymbolUiFooter()
+        {
             btnColor.BackColor = _fillColor;
             btnOutlineColor.BackColor = _outlineColor;
             lblType.Text = SymbolKindText(_kind);
@@ -220,26 +230,32 @@ namespace UrbanRenewal.Host
                 {
                     DrawMarkerPreview(g, brush, pen, r, cboStyle.SelectedIndex);
                 }
+                return;
             }
-            else if (_kind == SymbolKind.Line)
+
+            if (_kind == SymbolKind.Line)
             {
                 using (Pen pen = CreateLinePreviewPen())
                 {
                     int y = bounds.Top + bounds.Height / 2;
                     g.DrawLine(pen, bounds.Left, y, bounds.Right, y);
                 }
+                return;
             }
-            else if (_kind == SymbolKind.Fill)
+
+            if (_kind != SymbolKind.Fill)
             {
-                using (Brush brush = CreateFillPreviewBrush(bounds))
+                return;
+            }
+
+            using (Brush brush = CreateFillPreviewBrush(bounds))
+            {
+                g.FillRectangle(brush, bounds);
+                if (chkDrawOutline.Checked)
                 {
-                    g.FillRectangle(brush, bounds);
-                    if (chkDrawOutline.Checked)
+                    using (Pen pen = new Pen(_outlineColor, Math.Max(1f, (float)_outlineWidth)))
                     {
-                        using (Pen pen = new Pen(_outlineColor, Math.Max(1f, (float)_outlineWidth)))
-                        {
-                            g.DrawRectangle(pen, bounds);
-                        }
+                        g.DrawRectangle(pen, bounds);
                     }
                 }
             }

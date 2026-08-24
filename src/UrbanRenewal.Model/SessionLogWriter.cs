@@ -4,10 +4,7 @@ using System.Text;
 
 namespace UrbanRenewal.Model
 {
-    /// <summary>
-    /// 会话运行日志：仅在已配置「输入 GDB」时落盘，目录为该 GDB 同级文件夹，
-    /// 文件名 log_yyyyMMddHHmmss.txt；边输出边 Flush。未配置输入 GDB 时不写本地文件。
-    /// </summary>
+    /// <summary>会话日志：有输入 GDB 时写其同级目录 log_yyyyMMddHHmmss.txt。</summary>
     public static class SessionLogWriter
     {
         private static readonly object Sync = new object();
@@ -48,9 +45,6 @@ namespace UrbanRenewal.Model
             }
         }
 
-        /// <summary>
-        /// 仅当设置了输入 GDB 时返回其父目录；否则返回 null（表示不落盘）。
-        /// </summary>
         public static string ResolveLogDirectory()
         {
             return ResolveLogDirectory(GlobalAppSettingsStore.Load());
@@ -96,9 +90,6 @@ namespace UrbanRenewal.Model
             }
         }
 
-        /// <summary>
-        /// 按当前输入 GDB 启动/关闭落盘。无输入 GDB 时关闭文件并返回 null。
-        /// </summary>
         public static string StartNewSession()
         {
             return StartNewSession(null);
@@ -112,9 +103,6 @@ namespace UrbanRenewal.Model
             }
         }
 
-        /// <summary>
-        /// 输入 GDB 变化时调用：有 GDB 则立即在同目录开日志；无 GDB 则停止落盘。
-        /// </summary>
         public static string EnsureDirectoryMatchesSettings(GlobalAppSettings settings)
         {
             lock (Sync)
@@ -160,27 +148,17 @@ namespace UrbanRenewal.Model
             }
         }
 
-        /// <summary>写入异常详情（若当前未落盘则忽略；崩溃兜底见 WriteCrashReport）。</summary>
         public static void AppendException(string title, Exception ex)
         {
             StringBuilder sb = new StringBuilder();
             sb.AppendLine("======== " + (title ?? "异常") + " ========");
             sb.AppendLine(DateTime.Now.ToString("yyyy-MM-dd HH:mm:ss"));
-            if (ex != null)
-            {
-                sb.AppendLine(ex.ToString());
-            }
-            else
-            {
-                sb.AppendLine("(无异常对象)");
-            }
+            sb.AppendLine(ex != null ? ex.ToString() : "(无异常对象)");
             sb.AppendLine("========");
             Append(sb.ToString());
         }
 
-        /// <summary>
-        /// 未处理异常兜底：优先写会话日志；否则写 %LocalAppData%\UrbanRenewal\crash_*.txt。
-        /// </summary>
+        /// <summary>崩溃报告：有会话日志则写入；否则 %LocalAppData%\UrbanRenewal\crash_*.txt。</summary>
         public static string WriteCrashReport(string source, Exception ex)
         {
             string text = BuildCrashText(source, ex);
@@ -264,22 +242,23 @@ namespace UrbanRenewal.Model
 
         private static void CloseNoLock(bool writeFooter)
         {
-            if (_writer != null)
+            if (_writer == null)
             {
-                try
-                {
-                    if (writeFooter)
-                    {
-                        _writer.WriteLine("# 结束: " + DateTime.Now.ToString("yyyy-MM-dd HH:mm:ss"));
-                    }
-                    _writer.Flush();
-                    _writer.Dispose();
-                }
-                catch
-                {
-                }
-                _writer = null;
+                return;
             }
+            try
+            {
+                if (writeFooter)
+                {
+                    _writer.WriteLine("# 结束: " + DateTime.Now.ToString("yyyy-MM-dd HH:mm:ss"));
+                }
+                _writer.Flush();
+                _writer.Dispose();
+            }
+            catch
+            {
+            }
+            _writer = null;
         }
 
         private static string BuildCrashText(string source, Exception ex)
@@ -289,14 +268,7 @@ namespace UrbanRenewal.Model
             sb.AppendLine("时间: " + DateTime.Now.ToString("yyyy-MM-dd HH:mm:ss"));
             sb.AppendLine("来源: " + (source ?? "(未知)"));
             sb.AppendLine("--------------------------------");
-            if (ex != null)
-            {
-                sb.AppendLine(ex.ToString());
-            }
-            else
-            {
-                sb.AppendLine("(无异常对象，可能为非托管/强制终止)");
-            }
+            sb.AppendLine(ex != null ? ex.ToString() : "(无异常对象，可能为非托管/强制终止)");
             sb.AppendLine("========");
             return sb.ToString();
         }

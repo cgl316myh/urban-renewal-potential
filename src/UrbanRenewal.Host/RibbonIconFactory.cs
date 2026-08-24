@@ -5,9 +5,6 @@ using System.Drawing.Drawing2D;
 
 namespace UrbanRenewal.Host
 {
-    /// <summary>
-    /// Ribbon 大图标（32×32），按按钮标题或键名匹配。
-    /// </summary>
     internal static class RibbonIconFactory
     {
         private static readonly Dictionary<string, Image> Cache = new Dictionary<string, Image>(StringComparer.OrdinalIgnoreCase);
@@ -70,7 +67,7 @@ namespace UrbanRenewal.Host
             {
                 return GetLarge("global_settings");
             }
-                    if (caption.IndexOf("打开 GDB", StringComparison.Ordinal) >= 0 || caption.IndexOf("打开GDB", StringComparison.Ordinal) >= 0)
+            if (caption.IndexOf("打开 GDB", StringComparison.Ordinal) >= 0 || caption.IndexOf("打开GDB", StringComparison.Ordinal) >= 0)
             {
                 return GetLarge("open_gdb");
             }

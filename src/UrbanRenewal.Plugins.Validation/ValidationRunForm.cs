@@ -9,7 +9,7 @@ using UrbanRenewal.Model;
 
 namespace UrbanRenewal.Plugins.Validation
 {
-    /// <summary>验证校核；分析在 STA 后台线程执行。</summary>
+    /// <summary>验证校核；STA 后台。</summary>
     public partial class ValidationRunForm : Form
     {
         private readonly IAppContext _context;

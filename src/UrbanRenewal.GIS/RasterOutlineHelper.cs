@@ -11,10 +11,7 @@ using ESRI.ArcGIS.SpatialAnalystTools;
 
 namespace UrbanRenewal.GIS
 {
-    /// <summary>
-    /// 栅格边线：AE 栅格渲染器忽略 FillSymbol.Outline，需 RasterToPolygon 后叠加空心面。
-    /// 注意：GP 对中文路径常报 000864/000367；浮点栅格需先 Int。
-    /// </summary>
+    /// <summary>栅格边线：渲染器忽略 Outline，需 RasterToPolygon；GP 中文路径易 000864/000367，浮点栅格需先 Int。</summary>
     public static class RasterOutlineHelper
     {
         public const string OutlineSuffix = "_边线";
@@ -29,9 +26,6 @@ namespace UrbanRenewal.GIS
             return baseName + OutlineSuffix;
         }
 
-        /// <summary>
-        /// 同步边线图层：勾选则生成/替换；取消则移除。
-        /// </summary>
         public static void SyncOutlineLayer(
             IMap map,
             IRasterLayer rasterLayer,
@@ -65,7 +59,7 @@ namespace UrbanRenewal.GIS
             Directory.CreateDirectory(tempDir);
             string id = Guid.NewGuid().ToString("N").Substring(0, 8);
 
-            // 1) 用 ArcObjects 另存到纯英文路径，避免 GP 读中文路径失败
+            // 另存英文路径，避免 GP 读中文路径失败
             string asciiTiff = Path.Combine(tempDir, "src_" + id + ".tif");
             TryDeleteFile(asciiTiff);
             SaveRasterAsTiff(rasterLayer.Raster, tempDir, "src_" + id + ".tif");
@@ -76,7 +70,6 @@ namespace UrbanRenewal.GIS
 
             GeoprocessorHelper gp = new GeoprocessorHelper();
 
-            // 2) 浮点/连续值先 Int，RasterToPolygon 只接受整型域
             string polygonInput = asciiTiff;
             if (IsFloatingPixelType(rasterLayer.Raster))
             {
@@ -189,7 +182,6 @@ namespace UrbanRenewal.GIS
 
             string full = Path.Combine(folder, fileName);
             TryDeleteFile(full);
-            // 若已有同名，SaveAs 可能失败；上面已删
             object result = saveAs.SaveAs(fileName, ws, "TIFF");
             if (result == null && !File.Exists(full))
             {

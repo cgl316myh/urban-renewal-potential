@@ -5,9 +5,7 @@ using System.Xml.Serialization;
 
 namespace UrbanRenewal.Model
 {
-    /// <summary>
-    /// 全局工作区设置：输出 GDB、城市配置等，设置一次全模块共用。
-    /// </summary>
+    /// <summary>全局工作区设置：输出 GDB、城市配置等，设置一次全模块共用。</summary>
     [XmlRoot("GlobalAppSettings")]
     public class GlobalAppSettings
     {
@@ -24,43 +22,34 @@ namespace UrbanRenewal.Model
 
         public string PluginsDirectoryName { get; set; }
 
-        /// <summary>输入工作空间 GDB。</summary>
         public string InputGdbPath { get; set; }
 
-        /// <summary>分析结果输出 GDB（中间与结果数据均写入）。</summary>
         public string OutputGdbPath { get; set; }
 
-        /// <summary>当前城市配置 Id。</summary>
         public string ActiveCityProfileId { get; set; }
 
-        /// <summary>
-        /// 全局基准坐标系来源：Shapefile 完整路径（*.shp）或输入 File GDB 路径（*.gdb）。
-        /// 为空则完整性检查仍按 GDB 内自动推断基准。
-        /// </summary>
+        /// <summary>基准坐标系来源：*.shp 或 *.gdb；空则完整性检查按 GDB 内自动推断。</summary>
         public string SpatialRefSourcePath { get; set; }
 
-        /// <summary>
-        /// 当来源为 GDB 时的要素类名；来源为 Shapefile 时可为空。
-        /// </summary>
+        /// <summary>来源为 GDB 时的要素类名；Shapefile 可空。</summary>
         public string SpatialRefLayerName { get; set; }
 
-        /// <summary>解析得到的坐标系名称（展示与持久化缓存）。</summary>
         public string SpatialRefName { get; set; }
 
-        /// <summary>解析得到的 FactoryCode（0 表示未知）。</summary>
+        /// <summary>FactoryCode；0 表示未知。</summary>
         public int SpatialRefFactoryCode { get; set; }
 
-        /// <summary>当前工程地图文档（*.mxd）；启动时自动加载。</summary>
+        /// <summary>工程 MXD；启动时自动加载。</summary>
         public string ProjectMxdPath { get; set; }
 
         public double MotivationWeight { get; set; }
 
         public double FeasibilityWeight { get; set; }
 
-        /// <summary>潜力分析统一像元大小（米），动力性/可行度/叠置共用。</summary>
+        /// <summary>统一像元大小（米），动力性/可行度/叠置共用。</summary>
         public double CellSize { get; set; }
 
-        /// <summary>清空工作区相关设置（新建工程）；保留皮肤等界面偏好。</summary>
+        /// <summary>清空工作区设置（新建工程）；保留皮肤等界面偏好。</summary>
         public void ClearWorkspaceSettings()
         {
             InputGdbPath = null;
@@ -74,9 +63,7 @@ namespace UrbanRenewal.Model
         }
     }
 
-    /// <summary>
-    /// 读写全局设置。优先使用用户目录，避免 VS 编译覆盖 bin\Config 中的配置。
-    /// </summary>
+    /// <summary>读写全局设置；优先用户目录，避免 VS 编译覆盖 bin\Config。</summary>
     public static class GlobalAppSettingsStore
     {
         private const string AppFolderName = "UrbanRenewal";
@@ -86,10 +73,7 @@ namespace UrbanRenewal.Model
             return Path.Combine(GetConfigDirectory(), "app_settings.xml");
         }
 
-        /// <summary>
-        /// 稳定可写配置目录：%LocalAppData%\UrbanRenewal\Config
-        /// （不随 bin\Debug 清理/编译 CopyToOutput 而丢失）。
-        /// </summary>
+        /// <summary>可写配置目录：%LocalAppData%\UrbanRenewal\Config（不随 bin 清理丢失）。</summary>
         public static string GetConfigDirectory()
         {
             string userRoot = Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData);
@@ -159,7 +143,6 @@ namespace UrbanRenewal.Model
             Directory.CreateDirectory(dir);
             string path = GetSettingsFilePath();
 
-            // 先写临时文件再替换，避免写一半进程退出导致文件损坏
             string temp = path + ".tmp";
             XmlSerializer xs = new XmlSerializer(typeof(GlobalAppSettings));
             using (FileStream fs = File.Create(temp))
@@ -173,9 +156,7 @@ namespace UrbanRenewal.Model
             File.Move(temp, path);
         }
 
-        /// <summary>
-        /// 首次使用：从安装目录 / 旧 bin\Config 迁移模板与已有配置。
-        /// </summary>
+        /// <summary>首次使用：从安装目录 / 旧 bin\Config 迁移模板与已有配置。</summary>
         private static void EnsureSeeded(string userConfigDir)
         {
             try
@@ -184,7 +165,6 @@ namespace UrbanRenewal.Model
                 string userCities = Path.Combine(userConfigDir, "Cities");
                 Directory.CreateDirectory(userCities);
 
-                // 1) 若用户配置尚不存在，优先迁移旧运行目录配置（含用户已填路径）
                 if (!File.Exists(userSettings))
                 {
                     string legacyBin = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "Config", "app_settings.xml");
@@ -208,7 +188,6 @@ namespace UrbanRenewal.Model
                     }
                 }
 
-                // 2) 城市模板：用户 Cities 为空时从安装目录复制
                 if (Directory.GetFiles(userCities, "*.xml").Length == 0)
                 {
                     CopyCityTemplates(GetInstallConfigDirectory(), userCities);
@@ -219,7 +198,6 @@ namespace UrbanRenewal.Model
                     }
                 }
 
-                // 3) 迁移旧工程 MXD（若用户配置中已指向旧路径且文件仍在，保留；否则尝试复制默认 mxd）
                 string legacyMxd = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "Config", "CurrentProject.mxd");
                 string userMxd = Path.Combine(userConfigDir, "CurrentProject.mxd");
                 if (File.Exists(legacyMxd) && !File.Exists(userMxd))
@@ -230,7 +208,6 @@ namespace UrbanRenewal.Model
             }
             catch
             {
-                // 种子失败不阻断启动
             }
         }
 
@@ -243,12 +220,10 @@ namespace UrbanRenewal.Model
                 {
                     return false;
                 }
-                // 粗略判断：是否写过输入/输出 GDB 或工程 MXD
                 if (text.IndexOf("<InputGdbPath>", StringComparison.OrdinalIgnoreCase) >= 0
                     && text.IndexOf("<InputGdbPath />", StringComparison.OrdinalIgnoreCase) < 0
                     && text.IndexOf("<InputGdbPath/>", StringComparison.OrdinalIgnoreCase) < 0)
                 {
-                    // 有开标签且不是自闭合，再排除空内容
                     int a = text.IndexOf("<InputGdbPath>", StringComparison.OrdinalIgnoreCase);
                     int b = text.IndexOf("</InputGdbPath>", StringComparison.OrdinalIgnoreCase);
                     if (a >= 0 && b > a + "<InputGdbPath>".Length)

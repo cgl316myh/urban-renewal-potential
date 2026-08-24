@@ -12,9 +12,7 @@ using UrbanRenewal.Model;
 
 namespace UrbanRenewal.GIS
 {
-    /// <summary>
-    /// 动力性 + 可行度加权叠置、五级重分类与面积统计。
-    /// </summary>
+    /// <summary>动力性 + 可行度加权叠置、五级重分类与面积统计。</summary>
     public static class PotentialOverlayBuilder
     {
         public static string WeightedOverlay(
@@ -86,9 +84,7 @@ namespace UrbanRenewal.GIS
             return outRaster;
         }
 
-        /// <summary>
-        /// 基于分级栅格 VAT 统计各等级像元数与面积占比。
-        /// </summary>
+        /// <summary>基于分级栅格 VAT 统计各等级像元数与面积占比。</summary>
         public static List<LevelAreaStat> ComputeLevelAreas(
             GeoprocessorHelper gp,
             string levelRaster,

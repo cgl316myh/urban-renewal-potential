@@ -6,9 +6,7 @@ using UrbanRenewal.Model;
 
 namespace UrbanRenewal.Analysis
 {
-    /// <summary>
-    /// 验证校核引擎。
-    /// </summary>
+    /// <summary>验证校核引擎。</summary>
     public class ValidationAnalysisEngine
     {
         private Action<string, int> _progress;
@@ -51,7 +49,7 @@ namespace UrbanRenewal.Analysis
             string scoredPath = OutputGdbHelper.DatasetPath(outGdb, scoredName);
             if (!FeatureExists(outGdb, scoredName))
             {
-                // 回退：输入库中带潜力字段的宗地
+                // 回退：输入库宗地
                 string parcel = ResolveFeature(job, names, "Parcel", "宗地", "地块", "土地利用");
                 if (!string.IsNullOrEmpty(parcel))
                 {

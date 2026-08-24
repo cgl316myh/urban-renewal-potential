@@ -7,9 +7,7 @@ using ESRI.ArcGIS.Output;
 
 namespace UrbanRenewal.GIS
 {
-    /// <summary>
-    /// 将当前地图视图导出为 PDF / TIFF（专题图近似输出）。
-    /// </summary>
+    /// <summary>将当前地图视图导出为 PDF / TIFF（专题图近似输出）。</summary>
     public static class MapExportHelper
     {
         /// <summary>导出分辨率（DPI）。默认 300，避免按屏幕 96 DPI 导出过小。</summary>
@@ -67,7 +65,6 @@ namespace UrbanRenewal.GIS
                 else
                 {
                     ExportTIFFClass tiff = new ExportTIFFClass();
-                    // 无压缩，保证画质；GeoTIFF 便于叠加
                     try
                     {
                         tiff.CompressionType = esriTIFFCompression.esriTIFFCompressionNone;
@@ -85,7 +82,6 @@ namespace UrbanRenewal.GIS
                 int screenW = Math.Max(1, screenRECT.right - screenRECT.left);
                 int screenH = Math.Max(1, screenRECT.bottom - screenRECT.top);
 
-                // 按 DPI 放大，再保证长边不少于 MinLongEdgePixels
                 double scale = (double)dpi / (double)ScreenDpi;
                 int outW = Math.Max(1, (int)Math.Round(screenW * scale));
                 int outH = Math.Max(1, (int)Math.Round(screenH * scale));
@@ -95,7 +91,6 @@ namespace UrbanRenewal.GIS
                     double boost = (double)MinLongEdgePixels / (double)longEdge;
                     outW = Math.Max(1, (int)Math.Round(outW * boost));
                     outH = Math.Max(1, (int)Math.Round(outH * boost));
-                    // 与放大后的像素尺寸匹配的有效 DPI
                     dpi = Math.Max(DefaultExportDpi, (int)Math.Round(ScreenDpi * ((double)outW / (double)screenW)));
                     export.Resolution = dpi;
                 }

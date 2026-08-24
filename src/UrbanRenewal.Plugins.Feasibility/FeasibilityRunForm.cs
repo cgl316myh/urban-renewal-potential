@@ -9,10 +9,7 @@ using UrbanRenewal.Model;
 
 namespace UrbanRenewal.Plugins.Feasibility
 {
-    /// <summary>
-    /// 可行度分析运行窗体：使用全局输出 GDB / 城市配置。
-    /// 分析在 STA 后台线程执行，避免界面假死。
-    /// </summary>
+    /// <summary>可行度分析；STA 后台执行。</summary>
     public partial class FeasibilityRunForm : Form
     {
         private readonly IAppContext _context;

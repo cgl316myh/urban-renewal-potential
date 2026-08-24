@@ -6,10 +6,7 @@ using System.Xml.Serialization;
 
 namespace UrbanRenewal.Model
 {
-    /// <summary>
-    /// 动力性缓冲赋分规则（交通优化方案可配置）。
-    /// 得分≤0 的环在分析时跳过。
-    /// </summary>
+    /// <summary>动力性缓冲赋分规则（得分≤0 的环在分析时跳过）。</summary>
     public class BufferScoreRules
     {
         public BufferScoreRules()

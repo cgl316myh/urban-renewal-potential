@@ -7,9 +7,7 @@ using ESRI.ArcGIS.Geodatabase;
 
 namespace UrbanRenewal.GIS
 {
-    /// <summary>
-    /// 读取地图选中要素的潜力相关字段摘要。
-    /// </summary>
+    /// <summary>读取地图选中要素的潜力相关字段摘要。</summary>
     public static class ParcelSelectionHelper
     {
         public static bool TryDescribeSelection(object mapControl, out string text)

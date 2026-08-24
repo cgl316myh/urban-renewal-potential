@@ -10,10 +10,7 @@ using IoPath = System.IO.Path;
 
 namespace UrbanRenewal.GIS
 {
-    /// <summary>
-    /// Geoprocessor 封装（ArcEngine 10.2）。
-    /// 订阅 MessagesCreated，将 GP 过程消息回传到分析日志。
-    /// </summary>
+    /// <summary>Geoprocessor 封装（ArcEngine 10.2）；GP 消息回传到分析日志。</summary>
     public sealed class GeoprocessorHelper
     {
         private readonly Geoprocessor _gp;
@@ -36,17 +33,11 @@ namespace UrbanRenewal.GIS
             _gp.MessagesCreated += OnMessagesCreated;
         }
 
-        /// <summary>
-        /// 设置消息接收器。level 为「信息/警告/错误/…」，text 为 Description。
-        /// </summary>
         public void SetMessageSink(Action<string, string> messageSink)
         {
             _messageSink = messageSink;
         }
 
-        /// <summary>
-        /// 将 GP 消息接到分析进度回调（写入主窗体日志）。
-        /// </summary>
         public void BindToProgress(Action<string, int> progress, Func<int> currentPercent)
         {
             _messageSink = delegate(string level, string text)
@@ -71,16 +62,13 @@ namespace UrbanRenewal.GIS
             };
         }
 
-        /// <summary>
-        /// 配置工作空间、像元大小与输出坐标系。
-        /// 注意：不要在投影阶段设置 extent（米制范围会让 WGS84 图层 Project 报 invalid extent）。
-        /// </summary>
+        /// <summary>配置工作空间、像元大小与输出坐标系；投影阶段勿设 extent（WGS84 Project 会 invalid extent）。</summary>
         public void ConfigureAnalysis(string workDir, string extentDataset, double cellSize, object outputCoordinateSystem)
         {
             TrySetEnv("workspace", workDir);
             TrySetEnv("scratchWorkspace", workDir);
 
-            // 投影阶段使用默认范围；栅格分析前再调用 SetExtent
+            // 投影阶段保持 DEFAULT；栅格分析前再 SetExtent
             TrySetEnv("extent", "DEFAULT");
 
             if (cellSize > 0)
@@ -134,7 +122,6 @@ namespace UrbanRenewal.GIS
             {
             }
 
-            // 无 FactoryCode 时导出 .prj
             if (string.IsNullOrEmpty(workDir))
             {
                 return null;
@@ -176,7 +163,6 @@ namespace UrbanRenewal.GIS
             }
             catch (Exception ex)
             {
-                // 个别环境项失败不阻断；投影对齐仍由 Project 工具保证
                 System.Diagnostics.Debug.WriteLine("SetEnvironmentValue " + name + " skipped: " + ex.Message);
             }
         }
@@ -194,7 +180,6 @@ namespace UrbanRenewal.GIS
             }
             catch (Exception ex)
             {
-                // 失败时尽量把已产生的 GP 消息一并抛出
                 FlushRemainingGpMessages();
                 Emit("错误", (stepName ?? "GP") + " 异常: " + ex.Message);
                 throw new InvalidOperationException(stepName + " 失败: " + ex.Message + "\r\n" + GetMessages(), ex);
@@ -228,7 +213,6 @@ namespace UrbanRenewal.GIS
             EmitGpMessages(gpMsgs);
         }
 
-        /// <summary>若未触发 MessagesCreated，回退扫描字符串消息。</summary>
         private void FlushRemainingGpMessages()
         {
             if (_receivedMessageEvents)

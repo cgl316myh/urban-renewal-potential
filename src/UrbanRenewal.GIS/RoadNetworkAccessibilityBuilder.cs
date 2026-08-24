@@ -17,23 +17,15 @@ using ESRI.ArcGIS.esriSystem;
 namespace UrbanRenewal.GIS
 {
     /// <summary>
-    /// 路网可达性：基于预建 Network Dataset 做服务区分析，按通行距离赋 1–5 分。
-    /// 无 Network Analyst 许可时回退为到中心点的欧氏距离重分类。
+    /// 路网可达性：预建 Network Dataset 服务区赋 1–5 分；无路网时欧氏距离回退。
     /// </summary>
     public static class RoadNetworkAccessibilityBuilder
     {
-        /// <summary>默认服务区打断距离（米），对应阻抗 Length。</summary>
         public static readonly double[] DefaultBreaksMeters = new double[] { 1000, 2000, 3000, 5000, 8000 };
-
-        /// <summary>与 DefaultBreaksMeters 对应的得分（近→远：5→1）。</summary>
         public static readonly int[] DefaultScores = new int[] { 5, 4, 3, 2, 1 };
 
         private static Action<string> _onMessage;
 
-        /// <summary>
-        /// 生成路网可达性得分栅格。路网必须事先建好；本方法不会构建 Network Dataset。
-        /// </summary>
-        /// <param name="onMessage">可选：每条明细即时回调（用于主窗体日志）。</param>
         public static string Build(
             GeoprocessorHelper gp,
             string sourceGdbPath,
@@ -58,7 +50,6 @@ namespace UrbanRenewal.GIS
             }
         }
 
-        /// <summary>兼容旧调用（无即时回调）。</summary>
         public static string Build(
             GeoprocessorHelper gp,
             string sourceGdbPath,
@@ -74,9 +65,7 @@ namespace UrbanRenewal.GIS
                 featureDatasetName, networkName, impedanceAttribute, cellSize, messages, null);
         }
 
-        /// <summary>
-        /// 捕获层必须带 HandleProcessCorruptedStateExceptions，否则 AV 会直接杀进程。
-        /// </summary>
+        // CSE：否则 AccessViolation 无法被捕获，进程直接退出
         [HandleProcessCorruptedStateExceptions]
         [SecurityCritical]
         private static string BuildCore(
@@ -108,7 +97,6 @@ namespace UrbanRenewal.GIS
             string impedance = string.IsNullOrEmpty(impedanceAttribute)
                 ? NetworkDatasetHelper.DefaultImpedance : impedanceAttribute;
 
-            // 设施转点（面/线 → 点）
             string facilities = EnsurePointFacilities(gp, facilityFeatureClass, outputGdb, messages);
             if (string.IsNullOrEmpty(facilities))
             {
@@ -137,17 +125,14 @@ namespace UrbanRenewal.GIS
             catch (AccessViolationException exAv)
             {
                 AddMsg(messages, "服务区分析发生内存访问异常（已捕获）: " + exAv.Message);
-                saRaster = null;
             }
             catch (SEHException exSeh)
             {
                 AddMsg(messages, "服务区分析发生原生异常（已捕获）: " + exSeh.Message);
-                saRaster = null;
             }
             catch (Exception ex)
             {
                 AddMsg(messages, "服务区分析失败: " + ex.Message);
-                saRaster = null;
             }
 
             if (!string.IsNullOrEmpty(saRaster))
@@ -155,14 +140,12 @@ namespace UrbanRenewal.GIS
                 return saRaster;
             }
 
-            // 已有预建路网时不回退欧氏：避免结果口径变化；由重试/预热尽量把 NA 求解做稳
+            // 已有 ND 时不回退欧氏，避免结果口径变化
             AddMsg(messages, "路网可达性：服务区失败（已有预建路网，不回退欧氏距离）。");
             return null;
         }
 
-        /// <summary>
-        /// HandleProcessCorruptedStateExceptions：允许捕获 AccessViolation（NA/GP 原生崩溃常见）。
-        /// </summary>
+        // 首次 Solve/导出在部分 ArcGIS 上不稳定：预热 + 最多 3 次重试
         [HandleProcessCorruptedStateExceptions]
         [SecurityCritical]
         private static string BuildServiceAreaRaster(
@@ -174,21 +157,18 @@ namespace UrbanRenewal.GIS
             double cellSize,
             IList<string> messages)
         {
-            // 本机现象：首次求解/导出易失败或 AccessViolation，再跑同一流程往往成功。
-            // 因此：先冷启动预热一次，再正式求解；失败则整段自动重试。
             const int maxAttempts = 3;
             for (int attempt = 1; attempt <= maxAttempts; attempt++)
             {
-                if (attempt > 1)
+                if (attempt == 1)
                 {
-                    AddMsg(messages, "路网服务区第 " + attempt + " 次尝试（针对冷启动/导出偶发失败）...");
-                    TryComCleanup();
+                    WarmUpServiceAreaSolve(networkDataset, facilitiesPath, impedance, messages);
                 }
                 else
                 {
-                    WarmUpServiceAreaSolve(networkDataset, facilitiesPath, impedance, messages);
-                    TryComCleanup();
+                    AddMsg(messages, "路网服务区第 " + attempt + " 次尝试...");
                 }
+                TryComCleanup();
 
                 string raster = null;
                 try
@@ -199,12 +179,10 @@ namespace UrbanRenewal.GIS
                 catch (AccessViolationException exAv)
                 {
                     AddMsg(messages, "第 " + attempt + " 次服务区尝试发生内存访问异常: " + exAv.Message);
-                    raster = null;
                 }
                 catch (SEHException exSeh)
                 {
                     AddMsg(messages, "第 " + attempt + " 次服务区尝试发生原生异常: " + exSeh.Message);
-                    raster = null;
                 }
 
                 if (!string.IsNullOrEmpty(raster))
@@ -212,13 +190,9 @@ namespace UrbanRenewal.GIS
                     return raster;
                 }
             }
-
             return null;
         }
 
-        /// <summary>
-        /// 丢弃式预热求解：不读 Shape、不导出。用于避开首次 NA 求解后的不稳定态。
-        /// </summary>
         [HandleProcessCorruptedStateExceptions]
         [SecurityCritical]
         private static void WarmUpServiceAreaSolve(
@@ -227,7 +201,7 @@ namespace UrbanRenewal.GIS
             string impedance,
             IList<string> messages)
         {
-            AddMsg(messages, "路网服务区冷启动预热（首次求解后导出不稳定时常见）...");
+            AddMsg(messages, "路网服务区冷启动预热...");
             INAContext ctx = null;
             try
             {
@@ -236,32 +210,28 @@ namespace UrbanRenewal.GIS
                 {
                     return;
                 }
-                int loaded = LoadFacilities(ctx, facilitiesPath);
-                if (loaded <= 0)
+                if (LoadFacilities(ctx, facilitiesPath) <= 0)
                 {
                     return;
                 }
-                IGPMessages gpMessages = new GPMessagesClass();
                 try
                 {
-                    ctx.Solver.Solve(ctx, gpMessages, null);
+                    ctx.Solver.Solve(ctx, new GPMessagesClass(), null);
                 }
                 catch
                 {
-                    // 预热失败可忽略，正式求解仍会重试
                 }
-            }
-            catch (AccessViolationException)
-            {
-                AddMsg(messages, "冷启动预热遇到内存访问异常，将继续正式求解。");
-            }
-            catch (SEHException)
-            {
-                AddMsg(messages, "冷启动预热遇到原生异常，将继续正式求解。");
             }
             catch (Exception ex)
             {
-                AddMsg(messages, "冷启动预热跳过: " + ex.Message);
+                if (ex is AccessViolationException || ex is SEHException)
+                {
+                    AddMsg(messages, "冷启动预热异常，继续正式求解。");
+                }
+                else
+                {
+                    AddMsg(messages, "冷启动预热跳过: " + ex.Message);
+                }
             }
             finally
             {
@@ -308,16 +278,15 @@ namespace UrbanRenewal.GIS
                 catch (Exception exSolve)
                 {
                     AddMsg(messages, "NA Solve 异常: " + exSolve.Message);
-                    ok = false;
                 }
                 LogGpMessages(gpMessages, messages);
 
                 INAClass saClass = naContext.NAClasses.get_ItemByName("SAPolygons") as INAClass;
                 IFeatureClass saFc = saClass as IFeatureClass;
-                int polyCount = 0;
+                int polyCount;
                 try
                 {
-                    polyCount = (saFc == null) ? 0 : saFc.FeatureCount(null);
+                    polyCount = saFc == null ? 0 : saFc.FeatureCount(null);
                 }
                 catch (Exception exCnt)
                 {
@@ -325,25 +294,20 @@ namespace UrbanRenewal.GIS
                     return null;
                 }
 
-                // Esri：部分设施未落网或仅有警告时 Solve 常返回 false，但仍可能生成完整打断环。
-                // 本地日志常见：55 设施 × 5 环 = 275，Solve==false 仍可用。
+                // Solve==false 时常仍有完整 SAPolygons（警告/部分未落网）；无多边形才失败
+                if (polyCount <= 0)
+                {
+                    AddMsg(messages, ok
+                        ? "服务区未生成多边形。"
+                        : "NA Solve 返回 false，且未生成服务区多边形。");
+                    return null;
+                }
                 if (!ok)
                 {
                     int expected = loaded * DefaultBreaksMeters.Length;
-                    if (polyCount <= 0)
-                    {
-                        AddMsg(messages, "NA Solve 返回 false，且未生成服务区多边形。");
-                        return null;
-                    }
-                    AddMsg(messages, "NA Solve 返回 false（常见于警告/部分未落网），但已生成服务区多边形 "
-                        + polyCount + " 个"
-                        + (polyCount == expected ? "（与设施×打断数一致，视为可用）" : "")
+                    AddMsg(messages, "NA Solve 返回 false，已有多边形 " + polyCount + " 个"
+                        + (polyCount == expected ? "（与设施×打断数一致）" : "")
                         + "，继续导出。");
-                }
-                else if (polyCount <= 0)
-                {
-                    AddMsg(messages, "服务区未生成多边形。");
-                    return null;
                 }
                 else
                 {
@@ -387,8 +351,8 @@ namespace UrbanRenewal.GIS
                 {
                     return;
                 }
-                int ok = 0;
-                int bad = 0;
+
+                int ok = 0, bad = 0;
                 IFeatureCursor cur = fc.Search(null, true);
                 try
                 {
@@ -396,12 +360,7 @@ namespace UrbanRenewal.GIS
                     while ((f = cur.NextFeature()) != null)
                     {
                         object v = f.get_Value(statusIdx);
-                        int code = 0;
-                        if (v != null && v != DBNull.Value)
-                        {
-                            code = Convert.ToInt32(v);
-                        }
-                        // 0 = OK (esriNAObjectStatusOK)
+                        int code = (v == null || v == DBNull.Value) ? -1 : Convert.ToInt32(v);
                         if (code == 0)
                         {
                             ok++;
@@ -482,14 +441,10 @@ namespace UrbanRenewal.GIS
             sa.DefaultBreaks = breaks;
             sa.TravelDirection = esriNATravelDirection.esriNATravelDirectionFromFacility;
             sa.OutputPolygons = esriNAOutputPolygonType.esriNAOutputPolygonSimplified;
-            // false：按最近设施划分，避免多中心重叠；交通可达性取到最近中心的路网距离
-            sa.OverlapPolygons = false;
+            sa.OverlapPolygons = false; // 按最近设施，避免多中心重叠盖顶
             sa.SplitPolygonsAtBreaks = true;
-            // 保留各级打断环，便于按 ToBreak 赋 1–5 分
-            sa.MergeSimilarPolygonRanges = false;
-
-            // 将求解器参数写回上下文（否则打断距离可能不生效）
-            solver.UpdateContext(context, deNd, null);
+            sa.MergeSimilarPolygonRanges = false; // 保留各级 ToBreak 环
+            solver.UpdateContext(context, deNd, null); // 否则打断距离可能不生效
 
             return context;
         }
@@ -517,7 +472,6 @@ namespace UrbanRenewal.GIS
             loader.Locator = naContext.Locator;
             if (loader.Locator != null)
             {
-                // 米：设施到路网最大捕捉距离（投影坐标系下）
                 loader.Locator.SnapTolerance = 2000;
             }
 
@@ -546,7 +500,22 @@ namespace UrbanRenewal.GIS
             string outPath,
             IList<string> messages)
         {
-            // 优先 GP；失败再试游标。禁止在未捕获 AV 的情况下让进程直接崩掉。
+            if (TryExportWithCopyFeatures(gp, source, outPath, messages))
+            {
+                return true;
+            }
+            if (TryExportWithFeatureClassToFeatureClass(gp, source, outPath, messages))
+            {
+                return true;
+            }
+            return TryExportByCursor(source, outPath, messages);
+        }
+
+        [HandleProcessCorruptedStateExceptions]
+        [SecurityCritical]
+        private static bool TryExportWithCopyFeatures(
+            GeoprocessorHelper gp, IFeatureClass source, string outPath, IList<string> messages)
+        {
             try
             {
                 AddMsg(messages, "服务区导出: CopyFeatures...");
@@ -560,26 +529,24 @@ namespace UrbanRenewal.GIS
                 AddMsg(messages, "服务区导出成功（CopyFeatures）。");
                 return true;
             }
-            catch (AccessViolationException exAv)
-            {
-                AddMsg(messages, "CopyFeatures 内存访问异常: " + exAv.Message);
-            }
-            catch (SEHException exSeh)
-            {
-                AddMsg(messages, "CopyFeatures 原生异常: " + exSeh.Message);
-            }
             catch (Exception ex)
             {
-                AddMsg(messages, "CopyFeatures 服务区失败: " + ex.Message);
+                AddMsg(messages, "CopyFeatures 失败: " + ex.Message);
+                return false;
             }
+        }
 
+        [HandleProcessCorruptedStateExceptions]
+        [SecurityCritical]
+        private static bool TryExportWithFeatureClassToFeatureClass(
+            GeoprocessorHelper gp, IFeatureClass source, string outPath, IList<string> messages)
+        {
             try
             {
                 AddMsg(messages, "服务区导出: FeatureClassToFeatureClass...");
                 IFeatureLayer layer = new FeatureLayerClass();
                 layer.FeatureClass = source;
                 layer.Name = "SAPolygons";
-
                 ESRI.ArcGIS.ConversionTools.FeatureClassToFeatureClass convert =
                     new ESRI.ArcGIS.ConversionTools.FeatureClassToFeatureClass();
                 convert.in_features = layer;
@@ -589,21 +556,11 @@ namespace UrbanRenewal.GIS
                 AddMsg(messages, "服务区导出成功（FeatureClassToFeatureClass）。");
                 return true;
             }
-            catch (AccessViolationException exAv)
-            {
-                AddMsg(messages, "FeatureClassToFeatureClass 内存访问异常: " + exAv.Message);
-            }
-            catch (SEHException exSeh)
-            {
-                AddMsg(messages, "FeatureClassToFeatureClass 原生异常: " + exSeh.Message);
-            }
             catch (Exception ex)
             {
                 AddMsg(messages, "FeatureClassToFeatureClass 失败: " + ex.Message);
+                return false;
             }
-
-            // 本机第二次运行时游标导出曾成功；作为末位兜底（仍包在 AV 捕获内）
-            return TryExportByCursor(source, outPath, messages);
         }
 
         [HandleProcessCorruptedStateExceptions]
@@ -649,7 +606,8 @@ namespace UrbanRenewal.GIS
                         for (int i = 0; i < fields.FieldCount; i++)
                         {
                             IField field = fields.get_Field(i);
-                            if (!field.Editable || field.Type == esriFieldType.esriFieldTypeGeometry
+                            if (!field.Editable
+                                || field.Type == esriFieldType.esriFieldTypeGeometry
                                 || field.Type == esriFieldType.esriFieldTypeOID)
                             {
                                 continue;
@@ -679,16 +637,6 @@ namespace UrbanRenewal.GIS
                     }
                 }
             }
-            catch (AccessViolationException exAv)
-            {
-                AddMsg(messages, "游标导出内存访问异常: " + exAv.Message);
-                return false;
-            }
-            catch (SEHException exSeh)
-            {
-                AddMsg(messages, "游标导出原生异常: " + exSeh.Message);
-                return false;
-            }
             catch (Exception ex)
             {
                 AddMsg(messages, "游标导出失败: " + ex.Message);
@@ -715,7 +663,7 @@ namespace UrbanRenewal.GIS
                 // 字段可能已存在
             }
 
-            // FileGDB 的 CalculateField 对嵌套 IIf 不稳定，改用游标赋分
+            // FileGDB CalculateField 嵌套 IIf 不稳定，改用游标
             IFeatureClass fc = OpenFeatureClass(featureClass);
             if (fc == null)
             {
@@ -787,8 +735,8 @@ namespace UrbanRenewal.GIS
                     return inFeatures;
                 }
 
-                // FeatureToPoint 需 Advanced 许可；改用面/线质心写点（Engine 可用）
-                string points = OutputGdbHelper.DatasetPath(outputGdb, "road_fac_pt");
+            // FeatureToPoint 需 Advanced；Engine 用质心写点
+            string points = OutputGdbHelper.DatasetPath(outputGdb, "road_fac_pt");
                 OutputGdbHelper.TryDeleteDataset(gp, points);
                 if (!CreateCentroidPoints(fc, points, messages))
                 {
@@ -917,7 +865,6 @@ namespace UrbanRenewal.GIS
             {
                 return pt;
             }
-            // 回退：Envelope 中心
             IEnvelope env = geom.Envelope;
             if (env == null || env.IsEmpty)
             {
@@ -949,7 +896,6 @@ namespace UrbanRenewal.GIS
             }
             gp.Execute(euc, "EucDistance-road-fallback");
 
-            // Remap: 0-1000→5, 1000-2000→4, ... >8000→1（用 Reclassify）
             string remap = BuildRemapString(DefaultBreaksMeters, DefaultScores);
             Reclassify reclass = new Reclassify();
             reclass.in_raster = distRaster;
@@ -965,7 +911,6 @@ namespace UrbanRenewal.GIS
 
         private static string BuildRemapString(double[] breaks, int[] scores)
         {
-            // Remap format: "0 1000 5;1000 2000 4;..."
             StringBuilder sb = new StringBuilder();
             double prev = 0;
             for (int i = 0; i < breaks.Length; i++)
@@ -981,7 +926,6 @@ namespace UrbanRenewal.GIS
                 sb.Append(scores[i].ToString(CultureInfo.InvariantCulture));
                 prev = breaks[i];
             }
-            // beyond last break → score 1
             sb.Append(";");
             sb.Append(prev.ToString(CultureInfo.InvariantCulture));
             sb.Append(" 100000000 ");
@@ -1024,7 +968,6 @@ namespace UrbanRenewal.GIS
             }
             catch
             {
-                // 可能在要素数据集内：path = gdb\fd\fc 较少见；或仅 gdb\fc
                 return null;
             }
         }

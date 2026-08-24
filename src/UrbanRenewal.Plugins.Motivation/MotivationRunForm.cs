@@ -9,10 +9,7 @@ using UrbanRenewal.Model;
 
 namespace UrbanRenewal.Plugins.Motivation
 {
-    /// <summary>
-    /// 动力性分析运行窗体：使用全局输出 GDB / 城市配置。
-    /// 分析在 STA 后台线程执行，避免界面假死。
-    /// </summary>
+    /// <summary>动力性分析；STA 后台执行。</summary>
     public partial class MotivationRunForm : Form
     {
         private readonly IAppContext _context;
@@ -126,7 +123,7 @@ namespace UrbanRenewal.Plugins.Motivation
                 return;
             }
 
-            // 输入与输出同库时改用旁路工作库（正常：输入=clip.gdb，输出=分析库）
+            // 同库旁路工作库
             string sameNote;
             outGdb = OutputGdbHelper.EnsureSeparateAnalysisOutput(gdb, outGdb, out sameNote);
             if (!string.IsNullOrEmpty(sameNote))
@@ -155,7 +152,7 @@ namespace UrbanRenewal.Plugins.Motivation
             _context.LogInfo("输出 GDB: " + outGdb);
             _context.LogInfo("像元大小: " + job.CellSize + " 米");
 
-            // 上次结果栅格若仍在地图上，会锁住 traf10mx 等 VAT，导致 CellStatistics 000871
+            // 卸输出库图层，防 000871
             int removed = _context.RemoveMapLayersFromGdb(outGdb);
             if (removed > 0)
             {

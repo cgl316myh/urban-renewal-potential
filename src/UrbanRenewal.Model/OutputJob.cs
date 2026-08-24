@@ -2,9 +2,7 @@ using System.Collections.Generic;
 
 namespace UrbanRenewal.Model
 {
-    /// <summary>
-    /// 成果输出作业：专题图/TIFF/PDF/SHP/报表。
-    /// </summary>
+    /// <summary>成果输出作业：专题图/TIFF/PDF/SHP/报表。</summary>
     public class OutputJob
     {
         public OutputJob()

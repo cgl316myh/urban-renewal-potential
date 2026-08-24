@@ -3,14 +3,10 @@ using System.Collections.Generic;
 
 namespace UrbanRenewal.Host
 {
-    /// <summary>
-    /// Jenks 自然断裂点分级（采样后一维数组）。
-    /// </summary>
+    /// <summary>Jenks 自然断裂分级。</summary>
     public static class JenksClassifier
     {
-        /// <summary>
-        /// 计算自然断裂断点。返回长度为 classCount+1 的升序断点（含最小值与最大值）。
-        /// </summary>
+        /// <summary>自然断裂断点（classCount+1 个，含 min/max）。</summary>
         public static double[] ComputeBreaks(IList<double> values, int classCount)
         {
             if (values == null || values.Count == 0)

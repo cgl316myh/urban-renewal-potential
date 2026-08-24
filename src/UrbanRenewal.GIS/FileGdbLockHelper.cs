@@ -7,12 +7,9 @@ using ESRI.ArcGIS.Geodatabase;
 
 namespace UrbanRenewal.GIS
 {
-    /// <summary>
-    /// File GDB 占用释放与独占删除（地图清空后 COM 锁仍可能残留）。
-    /// </summary>
+    /// <summary>File GDB 独占删除与 COM 占用释放。</summary>
     public static class FileGdbLockHelper
     {
-        /// <summary>催促释放未引用的 ArcObjects / RCW。</summary>
         public static void ForceComRelease()
         {
             try
@@ -34,9 +31,7 @@ namespace UrbanRenewal.GIS
             }
         }
 
-        /// <summary>
-        /// 独占锁删除要素类。成功返回 true；不存在也视为成功。
-        /// </summary>
+        /// <summary>独占删除要素类；不存在视为成功。</summary>
         public static bool TryDeleteFeatureClassExclusive(string gdbPath, string featureClassName, out string message)
         {
             message = null;
@@ -111,9 +106,7 @@ namespace UrbanRenewal.GIS
             }
         }
 
-        /// <summary>
-        /// 独占锁删除 File GDB 内栅格（含 VAT）。成功或不存在返回 true。
-        /// </summary>
+        /// <summary>独占删除栅格（含 VAT）；不存在视为成功。</summary>
         public static bool TryDeleteRasterExclusive(string gdbPath, string rasterName, out string message)
         {
             message = null;

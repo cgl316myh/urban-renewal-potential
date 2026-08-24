@@ -7,9 +7,7 @@ using UrbanRenewal.Contracts;
 
 namespace UrbanRenewal.PluginLoader
 {
-    /// <summary>
-    /// 扫描 Plugins 目录，仅加载 UrbanRenewal.Plugins.*.dll。
-    /// </summary>
+    /// <summary>扫描 Plugins 目录，加载 UrbanRenewal.Plugins.*.dll。</summary>
     public sealed class PluginManager
     {
         private readonly List<IModulePlugin> _plugins = new List<IModulePlugin>();
@@ -41,7 +39,7 @@ namespace UrbanRenewal.PluginLoader
 
             _logInfo("扫描插件目录: " + pluginsDirectory);
 
-            // 只加载插件程序集，避免把 Contracts/GIS 等依赖再 LoadFrom 造成类型不一致
+            // 仅 LoadFrom 插件 DLL，防 Contracts 双份
             string[] files = Directory.GetFiles(pluginsDirectory, "UrbanRenewal.Plugins.*.dll", SearchOption.TopDirectoryOnly);
             Array.Sort(files, StringComparer.OrdinalIgnoreCase);
 
@@ -170,9 +168,7 @@ namespace UrbanRenewal.PluginLoader
             AppDomain.CurrentDomain.AssemblyResolve += OnAssemblyResolve;
         }
 
-        /// <summary>
-        /// 插件依赖优先从主程序目录加载，避免 Plugins 下重复 DLL 造成双份 Contracts。
-        /// </summary>
+        /// <summary>依赖从主程序目录加载，防 Plugins 下双份 Contracts。</summary>
         private static Assembly OnAssemblyResolve(object sender, ResolveEventArgs args)
         {
             try
@@ -184,7 +180,7 @@ namespace UrbanRenewal.PluginLoader
                     return null;
                 }
 
-                // 已加载则直接返回
+                // 已加载则复用
                 Assembly[] loaded = AppDomain.CurrentDomain.GetAssemblies();
                 for (int i = 0; i < loaded.Length; i++)
                 {

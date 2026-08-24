@@ -51,7 +51,6 @@ namespace UrbanRenewal.GIS
             string folder = System.IO.Path.GetDirectoryName(rasterPath);
             string name = System.IO.Path.GetFileName(rasterPath);
 
-            // File GDB 内栅格：...\xxx.gdb\rasterName
             if (!string.IsNullOrEmpty(folder) && folder.EndsWith(".gdb", StringComparison.OrdinalIgnoreCase))
             {
                 IWorkspaceFactory gwf = new FileGDBWorkspaceFactoryClass();

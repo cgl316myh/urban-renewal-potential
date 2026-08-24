@@ -64,9 +64,7 @@ namespace UrbanRenewal.GIS
             return Path.Combine(gdbPath, datasetName);
         }
 
-        /// <summary>
-        /// 删除 GDB 内已有同名要素类/栅格（覆盖失败时的兜底）。
-        /// </summary>
+        /// <summary>删除同名要素类/栅格（FC → Raster → GP Delete）。</summary>
         public static void TryDeleteDataset(GeoprocessorHelper gp, string datasetPath)
         {
             if (string.IsNullOrEmpty(datasetPath) || gp == null)
@@ -85,7 +83,6 @@ namespace UrbanRenewal.GIS
                     {
                         return;
                     }
-                    // 栅格（含 VAT）常被地图占用；要素类删除失败后再试栅格删除
                     if (FileGdbLockHelper.TryDeleteRasterExclusive(gdb, name, out msg))
                     {
                         return;

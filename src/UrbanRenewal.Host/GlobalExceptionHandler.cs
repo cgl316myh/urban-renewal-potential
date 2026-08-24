@@ -5,9 +5,7 @@ using UrbanRenewal.Model;
 
 namespace UrbanRenewal.Host
 {
-    /// <summary>
-    /// 全局 / UI 线程 / 非 UI 线程未处理异常捕获，避免进程莫名退出且无痕迹。
-    /// </summary>
+    /// <summary>UI / AppDomain / Task 未处理异常捕获与落盘。</summary>
     internal static class GlobalExceptionHandler
     {
         private static bool _registered;
@@ -27,7 +25,6 @@ namespace UrbanRenewal.Host
 
             try
             {
-                // .NET 4+：未观察的 Task 异常
                 System.Threading.Tasks.TaskScheduler.UnobservedTaskException += OnUnobservedTaskException;
             }
             catch
@@ -70,7 +67,7 @@ namespace UrbanRenewal.Host
             {
             }
 
-            // 防止异常处理本身重入弹窗死锁
+            // 防重入弹窗死锁
             if (Interlocked.CompareExchange(ref _showing, 1, 0) != 0)
             {
                 return;

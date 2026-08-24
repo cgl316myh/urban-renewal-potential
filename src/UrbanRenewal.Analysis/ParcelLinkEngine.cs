@@ -6,9 +6,7 @@ using UrbanRenewal.Model;
 
 namespace UrbanRenewal.Analysis
 {
-    /// <summary>
-    /// 宗地关联引擎：Zonal Statistics → 宗地字段。
-    /// </summary>
+    /// <summary>宗地区统计关联。</summary>
     public class ParcelLinkEngine
     {
         private Action<string, int> _progress;

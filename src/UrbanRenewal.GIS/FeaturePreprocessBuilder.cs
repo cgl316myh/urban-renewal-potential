@@ -8,9 +8,7 @@ using ESRI.ArcGIS.Geometry;
 
 namespace UrbanRenewal.GIS
 {
-    /// <summary>
-    /// 投影/裁剪预处理作业参数。
-    /// </summary>
+    /// <summary>投影/裁剪预处理作业参数。</summary>
     public sealed class FeaturePreprocessJob
     {
         public FeaturePreprocessJob()
@@ -18,13 +16,12 @@ namespace UrbanRenewal.GIS
             LayerNames = new List<string>();
             DoProject = true;
             DoClip = true;
-            // 默认不破坏原库：结果只写入输出 GDB
             ReplaceInInputGdb = false;
         }
 
         public string InputGdbPath { get; set; }
 
-        /// <summary>处理后输出 File GDB（投影/裁剪结果）；原输入库保持只读不变。</summary>
+        /// <summary>输出 File GDB；原输入库只读。</summary>
         public string OutputGdbPath { get; set; }
 
         public string ClipLayerName { get; set; }
@@ -32,15 +29,11 @@ namespace UrbanRenewal.GIS
         public bool DoProject { get; set; }
         public bool DoClip { get; set; }
 
-        /// <summary>
-        /// true：额外用结果覆盖输入 GDB 同名图层（破坏性，默认 false，界面不再启用）。
-        /// </summary>
+        /// <summary>true：覆盖输入 GDB 同名图层（破坏性，默认 false）。</summary>
         public bool ReplaceInInputGdb { get; set; }
     }
 
-    /// <summary>
-    /// 预处理结果。
-    /// </summary>
+    /// <summary>预处理结果。</summary>
     public sealed class FeaturePreprocessResult
     {
         public FeaturePreprocessResult()
@@ -54,16 +47,10 @@ namespace UrbanRenewal.GIS
         public List<string> Messages { get; private set; }
         public List<string> OutputLayers { get; private set; }
 
-        /// <summary>若启用破坏性写回，已替换进输入 GDB 的图层名。</summary>
         public List<string> ReplacedLayers { get; private set; }
     }
 
-    /// <summary>
-    /// 批量投影到目标坐标系，并按建成区/分析范围裁剪。
-    /// 非破坏：从输入 GDB 读取，结果写入输出 GDB；原图层不删不改。
-    /// 后续分析可将「输入 GDB」切换为该输出库。
-    /// 不处理 Network Dataset（须在 ArcGIS 中预建）；跳过路网拓扑附属要素。
-    /// </summary>
+    /// <summary>批量投影并按分析范围裁剪；结果写入输出 GDB，不处理 Network Dataset。</summary>
     public static class FeaturePreprocessBuilder
     {
         private static Action<string, int> _progress;
@@ -174,7 +161,7 @@ namespace UrbanRenewal.GIS
             int total = job.LayerNames.Count;
             int done = 0;
             int okCount = 0;
-            // 先全部写入暂存，再统一写回输入库，避免 Clip 读输入库时的 schema 锁导致 CopyFeatures 失败
+            // schema lock：先全部写入暂存，再统一写回输入库
             List<string> pendingReplaceNames = new List<string>();
             List<string> pendingReplacePaths = new List<string>();
 
@@ -215,7 +202,6 @@ namespace UrbanRenewal.GIS
                 }
             }
 
-            // 释放裁剪阶段对输入库的占用后再替换
             clipPrepared = null;
             FileGdbLockHelper.ForceComRelease();
 
@@ -243,10 +229,7 @@ namespace UrbanRenewal.GIS
             return result;
         }
 
-        /// <summary>
-        /// 用暂存库中的正确图层替换输入 GDB 中的错误图层。
-        /// 优先写回原路径（含要素数据集内）；若因坐标系变更无法写回要素数据集，则落到 GDB 根目录同名要素类。
-        /// </summary>
+        /// <summary>暂存写回输入库；要素数据集坐标系冲突时落到 GDB 根目录。</summary>
         private static bool TryReplaceInInputGdb(
             GeoprocessorHelper gp,
             string inputGdb,
@@ -270,7 +253,6 @@ namespace UrbanRenewal.GIS
             string originalPath = WorkspaceCatalog.ToFeatureClassPath(inputGdb, layerName);
             string rootPath = WorkspaceCatalog.ToFeatureClassPath(inputGdb, leafName);
 
-            // 1) 优先覆盖原路径（后期数据配置中的图层名可保持不变）
             string errInPlace;
             if (TryCopyReplace(gp, inputGdb, layerName, leafName, correctedPath, originalPath, out errInPlace))
             {
@@ -279,12 +261,10 @@ namespace UrbanRenewal.GIS
                 return true;
             }
 
-            // 2) 要素数据集内无法混入新坐标系时，改写到 GDB 根目录
             if (slash >= 0
                 && !string.Equals(originalPath, rootPath, StringComparison.OrdinalIgnoreCase))
             {
                 string errRoot;
-                // 尽量先删掉原路径再写根目录
                 TryDeleteTarget(gp, inputGdb, layerName, originalPath);
                 if (TryCopyReplace(gp, inputGdb, leafName, leafName, correctedPath, rootPath, out errRoot))
                 {
@@ -307,7 +287,7 @@ namespace UrbanRenewal.GIS
             return false;
         }
 
-        /// <summary>删除目标 → CopyFeatures；失败则 FeatureClassToFeatureClass；再失败则 staging 名中转。</summary>
+        /// <summary>删目标 → CopyFeatures；失败则 staging 中转写回。</summary>
         private static bool TryCopyReplace(
             GeoprocessorHelper gp,
             string inputGdb,
@@ -335,7 +315,7 @@ namespace UrbanRenewal.GIS
                 error = exCopy.Message;
             }
 
-            // 回退：先写到临时名，再删目标、再拷到正式名（避开「删不掉却覆盖失败」）
+            // staging writeback：临时名中转后再拷正式名
             string stagingName = "r_" + StableHash(leafName).ToString("0000");
             string stagingPath = OutputGdbHelper.DatasetPath(inputGdb, stagingName);
             try
@@ -384,9 +364,6 @@ namespace UrbanRenewal.GIS
             FileGdbLockHelper.ForceComRelease();
         }
 
-        /// <summary>
-        /// 是否为路网 Network Dataset 附属要素（不可按普通图层裁剪）。
-        /// </summary>
         public static bool IsNetworkArtifact(string layerName)
         {
             if (string.IsNullOrEmpty(layerName))
@@ -600,9 +577,6 @@ namespace UrbanRenewal.GIS
             return null;
         }
 
-        /// <summary>
-        /// File GDB 要素类名：保留中文/字母数字，替换非法字符；过长截断。
-        /// </summary>
         public static string SanitizeFcName(string name)
         {
             if (string.IsNullOrEmpty(name))

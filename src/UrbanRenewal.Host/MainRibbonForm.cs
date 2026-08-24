@@ -17,9 +17,6 @@ using IOPath = System.IO.Path;
 
 namespace UrbanRenewal.Host
 {
-    /// <summary>
-    /// DevExpress 13.1 Ribbon 主壳。界面布局在设计器中编辑；Ax 地图控件运行时嵌入面板。
-    /// </summary>
     public partial class MainRibbonForm : DevExpress.XtraBars.Ribbon.RibbonForm
     {
         private readonly AppSettings _settings = new AppSettings();
@@ -37,10 +34,9 @@ namespace UrbanRenewal.Host
             ApplyAppLogo();
             ApplyRibbonLargeImages();
 
-            // 设计器打开时不创建 AO 对象、不加载插件
+            // 设计器不加载 AO / 插件
             if (LicenseManager.UsageMode != LicenseUsageMode.Designtime)
             {
-                // 仅当已配置输入 GDB 时落盘；否则只显示在界面
                 string logPath = SessionLogWriter.StartNewSession();
                 if (!string.IsNullOrEmpty(logPath))
                 {
@@ -53,13 +49,12 @@ namespace UrbanRenewal.Host
                 CreateArcEngineControls();
                 LoadPlugins();
             }
-            if(_axTocControl!=null)
-            _axTocControl.EnableLayerDragDrop = true;
+            if (_axTocControl != null)
+            {
+                _axTocControl.EnableLayerDragDrop = true;
+            }
         }
 
-        /// <summary>
-        /// 窗体图标与 Ribbon 应用按钮 Logo（应用按钮仅用小图，避免占满整条 Ribbon）。
-        /// </summary>
         private void ApplyAppLogo()
         {
             try
@@ -76,32 +71,30 @@ namespace UrbanRenewal.Host
                 }
 
                 string pngPath = IOPath.Combine(baseDir, "Resources", "urban-renewal-logo.png");
-                if (File.Exists(pngPath) && this.ribbonControl != null)
+                if (!File.Exists(pngPath) || this.ribbonControl == null)
                 {
-                    // DevExpress 13.1 ApplicationIcon 会按原图像素铺开；必须缩到按钮尺寸
-                    const int ribbonIconSize = 32;
-                    using (Bitmap src = new Bitmap(pngPath))
+                    return;
+                }
+
+                // DX 13.1 ApplicationIcon 按原图像素显示
+                const int size = 32;
+                using (Bitmap src = new Bitmap(pngPath))
+                {
+                    Bitmap small = new Bitmap(size, size);
+                    using (Graphics g = Graphics.FromImage(small))
                     {
-                        Bitmap small = new Bitmap(ribbonIconSize, ribbonIconSize);
-                        using (Graphics g = Graphics.FromImage(small))
-                        {
-                            g.Clear(Color.Transparent);
-                            g.InterpolationMode = System.Drawing.Drawing2D.InterpolationMode.HighQualityBicubic;
-                            g.DrawImage(src, 0, 0, ribbonIconSize, ribbonIconSize);
-                        }
-                        this.ribbonControl.ApplicationIcon = small;
+                        g.Clear(Color.Transparent);
+                        g.InterpolationMode = System.Drawing.Drawing2D.InterpolationMode.HighQualityBicubic;
+                        g.DrawImage(src, 0, 0, size, size);
                     }
+                    this.ribbonControl.ApplicationIcon = small;
                 }
             }
             catch
             {
-                // Logo 缺失不影响启动
             }
         }
 
-        /// <summary>
-        /// 为主界面 Ribbon 按钮设置 LargeGlyph（大图标）。
-        /// </summary>
         private void ApplyRibbonLargeImages()
         {
             RibbonHostImpl.ApplyLargeImage(this.btnMapFit, this.btnMapFit.Caption);
@@ -185,7 +178,6 @@ namespace UrbanRenewal.Host
                 AppendLog("WARN", "未加载到业务插件。请生成整个解决方案，确认 Plugins 下有 UrbanRenewal.Plugins.*.dll");
             }
 
-            // 启动时自动加载上次保存的工程 MXD
             string mxdMsg;
             if (_appContext.TryLoadSavedProject(out mxdMsg) && !string.IsNullOrEmpty(mxdMsg))
             {
@@ -214,7 +206,6 @@ namespace UrbanRenewal.Host
             try
             {
                 this.listBoxLog.Items.Insert(0, line);
-                // 防止日志无限增长
                 while (this.listBoxLog.Items.Count > 2000)
                 {
                     this.listBoxLog.Items.RemoveAt(this.listBoxLog.Items.Count - 1);
@@ -225,7 +216,7 @@ namespace UrbanRenewal.Host
                 this.listBoxLog.EndUpdate();
             }
             SessionLogWriter.Append(line);
-            // 频繁 Refresh 会拖死 UI 消息泵；批量后再重绘
+            // 批量 Invalidate，避免频繁 Refresh 拖死消息泵
             _logPaintCounter++;
             if (_logPaintCounter >= 8)
             {
@@ -234,7 +225,6 @@ namespace UrbanRenewal.Host
             }
         }
 
-        /// <summary>分析运行时若日志面板被隐藏，自动展开以便查看逐步日志。</summary>
         internal void EnsureLogPanelVisible()
         {
             if (InvokeRequired)
@@ -430,71 +420,61 @@ namespace UrbanRenewal.Host
 
             _axTocControl.HitTest(e.x, e.y, ref itemType, ref map, ref layer, ref other, ref data);
 
-            // 左键：点击矢量图例符号 → 自定义符号窗体
             if (e.button == 1)
             {
-                if (layer == null)
+                if (layer == null || itemType != esriTOCControlItem.esriTOCControlItemLegendClass)
                 {
                     return;
                 }
 
-                if (itemType == esriTOCControlItem.esriTOCControlItemLegendClass)
+                IFeatureLayer featureLayer = layer as IFeatureLayer;
+                if (featureLayer == null)
                 {
-                    IFeatureLayer featureLayer = layer as IFeatureLayer;
-                    if (featureLayer != null)
-                    {
-                        try
-                        {
-                            ILegendClass legendClass = ((ILegendGroup)other).get_Class((int)data);
-                            if (legendClass == null || legendClass.Symbol == null)
-                            {
-                                return;
-                            }
-
-                            using (SymbolForm form = new SymbolForm(legendClass.Symbol, layer.Name))
-                            {
-                                if (form.ShowDialog(this) == DialogResult.OK && form.ResultSymbol != null)
-                                {
-                                    legendClass.Symbol = form.ResultSymbol;
-
-                                    IGeoFeatureLayer geoFeatureLayer = layer as IGeoFeatureLayer;
-                                    if (geoFeatureLayer != null)
-                                    {
-                                        ISimpleRenderer simpleRenderer = geoFeatureLayer.Renderer as ISimpleRenderer;
-                                        if (simpleRenderer != null)
-                                        {
-                                            simpleRenderer.Symbol = form.ResultSymbol;
-                                        }
-                                    }
-
-                                    _axMapControl.ActiveView.PartialRefresh(esriViewDrawPhase.esriViewGeography, layer, null);
-                                    _axTocControl.Update();
-                                }
-                            }
-                        }
-                        catch (Exception ex)
-                        {
-                            MessageBox.Show(this, "修改图层符号失败：\r\n" + ex.Message, "错误",
-                                MessageBoxButtons.OK, MessageBoxIcon.Error);
-                        }
-                    }
-                    else
-                    {
-                        MessageBox.Show(this, "仅支持修改矢量图层符号。", "提示",
-                            MessageBoxButtons.OK, MessageBoxIcon.Information);
-                    }
+                    MessageBox.Show(this, "仅支持修改矢量图层符号。", "提示",
+                        MessageBoxButtons.OK, MessageBoxIcon.Information);
+                    return;
                 }
 
+                try
+                {
+                    ILegendClass legendClass = ((ILegendGroup)other).get_Class((int)data);
+                    if (legendClass == null || legendClass.Symbol == null)
+                    {
+                        return;
+                    }
+
+                    using (SymbolForm form = new SymbolForm(legendClass.Symbol, layer.Name))
+                    {
+                        if (form.ShowDialog(this) != DialogResult.OK || form.ResultSymbol == null)
+                        {
+                            return;
+                        }
+
+                        legendClass.Symbol = form.ResultSymbol;
+
+                        IGeoFeatureLayer geoFeatureLayer = layer as IGeoFeatureLayer;
+                        if (geoFeatureLayer != null)
+                        {
+                            ISimpleRenderer simpleRenderer = geoFeatureLayer.Renderer as ISimpleRenderer;
+                            if (simpleRenderer != null)
+                            {
+                                simpleRenderer.Symbol = form.ResultSymbol;
+                            }
+                        }
+
+                        _axMapControl.ActiveView.PartialRefresh(esriViewDrawPhase.esriViewGeography, layer, null);
+                        _axTocControl.Update();
+                    }
+                }
+                catch (Exception ex)
+                {
+                    MessageBox.Show(this, "修改图层符号失败：\r\n" + ex.Message, "错误",
+                        MessageBoxButtons.OK, MessageBoxIcon.Error);
+                }
                 return;
             }
 
-            // 右键：图层菜单
-            if (e.button != 2)
-            {
-                return;
-            }
-
-            if (layer == null)
+            if (e.button != 2 || layer == null)
             {
                 return;
             }
@@ -546,7 +526,7 @@ namespace UrbanRenewal.Host
                 {
                     if (form.ShowDialog(this) == DialogResult.OK && form.Applied)
                     {
-                        // 栅格渲染器变更后需整图刷新，PartialRefresh 有时不重绘色带
+                        // PartialRefresh 有时不重绘色带
                         _axMapControl.ActiveView.ContentsChanged();
                         _axMapControl.ActiveView.Refresh();
                         _axTocControl.Update();

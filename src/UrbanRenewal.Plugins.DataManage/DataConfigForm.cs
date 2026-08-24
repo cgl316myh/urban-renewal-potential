@@ -11,9 +11,7 @@ using UrbanRenewal.Model;
 
 namespace UrbanRenewal.Plugins.DataManage
 {
-    /// <summary>
-    /// 数据配置：将标准角色映射到当前 GDB 图层，保存到本地城市配置 XML。
-    /// </summary>
+    /// <summary>图层角色映射，保存到城市配置 XML。</summary>
     public partial class DataConfigForm : Form
     {
         private const string Unselected = "（未选择）";

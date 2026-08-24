@@ -6,9 +6,6 @@ using UrbanRenewal.Contracts;
 
 namespace UrbanRenewal.Host
 {
-    /// <summary>
-    /// DevExpress 13.1 Ribbon 挂接实现。
-    /// </summary>
     internal sealed class RibbonHostImpl : IRibbonHost
     {
         private readonly RibbonControl _ribbon;
@@ -25,7 +22,7 @@ namespace UrbanRenewal.Host
                 throw new ArgumentException("pageName 不能为空", "pageName");
             }
 
-            // 同名页签复用，便于多插件挂到同一业务页（如「潜力分析」）
+            // 同名页签复用
             for (int i = 0; i < _ribbon.Pages.Count; i++)
             {
                 RibbonPage existing = _ribbon.Pages[i];
@@ -92,9 +89,6 @@ namespace UrbanRenewal.Host
             return item;
         }
 
-        /// <summary>
-        /// 为设计器中的地图按钮等补上大图标。
-        /// </summary>
         public static void ApplyLargeImage(BarButtonItem item, string caption)
         {
             if (item == null)

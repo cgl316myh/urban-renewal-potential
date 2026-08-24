@@ -9,9 +9,7 @@ using ESRI.ArcGIS.Geometry;
 
 namespace UrbanRenewal.Host
 {
-    /// <summary>
-    /// 面图层按数值字段分段渲染（ClassBreaksRenderer）。
-    /// </summary>
+    /// <summary>面图层分段渲染。</summary>
     public partial class PolygonClassRenderForm : Form
     {
         private readonly IFeatureLayer _featureLayer;

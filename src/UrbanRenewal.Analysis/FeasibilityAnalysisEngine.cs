@@ -6,9 +6,7 @@ using UrbanRenewal.Model;
 
 namespace UrbanRenewal.Analysis
 {
-    /// <summary>
-    /// 可行度分析引擎：宗地 SI/PD + DEM 高程/坡度 + 人口，加性合成后标准化到 0–100。
-    /// </summary>
+    /// <summary>可行度：宗地/DEM/人口加性合成，标准化 0–100。</summary>
     public class FeasibilityAnalysisEngine
     {
         private GeoprocessorHelper _gp;
@@ -268,7 +266,7 @@ namespace UrbanRenewal.Analysis
             string hinted = ResolveHint(job, hintKey);
             if (!string.IsNullOrEmpty(hinted))
             {
-                // 提示可能来自配置名，确认在列表中或直接使用
+                // 配置名可能不在 GDB 列表中
                 for (int i = 0; i < names.Count; i++)
                 {
                     if (string.Equals(names[i], hinted, StringComparison.OrdinalIgnoreCase))

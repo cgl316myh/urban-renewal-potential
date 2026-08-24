@@ -13,7 +13,6 @@ namespace UrbanRenewal.Host
         [STAThread]
         private static void Main()
         {
-            // 尽早注册，避免启动阶段异常无痕迹
             GlobalExceptionHandler.Register();
 
             Application.EnableVisualStyles();

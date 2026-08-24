@@ -8,9 +8,7 @@ using IoPath = System.IO.Path;
 
 namespace UrbanRenewal.Analysis
 {
-    /// <summary>
-    /// 综合潜力叠置引擎：mot_score × W动力 + fea_score × W可行 → pot_score + 五级分类。
-    /// </summary>
+    /// <summary>综合潜力加权叠置与五级分类。</summary>
     public class OverlayAnalysisEngine
     {
         private Action<string, int> _progress;

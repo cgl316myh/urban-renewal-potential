@@ -11,9 +11,7 @@ using IoPath = System.IO.Path;
 
 namespace UrbanRenewal.GIS
 {
-    /// <summary>
-    /// 要素类坐标系读取与投影对齐（解决 WGS84 与 CGCS2000 混用导致栅格分析失败）。
-    /// </summary>
+    /// <summary>要素类坐标系读取与投影对齐（WGS84/CGCS2000 混用会导致栅格分析失败）。</summary>
     public static class FeatureProjectionHelper
     {
         public static ISpatialReference GetSpatialReference(string featureClassPath)
@@ -27,10 +25,6 @@ namespace UrbanRenewal.GIS
             return gds != null ? gds.SpatialReference : null;
         }
 
-        /// <summary>
-        /// 从 Shapefile 或 File GDB 图层读取空间参考。
-        /// sourcePath：*.shp 或 *.gdb；layerName：GDB 内要素类名（shp 可空）。
-        /// </summary>
         public static bool TryReadSpatialReference(
             string sourcePath,
             string layerName,
@@ -106,9 +100,6 @@ namespace UrbanRenewal.GIS
             }
         }
 
-        /// <summary>
-        /// 仅读取名称/WKID（供 UI 插件使用，无需直接引用 Geometry 程序集）。
-        /// </summary>
         public static bool TryReadSpatialReferenceInfo(
             string sourcePath,
             string layerName,
@@ -142,9 +133,6 @@ namespace UrbanRenewal.GIS
             return string.Equals(na, nb, StringComparison.OrdinalIgnoreCase);
         }
 
-        /// <summary>
-        /// 若输入与目标坐标系不一致则投影到工作目录 shapefile，否则返回原路径。
-        /// </summary>
         public static string EnsureProjected(
             GeoprocessorHelper gp,
             string inFeatures,
@@ -173,9 +161,6 @@ namespace UrbanRenewal.GIS
             return outShp;
         }
 
-        /// <summary>
-        /// 将要素类投影到目标坐标系并写入 File GDB（保留属性字段）。
-        /// </summary>
         public static void ProjectFeatureClassToGdb(
             string inFeatures,
             string outGdb,
