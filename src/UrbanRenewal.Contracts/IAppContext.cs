@@ -80,6 +80,8 @@ namespace UrbanRenewal.Contracts
 
         double CellSize { get; set; }
 
+        bool MaskResultToStudyArea { get; set; }
+
         string SkinName { get; set; }
 
         void ApplySkin(string skinName);

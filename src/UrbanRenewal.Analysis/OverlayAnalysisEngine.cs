@@ -112,6 +112,22 @@ namespace UrbanRenewal.Analysis
             }
             Note(result, "潜力等级栅格: " + result.LevelRasterPath + "（1偏低～5极高）");
 
+            if (ResultMaskHelper.IsMaskEnabled())
+            {
+                if (string.IsNullOrEmpty(studyPath))
+                {
+                    Note(result, "已启用成果掩膜，但未找到分析范围图层 StudyArea。");
+                    Report(progress, result, "失败", 100);
+                    return result;
+                }
+                Report(progress, result, "按中心城区掩膜叠置成果...", 82);
+                result.PotentialRasterPath = ResultMaskHelper.MaskAndReplace(
+                    gp, result.PotentialRasterPath, studyPath, finalPath);
+                result.LevelRasterPath = ResultMaskHelper.MaskAndReplace(
+                    gp, result.LevelRasterPath, studyPath, levelFinal);
+                Note(result, "已按全局设置掩膜叠置成果: " + result.PotentialRasterPath);
+            }
+
             Report(progress, result, "统计各等级面积...", 88);
             result.LevelAreas = PotentialOverlayBuilder.ComputeLevelAreas(
                 gp, result.LevelRasterPath, job.CellSize, LiveMsgs(result));

@@ -57,6 +57,7 @@ namespace UrbanRenewal.Plugins.DataManage
                     cell = (double)this.nudCellSize.Maximum;
                 }
                 this.nudCellSize.Value = (decimal)cell;
+                this.chkMaskResultToStudyArea.Checked = _context.MaskResultToStudyArea;
             }
         }
 
@@ -511,6 +512,7 @@ namespace UrbanRenewal.Plugins.DataManage
             _context.OutputGdbPath = outGdb;
             _context.ActiveCityProfileId = profile != null ? profile.Id : null;
             _context.CellSize = (double)this.nudCellSize.Value;
+            _context.MaskResultToStudyArea = this.chkMaskResultToStudyArea.Checked;
             _context.SpatialRefSourcePath = _spatialRefSourcePath;
             _context.SpatialRefLayerName = _spatialRefLayerName;
             _context.SpatialRefName = _spatialRefName;
@@ -533,6 +535,7 @@ namespace UrbanRenewal.Plugins.DataManage
             _context.OutputGdbPath = outGdb;
             _context.ActiveCityProfileId = profile != null ? profile.Id : null;
             _context.CellSize = (double)this.nudCellSize.Value;
+            _context.MaskResultToStudyArea = this.chkMaskResultToStudyArea.Checked;
             _context.SpatialRefSourcePath = _spatialRefSourcePath;
             _context.SpatialRefLayerName = _spatialRefLayerName;
             _context.SpatialRefName = _spatialRefName;
@@ -550,6 +553,7 @@ namespace UrbanRenewal.Plugins.DataManage
                 + "\r\n输出: " + outGdb
                 + "\r\n城市: " + (profile != null ? profile.DisplayName : "(未选择)")
                 + "\r\n像元: " + this.nudCellSize.Value.ToString() + " 米"
+                + "\r\n成果掩膜: " + (this.chkMaskResultToStudyArea.Checked ? "是" : "否")
                 + "\r\nSpatialRef: " + (string.IsNullOrEmpty(_spatialRefName) ? "(自动推断)" : _spatialRefName)
                 + "\r\n\r\n提示：配置已写入用户目录，重启/重新编译后仍会保留。"
                 + "\r\n若需下次启动自动恢复当前地图，请再单击「数据管理 → 保存工程」。",

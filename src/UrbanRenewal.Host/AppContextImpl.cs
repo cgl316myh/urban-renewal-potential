@@ -185,6 +185,16 @@ namespace UrbanRenewal.Host
             }
         }
 
+        public bool MaskResultToStudyArea
+        {
+            get { return _settings == null || _settings.MaskResultToStudyArea; }
+            set
+            {
+                EnsureSettings();
+                _settings.MaskResultToStudyArea = value;
+            }
+        }
+
         public string SkinName
         {
             get { return _settings != null ? _settings.SkinName : "Office 2013"; }
@@ -238,6 +248,7 @@ namespace UrbanRenewal.Host
                 + "；输入GDB=" + (_settings.InputGdbPath ?? "(空)")
                 + "；城市=" + (_settings.ActiveCityProfileId ?? "(空)")
                 + "；像元=" + CellSize + "米"
+                + "；成果掩膜=" + (MaskResultToStudyArea ? "是" : "否")
                 + "；SpatialRef=" + (_settings.SpatialRefName ?? "(自动)")
                 + "；工程MXD=" + (_settings.ProjectMxdPath ?? "(未保存)"));
             if (string.IsNullOrEmpty(logAfter))

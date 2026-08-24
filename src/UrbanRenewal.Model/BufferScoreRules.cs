@@ -12,8 +12,8 @@ namespace UrbanRenewal.Model
         public BufferScoreRules()
         {
             MetroPreset = "Original";
-            MetroMulti = MultiRingRule.Create(new double[] { 300, 600, 1000 }, new int[] { 4, 3, 2 });
-            MetroSingle = MultiRingRule.Create(new double[] { 300, 600, 1000 }, new int[] { 3, 2, 1 });
+            MetroMulti = MultiRingRule.Create(new double[] { 300, 500, 1000 }, new int[] { 4, 3, 2 });
+            MetroSingle = MultiRingRule.Create(new double[] { 300, 500, 1000 }, new int[] { 3, 2, 1 });
             Cbd = SingleRingRule.Create(1000, 3);
             TrafficFacility = SingleRingRule.Create(300, 1);
             EcoCorridor = SingleRingRule.Create(500, 2);
@@ -22,6 +22,9 @@ namespace UrbanRenewal.Model
             PublicService = SingleRingRule.Create(1000, 2);
             Convenience = SingleRingRule.Create(300, 1);
             Commercial = SingleRingRule.Create(1000, 1);
+            PolicyBelt = PolygonScoreRule.Create(1);
+            PolicyStrategy = PolygonScoreRule.Create(1);
+            PolicyKey = PolygonScoreRule.Create(2);
         }
 
         /// <summary>Original / A / B / C / Custom</summary>
@@ -58,6 +61,15 @@ namespace UrbanRenewal.Model
         [XmlElement("Commercial")]
         public SingleRingRule Commercial { get; set; }
 
+        [XmlElement("PolicyBelt")]
+        public PolygonScoreRule PolicyBelt { get; set; }
+
+        [XmlElement("PolicyStrategy")]
+        public PolygonScoreRule PolicyStrategy { get; set; }
+
+        [XmlElement("PolicyKey")]
+        public PolygonScoreRule PolicyKey { get; set; }
+
         /// <summary>现状代码默认（地铁偏强）。</summary>
         public static BufferScoreRules CreateOriginal()
         {
@@ -69,8 +81,8 @@ namespace UrbanRenewal.Model
         {
             BufferScoreRules r = CreateOriginal();
             r.MetroPreset = "A";
-            r.MetroMulti = MultiRingRule.Create(new double[] { 300, 600, 1000 }, new int[] { 3, 2, 1 });
-            r.MetroSingle = MultiRingRule.Create(new double[] { 300, 600, 1000 }, new int[] { 2, 1, 1 });
+            r.MetroMulti = MultiRingRule.Create(new double[] { 300, 500, 1000 }, new int[] { 3, 2, 1 });
+            r.MetroSingle = MultiRingRule.Create(new double[] { 300, 500, 1000 }, new int[] { 2, 1, 1 });
             return r;
         }
 
@@ -79,8 +91,8 @@ namespace UrbanRenewal.Model
         {
             BufferScoreRules r = CreateOriginal();
             r.MetroPreset = "B";
-            r.MetroMulti = MultiRingRule.Create(new double[] { 300, 600, 1000 }, new int[] { 2, 1, 1 });
-            r.MetroSingle = MultiRingRule.Create(new double[] { 300, 600 }, new int[] { 2, 1 });
+            r.MetroMulti = MultiRingRule.Create(new double[] { 300, 500, 1000 }, new int[] { 2, 1, 1 });
+            r.MetroSingle = MultiRingRule.Create(new double[] { 300, 500 }, new int[] { 2, 1 });
             return r;
         }
 
@@ -89,8 +101,8 @@ namespace UrbanRenewal.Model
         {
             BufferScoreRules r = CreateOriginal();
             r.MetroPreset = "C";
-            r.MetroMulti = MultiRingRule.Create(new double[] { 300, 600 }, new int[] { 2, 1 });
-            r.MetroSingle = MultiRingRule.Create(new double[] { 300, 600 }, new int[] { 1, 1 });
+            r.MetroMulti = MultiRingRule.Create(new double[] { 300, 500 }, new int[] { 2, 1 });
+            r.MetroSingle = MultiRingRule.Create(new double[] { 300, 500 }, new int[] { 1, 1 });
             return r;
         }
 
@@ -133,6 +145,9 @@ namespace UrbanRenewal.Model
             c.PublicService = PublicService != null ? PublicService.Clone() : null;
             c.Convenience = Convenience != null ? Convenience.Clone() : null;
             c.Commercial = Commercial != null ? Commercial.Clone() : null;
+            c.PolicyBelt = PolicyBelt != null ? PolicyBelt.Clone() : null;
+            c.PolicyStrategy = PolicyStrategy != null ? PolicyStrategy.Clone() : null;
+            c.PolicyKey = PolicyKey != null ? PolicyKey.Clone() : null;
             return c;
         }
 
@@ -143,6 +158,69 @@ namespace UrbanRenewal.Model
             sb.Append("; 多线=").Append(MetroMulti != null ? MetroMulti.ToDisplay() : "-");
             sb.Append("; 单线=").Append(MetroSingle != null ? MetroSingle.ToDisplay() : "-");
             return sb.ToString();
+        }
+
+        /// <summary>环境 SUM 理论满分（各有效因子得分之和）。</summary>
+        public double GetEnvironmentTheoreticalMax()
+        {
+            double sum = 0;
+            if (EcoCorridor != null && EcoCorridor.IsActive) sum += EcoCorridor.Score;
+            if (OpenSpace != null && OpenSpace.IsActive) sum += OpenSpace.Score;
+            if (Green != null && Green.IsActive) sum += Green.Score;
+            return sum > 0 ? sum : 5.0;
+        }
+
+        /// <summary>设施 SUM 理论满分。</summary>
+        public double GetFacilityTheoreticalMax()
+        {
+            double sum = 0;
+            if (PublicService != null && PublicService.IsActive) sum += PublicService.Score;
+            if (Convenience != null && Convenience.IsActive) sum += Convenience.Score;
+            if (Commercial != null && Commercial.IsActive) sum += Commercial.Score;
+            return sum > 0 ? sum : 4.0;
+        }
+
+        /// <summary>政策 SUM 理论满分。</summary>
+        public double GetPolicyTheoreticalMax()
+        {
+            double sum = 0;
+            if (PolicyBelt != null && PolicyBelt.IsActive) sum += PolicyBelt.Score;
+            if (PolicyStrategy != null && PolicyStrategy.IsActive) sum += PolicyStrategy.Score;
+            if (PolicyKey != null && PolicyKey.IsActive) sum += PolicyKey.Score;
+            return sum > 0 ? sum : 4.0;
+        }
+    }
+
+    /// <summary>政策面赋分（无缓冲距离）。</summary>
+    public class PolygonScoreRule
+    {
+        [XmlAttribute("score")]
+        public int Score { get; set; }
+
+        public static PolygonScoreRule Create(int score)
+        {
+            PolygonScoreRule r = new PolygonScoreRule();
+            r.Score = score;
+            return r;
+        }
+
+        public PolygonScoreRule Clone()
+        {
+            return Create(Score);
+        }
+
+        public bool IsActive
+        {
+            get { return Score > 0; }
+        }
+
+        public string ToDisplay()
+        {
+            if (!IsActive)
+            {
+                return "（关闭）";
+            }
+            return Score.ToString(CultureInfo.InvariantCulture) + "分";
         }
     }
 

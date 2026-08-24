@@ -1,0 +1,523 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>分析成果掩膜 — 全局设置方案</title>
+  <style>
+    :root {
+      --primary: #1a5276;
+      --primary-light: #2e86c1;
+      --accent: #e67e22;
+      --bg: #f4f6f9;
+      --card: #ffffff;
+      --border: #d5dbdb;
+      --text: #2c3e50;
+      --muted: #7f8c8d;
+      --danger: #c0392b;
+      --success: #1e8449;
+    }
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body {
+      font-family: "Microsoft YaHei", "PingFang SC", "Segoe UI", sans-serif;
+      background: var(--bg);
+      color: var(--text);
+      line-height: 1.75;
+      font-size: 15px;
+    }
+    .header {
+      background: linear-gradient(135deg, var(--primary) 0%, var(--primary-light) 100%);
+      color: #fff;
+      padding: 44px 36px 32px;
+      text-align: center;
+    }
+    .header h1 { font-size: 24px; margin-bottom: 8px; }
+    .header .subtitle { opacity: 0.92; font-size: 14px; }
+    .header .tags { margin-top: 16px; display: flex; justify-content: center; gap: 8px; flex-wrap: wrap; }
+    .header .tag {
+      background: rgba(255,255,255,0.18);
+      border: 1px solid rgba(255,255,255,0.35);
+      padding: 3px 12px;
+      border-radius: 16px;
+      font-size: 12px;
+    }
+    .container { max-width: 1000px; margin: 0 auto; padding: 28px 20px 56px; }
+    .toc {
+      background: var(--card);
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      padding: 20px 24px;
+      margin-bottom: 24px;
+    }
+    .toc h2 { font-size: 16px; color: var(--primary); margin-bottom: 10px; }
+    .toc ol { padding-left: 22px; }
+    .toc li { margin: 5px 0; }
+    .toc a { color: var(--primary-light); text-decoration: none; }
+    section {
+      background: var(--card);
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      padding: 24px 28px;
+      margin-bottom: 22px;
+    }
+    section > h2 {
+      font-size: 18px;
+      color: var(--primary);
+      border-left: 4px solid var(--accent);
+      padding-left: 12px;
+      margin-bottom: 16px;
+    }
+    h3 { font-size: 15px; color: var(--primary-light); margin: 18px 0 10px; }
+    h4 { font-size: 14px; margin: 14px 0 8px; }
+    p { margin-bottom: 10px; }
+    ul, ol { padding-left: 22px; margin-bottom: 10px; }
+    li { margin: 4px 0; }
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      margin: 12px 0 16px;
+      font-size: 13.5px;
+    }
+    th, td {
+      border: 1px solid var(--border);
+      padding: 7px 10px;
+      text-align: left;
+      vertical-align: top;
+    }
+    th { background: #eaf2f8; color: var(--primary); font-weight: 600; }
+    tr:nth-child(even) { background: #f8fafc; }
+    .formula {
+      background: #eaf2f8;
+      border-left: 4px solid var(--primary-light);
+      padding: 12px 16px;
+      margin: 12px 0;
+      font-family: Consolas, "Courier New", monospace;
+      font-size: 13px;
+      line-height: 1.7;
+      overflow-x: auto;
+    }
+    .warn {
+      background: #fef5e7;
+      border-left: 4px solid var(--accent);
+      padding: 11px 14px;
+      margin: 12px 0;
+      font-size: 14px;
+    }
+    .ok {
+      background: #eafaf1;
+      border-left: 4px solid var(--success);
+      padding: 11px 14px;
+      margin: 12px 0;
+      font-size: 14px;
+    }
+    .rec {
+      background: #f4f6f9;
+      border: 1px dashed var(--primary-light);
+      border-radius: 8px;
+      padding: 14px 16px;
+      margin: 12px 0;
+    }
+    .rec strong { color: var(--primary); }
+    .muted { color: var(--muted); font-size: 13px; }
+    code { background: #eef2f7; padding: 1px 5px; border-radius: 3px; font-size: 13px; }
+    .ui-mock {
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      padding: 18px 22px;
+      background: #fafbfc;
+      max-width: 580px;
+      margin: 14px 0;
+    }
+    .ui-mock .mock-title {
+      font-size: 13px;
+      color: var(--muted);
+      margin-bottom: 12px;
+    }
+    .ui-mock label.chk-row {
+      display: flex;
+      align-items: flex-start;
+      gap: 10px;
+      font-size: 14px;
+      line-height: 1.6;
+      cursor: default;
+    }
+    .ui-mock input[type="checkbox"] {
+      width: 16px;
+      height: 16px;
+      margin-top: 4px;
+      flex-shrink: 0;
+      accent-color: var(--primary-light);
+    }
+    .ui-mock .chk-hint {
+      font-size: 12px;
+      color: var(--muted);
+      margin-top: 10px;
+      padding-left: 26px;
+    }
+    .flow {
+      display: flex;
+      flex-wrap: wrap;
+      align-items: center;
+      gap: 8px;
+      margin: 14px 0;
+      font-size: 13px;
+    }
+    .flow .box {
+      background: #eaf2f8;
+      border: 1px solid var(--border);
+      border-radius: 6px;
+      padding: 8px 12px;
+      white-space: nowrap;
+    }
+    .flow .arrow { color: var(--muted); }
+    footer {
+      text-align: center;
+      color: var(--muted);
+      font-size: 12px;
+      padding-bottom: 32px;
+    }
+    .kw { color: #1a5276; }
+    .cm { color: #7f8c8d; }
+  </style>
+</head>
+<body>
+  <div class="header">
+    <h1>分析成果掩膜 — 全局设置方案</h1>
+    <p class="subtitle">在「全局设置」统一控制动力性 / 可行度 / 叠置最终栅格是否按 StudyArea 掩膜，避免方框外无意义低分</p>
+    <div class="tags">
+      <span class="tag">设计文档 · 待开发指令</span>
+      <span class="tag">全模块共用</span>
+      <span class="tag">默认开启</span>
+      <span class="tag">方案 A · Extract by Mask</span>
+    </div>
+  </div>
+
+  <div class="container">
+    <div class="toc">
+      <h2>目录</h2>
+      <ol>
+        <li><a href="#bg">背景与目标</a></li>
+        <li><a href="#why-global">为何做成全局设置</a></li>
+        <li><a href="#scope">作用范围与掩膜对象</a></li>
+        <li><a href="#setting">全局配置项</a></li>
+        <li><a href="#ui">界面：全局设置窗体</a></li>
+        <li><a href="#context">运行时读取（IAppContext）</a></li>
+        <li><a href="#engine">各分析引擎落地</a></li>
+        <li><a href="#helper">共享 GIS 辅助</a></li>
+        <li><a href="#chain">全链路数据流</a></li>
+        <li><a href="#errors">异常与前置条件</a></li>
+        <li><a href="#impl">实施分期</a></li>
+        <li><a href="#verify">验收清单</a></li>
+        <li><a href="#refs">相关文档</a></li>
+      </ol>
+    </div>
+
+    <section id="bg">
+      <h2>1. 背景与目标</h2>
+      <p>动力性、可行度、叠置评价在 GP 环境中使用 <code>StudyArea</code> 的<strong>外包矩形 Extent</strong> 作为分析范围；标准化与加权步骤将 NoData 统一为 0，导致最终成果栅格（<code>mot_score</code>、<code>fea_score</code>、<code>pot_score</code>、<code>pot_level</code>）铺满矩形，片区外出现无意义的低分色块。</p>
+      <p>改进采用<strong>方案 A：成果掩膜</strong> — 各模块在写出<strong>最终成果栅格</strong>前，对 <code>StudyArea</code> 面要素执行 <strong>Extract by Mask</strong>，片区外保持 NoData。</p>
+      <div class="ok">
+        <strong>控制方式：</strong>不在各分析窗体重复放 Checkbox，而在<strong>全局设置</strong>（<code>GlobalSettingsForm</code>）中配置一项开关，持久化到 <code>app_settings.xml</code>，动力性 / 可行度 / 叠置引擎运行时统一读取。
+      </div>
+      <p class="muted">现象与根因详见 <a href="动力性成果范围片区与方框说明.html">动力性成果范围片区与方框说明</a>。</p>
+    </section>
+
+    <section id="why-global">
+      <h2>2. 为何做成全局设置</h2>
+      <table>
+        <tr><th>对比项</th><th>各窗体单独 Checkbox</th><th>全局设置（本方案）</th></tr>
+        <tr>
+          <td>口径一致性</td>
+          <td>用户可能在动力性勾选、叠置未勾选，综合图仍为方框</td>
+          <td><strong>一次配置，全链路一致</strong></td>
+        </tr>
+        <tr>
+          <td>与现有模式</td>
+          <td>与像元大小、叠置权重等「全局共用」项割裂</td>
+          <td>与 <code>CellSize</code>、<code>MotivationWeight</code> 等同属 <code>GlobalAppSettings</code></td>
+        </tr>
+        <tr>
+          <td>界面复杂度</td>
+          <td>三个窗体各加一个控件，易遗漏</td>
+          <td>分析窗体保持简洁，仅「数据管理 → 全局设置」一处</td>
+        </tr>
+        <tr>
+          <td>持久化</td>
+          <td>需写入各 Job 或重复读窗体状态</td>
+          <td>写入用户目录 <code>%LocalAppData%\UrbanRenewal\Config\app_settings.xml</code></td>
+        </tr>
+      </table>
+      <div class="warn">
+        <strong>说明：</strong>动力性窗体「外部交通 → 按中心城区裁切」(<code>ClipExternalTrafficToStudyArea</code>) 是<strong>输入数据</strong>裁切，与本项<strong>最终成果掩膜</strong>不同，仍保留在动力性窗体，不受全局开关替代。
+      </div>
+    </section>
+
+    <section id="scope">
+      <h2>3. 作用范围与掩膜对象</h2>
+      <h3>3.1 受全局开关控制的模块</h3>
+      <table>
+        <tr><th>模块</th><th>引擎</th><th>掩膜时机</th><th>正式成果数据集</th></tr>
+        <tr>
+          <td>动力性分析</td>
+          <td><code>MotivationAnalysisEngine</code></td>
+          <td><code>WeightedSum</code> 得到矩形 <code>mot_score</code> 之后</td>
+          <td><code>mot_score</code></td>
+        </tr>
+        <tr>
+          <td>可行度分析</td>
+          <td><code>FeasibilityAnalysisEngine</code></td>
+          <td>写出 <code>fea_score</code> 之前（合成/标准化完成后）</td>
+          <td><code>fea_score</code></td>
+        </tr>
+        <tr>
+          <td>叠置评价</td>
+          <td><code>OverlayAnalysisEngine</code></td>
+          <td><code>pot_score</code>、<code>pot_level</code> 写出之前</td>
+          <td><code>pot_score</code>、<code>pot_level</code></td>
+        </tr>
+      </table>
+
+      <h3>3.2 不在此开关范围内的内容</h3>
+      <ul>
+        <li><strong>中间准则栅格</strong>（交通/环境/设施/政策、坡度/人口等中间层）：仍可在矩形 Extent 上计算，不必逐个掩膜；</li>
+        <li><strong>宗地关联</strong>（<code>ParcelLinkEngine</code>）：读取已掩膜的 <code>pot_score</code>，无需单独开关；</li>
+        <li><strong>成果导出</strong>：导出 GDB 中已有栅格，随上游成果范围；</li>
+        <li><strong>验证校核</strong>：统计模块，非连续面状成果。</li>
+      </ul>
+
+      <h3>3.3 可选保留的调试数据集</h3>
+      <table>
+        <tr><th>数据集</th><th>含义</th><th>默认地图加载</th></tr>
+        <tr><td><code>mot_score_raw</code> / <code>pot_raw</code> 等</td><td>掩膜前的矩形版，备查与回归对比</td><td>否</td></tr>
+        <tr><td><code>mot_score</code>、<code>fea_score</code>、<code>pot_score</code>、<code>pot_level</code></td><td>掩膜后的<strong>正式成果</strong></td><td>是</td></tr>
+      </table>
+    </section>
+
+    <section id="setting">
+      <h2>4. 全局配置项</h2>
+      <h3>4.1 模型（<code>GlobalAppSettings</code>）</h3>
+      <div class="formula">
+<span class="cm">/// 分析最终成果是否按 StudyArea 掩膜；默认 true。动力性/可行度/叠置共用。</span><br/>
+<span class="kw">public bool</span> MaskResultToStudyArea { <span class="kw">get</span>; <span class="kw">set</span>; }  <span class="cm">// 构造函数中默认 true</span>
+      </div>
+
+      <h3>4.2 持久化（<code>app_settings.xml</code> 片段）</h3>
+      <div class="formula">
+&lt;MaskResultToStudyArea&gt;true&lt;/MaskResultToStudyArea&gt;
+      </div>
+      <p>旧版配置文件无此节点时，反序列化后由构造函数默认值为 <code>true</code>；与 <code>CellSize</code> 缺省 30 米策略一致。</p>
+
+      <h3>4.3 开关行为</h3>
+      <table>
+        <tr><th>值</th><th>行为</th><th>适用场景</th></tr>
+        <tr>
+          <td><strong>true（默认）</strong></td>
+          <td>各模块最终成果经 Extract by Mask，片区外 NoData</td>
+          <td>正常生产、出图、汇报</td>
+        </tr>
+        <tr>
+          <td>false</td>
+          <td>保持现状矩形成果，与改前算法一致</td>
+          <td>与历史结果对比、调试中间矩形 Extent</td>
+        </tr>
+      </table>
+    </section>
+
+    <section id="ui">
+      <h2>5. 界面：全局设置窗体</h2>
+      <p>在 <code>GlobalSettingsForm</code>（数据管理 → 全局设置）中，于「像元大小」行下方增加复选框，与现有分析参数分组相邻。</p>
+
+      <h3>5.1 控件示意</h3>
+      <div class="ui-mock">
+        <div class="mock-title">全局设置 · 分析参数区域（示意）</div>
+        <p style="font-size:13px;margin-bottom:10px;">像元大小(米)：<input type="text" value="30" disabled style="width:60px;" /></p>
+        <label class="chk-row">
+          <input type="checkbox" checked disabled />
+          <span><strong>分析成果按中心城区掩膜</strong>（动力性 / 可行度 / 叠置最终栅格仅保留 StudyArea 内像元）</span>
+        </label>
+        <p class="chk-hint">默认<strong>勾选</strong>。取消后各分析模块输出矩形范围成果（与当前版本一致）。保存后立即写入 <code>app_settings.xml</code>。</p>
+      </div>
+
+      <h3>5.2 控件属性（Designer）</h3>
+      <table>
+        <tr><th>项目</th><th>说明</th></tr>
+        <tr><td>控件名</td><td><code>chkMaskResultToStudyArea</code></td></tr>
+        <tr><td>显示文本</td><td>分析成果按中心城区掩膜（动力性/可行度/叠置）</td></tr>
+        <tr><td>默认值</td><td><strong>Checked = true</strong></td></tr>
+        <tr><td>位置</td><td><code>nudCellSize</code> 下方；<code>lblHint</code> 文案扩展说明本项</td></tr>
+        <tr><td>窗体高度</td><td>适当增加（约 +28px），按钮区下移</td></tr>
+      </table>
+
+      <h3>5.3 保存逻辑（<code>btnSave_Click</code>）</h3>
+      <div class="formula">
+_context.MaskResultToStudyArea = chkMaskResultToStudyArea.Checked;<br/>
+_context.SaveGlobalSettings();
+      </div>
+      <p>保存成功提示中增加一行，例如：<code>成果掩膜=是/否</code>。</p>
+
+      <h3>5.4 <code>lblHint</code> 建议文案</h3>
+      <p class="muted">像元大小供动力性/可行度/叠置等潜力分析共用。勾选「分析成果按中心城区掩膜」时，<code>mot_score</code>、<code>fea_score</code>、<code>pot_score</code>、<code>pot_level</code> 写出前将按 StudyArea 裁切；需 GDB 中存在分析范围图层。</p>
+    </section>
+
+    <section id="context">
+      <h2>6. 运行时读取（IAppContext）</h2>
+      <p>与 <code>CellSize</code> 相同模式，在 <code>IAppContext</code> / <code>AppContextImpl</code> 暴露属性，各插件通过注入的 <code>IAppContext</code> 或 <code>GlobalAppSettingsStore.Load()</code> 读取。</p>
+      <div class="formula">
+<span class="cm">// IAppContext</span><br/>
+<span class="kw">bool</span> MaskResultToStudyArea { <span class="kw">get</span>; <span class="kw">set</span>; }<br/>
+<br/>
+<span class="cm">// AppContextImpl — 读写 _settings.MaskResultToStudyArea</span>
+      </div>
+      <p>分析 Job 对象<strong>不必</strong>再增加 <code>MaskMotivationResultToStudyArea</code> 等字段；引擎在 <code>Run</code> 入口读取全局设置即可。若需日志追溯，可在运行日志中记录当前全局值。</p>
+    </section>
+
+    <section id="engine">
+      <h2>7. 各分析引擎落地</h2>
+
+      <h3>7.1 动力性（<code>MotivationAnalysisEngine</code>）</h3>
+      <div class="formula">
+WeightedSum → mot_score（矩形，或先写 mot_score_raw）<br/>
+if (GlobalAppSettings.MaskResultToStudyArea &amp;&amp; studyLayer != null)<br/>
+　Extract by Mask(studyLayer) → 覆盖 mot_score<br/>
+else if (开启但无 StudyArea) → 记录警告并中止或跳过掩膜（见 §9）
+      </div>
+
+      <h3>7.2 可行度（<code>FeasibilityAnalysisEngine</code>）</h3>
+      <div class="formula">
+合成 fea_score（矩形）<br/>
+if (MaskResultToStudyArea) → Extract by Mask → fea_score
+      </div>
+      <p>可行度同样使用 <code>SetExtent(StudyArea)</code> 与 <code>NormalizeRangeTo100</code>（NoData→0），存在与动力性相同的方框问题，须同步掩膜。</p>
+
+      <h3>7.3 叠置（<code>OverlayAnalysisEngine</code>）</h3>
+      <div class="formula">
+WeightedOverlay(mot, fea) → pot_raw → pot_score<br/>
+ClassifyLevels → pot_level<br/>
+if (MaskResultToStudyArea) → 对 pot_score、pot_level 分别 Extract by Mask
+      </div>
+      <div class="warn">
+        即使上游 <code>mot_score</code>、<code>fea_score</code> 已掩膜，<code>PotentialOverlayBuilder.WeightedOverlay</code> 仍将 NoData 当 0 参与运算，矩形 Extent 内可能重新出现低分像元；<strong>叠置最终写出前仍须掩膜</strong>。
+      </div>
+      <p>等级面积统计（<code>ComputeLevelAreas</code>）在掩膜后的 <code>pot_level</code> 上执行，可避免矩形角落假像元计入占比。</p>
+    </section>
+
+    <section id="helper">
+      <h2>8. 共享 GIS 辅助</h2>
+      <p>在 <code>UrbanRenewal.GIS</code> 增加统一方法（可置于 <code>ExternalRasterHelper</code> 或新建 <code>ResultMaskHelper</code>），避免三处重复 GP 代码：</p>
+      <div class="formula">
+<span class="kw">public static string</span> MaskRasterToStudyArea(<br/>
+　　GeoprocessorHelper gp,<br/>
+　　<span class="kw">string</span> sourceRasterPath,<br/>
+　　<span class="kw">string</span> studyAreaFeaturePath,<br/>
+　　<span class="kw">string</span> outputRasterPath)<br/>
+<span class="cm">// ExtractByMask；失败抛异常或返回 null，由引擎写日志</span>
+      </div>
+      <p>与外部交通裁切（<code>PrepareExternalTrafficRaster</code> 内 Extract by Mask）使用同一 GP 工具，仅输入输出语义不同：本方法针对<strong>分析成果栅格</strong>。</p>
+    </section>
+
+    <section id="chain">
+      <h2>9. 全链路数据流</h2>
+      <div class="flow">
+        <span class="box">全局设置<br/>MaskResultToStudyArea</span>
+        <span class="arrow">→</span>
+        <span class="box">动力性<br/>mot_score</span>
+        <span class="arrow">→</span>
+        <span class="box">可行度<br/>fea_score</span>
+        <span class="arrow">→</span>
+        <span class="box">叠置<br/>pot_score / pot_level</span>
+        <span class="arrow">→</span>
+        <span class="box">宗地关联 / 导出</span>
+      </div>
+      <div class="formula">
+StudyArea 面要素<br/>
+　↓ SetExtent（矩形，GP 环境不变）<br/>
+中间准则 / 因子栅格（矩形内计算）<br/>
+　↓ 各模块合成最终分<br/>
+mot_score_raw / fea_score_raw / pot_raw（矩形，可选保留）<br/>
+　↓ if MaskResultToStudyArea → Extract by Mask<br/>
+mot_score / fea_score / pot_score / pot_level（城区形，片区外 NoData）<br/>
+　↓ 地图默认加载、导出、宗地 zonal 统计
+      </div>
+    </section>
+
+    <section id="errors">
+      <h2>10. 异常与前置条件</h2>
+      <table>
+        <tr><th>情况</th><th>建议处理</th></tr>
+        <tr>
+          <td>全局勾选掩膜，但 GDB 无 <code>StudyArea</code></td>
+          <td>运行前检测；<strong>中止并提示</strong>「已启用成果掩膜，但未找到分析范围图层 StudyArea」</td>
+        </tr>
+        <tr>
+          <td>全局未勾选掩膜</td>
+          <td>不执行 Extract by Mask，行为与现版一致；不强制要求 StudyArea</td>
+        </tr>
+        <tr>
+          <td>StudyArea 几何为空或无效</td>
+          <td>GP 失败时写日志，分析结果 <code>Success=false</code></td>
+        </tr>
+        <tr>
+          <td>用户修改全局设置后未重跑分析</td>
+          <td>GDB 中仍是旧成果；属预期，提示用户重新运行相关模块</td>
+        </tr>
+      </table>
+      <p>StudyArea 解析规则与各引擎现有一致：角色键 <code>StudyArea</code>，别名「中心城区」「分析范围」「建成区」等。</p>
+    </section>
+
+    <section id="impl">
+      <h2>11. 实施分期</h2>
+      <table>
+        <tr><th>期次</th><th>内容</th><th>说明</th></tr>
+        <tr>
+          <td><strong>一期</strong></td>
+          <td><code>GlobalAppSettings</code> + 全局设置窗体 + <code>IAppContext</code> + <code>ResultMaskHelper</code> + 动力性 <code>mot_score</code></td>
+          <td>最小可用，解决动力性方框</td>
+        </tr>
+        <tr>
+          <td><strong>二期</strong></td>
+          <td>可行度 <code>fea_score</code> + 叠置 <code>pot_score</code> / <code>pot_level</code></td>
+          <td>全链路口径一致</td>
+        </tr>
+        <tr>
+          <td>可选</td>
+          <td>保留 <code>*_raw</code> 矩形数据集、日志增强</td>
+          <td>便于回归对比</td>
+        </tr>
+      </table>
+      <div class="rec">
+        <strong>开发指令建议：</strong>确认本 HTML 后，可按一期 → 二期顺序下达实现；各期独立可测，一期上线后动力性图面即可恢复城区形。
+      </div>
+    </section>
+
+    <section id="verify">
+      <h2>12. 验收清单</h2>
+      <ol>
+        <li>打开「全局设置」，<code>chkMaskResultToStudyArea</code> 默认<strong>勾选</strong>；保存后 <code>app_settings.xml</code> 含 <code>&lt;MaskResultToStudyArea&gt;true&lt;/MaskResultToStudyArea&gt;</code>；</li>
+        <li>勾选状态下运行动力性：加载 <code>mot_score</code>，片区外 NoData/透明，轮廓与 StudyArea 一致；</li>
+        <li>取消勾选并重跑：仍为矩形方框（回归对比）；</li>
+        <li>片区内像元值与掩膜前同位置<strong>一致</strong>；</li>
+        <li>可行度 <code>fea_score</code>、叠置 <code>pot_score</code> / <code>pot_level</code> 在勾选时均为城区形；</li>
+        <li>叠置等级面积表不含矩形角落假像元；</li>
+        <li>勾选掩膜但无 StudyArea 时，分析<strong>中止并提示</strong>；</li>
+        <li>重启程序后全局设置仍保留；动力性/可行度/叠置窗体<strong>无</strong>重复 Checkbox；</li>
+        <li>日志含「已按全局设置掩膜成果」或各模块等价说明。</li>
+      </ol>
+      <p class="muted">本文档为设计方案，<strong>不含代码修改</strong>；确认后下达开发指令再落地。</p>
+    </section>
+
+    <section id="refs">
+      <h2>13. 相关文档</h2>
+      <ul>
+        <li><a href="动力性成果范围片区与方框说明.html">动力性成果范围片区与方框说明</a> — 现象、根因、方案对比</li>
+        <li><a href="外部交通栅格接入动力性叠加方案.html">外部交通栅格接入动力性叠加方案</a> — 输入裁切（与成果掩膜区分）</li>
+        <li><a href="动力性分析算法说明.html">动力性分析算法说明</a></li>
+        <li><a href="城市更新潜力评价与验证系统-实施方案.html">城市更新潜力评价与验证系统-实施方案</a></li>
+      </ul>
+    </section>
+  </div>
+
+  <footer>
+    城市更新潜力评价与验证系统 · 分析成果掩膜全局设置方案 · 2026-08-24
+  </footer>
+</body>
+</html>

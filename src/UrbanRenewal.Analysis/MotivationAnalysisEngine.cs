@@ -143,6 +143,9 @@ namespace UrbanRenewal.Analysis
                 return result;
             }
 
+            // 环境 / 设施 / 政策：理论满分随城市赋分配置变化
+            BufferScoreRules rulesForScale = job.BufferScoreRules ?? BufferScoreRules.CreateOriginal();
+
             // 环境 20%
             Report(progress, result, "环境舒适度分析...", 40);
             string env = BuildEnvironment(job, names, result);
@@ -150,7 +153,7 @@ namespace UrbanRenewal.Analysis
             {
                 criterionRasters.Add(env);
                 weights.Add(job.EnvironmentWeight);
-                scoreMaxes.Add(MotivationScoreScale.EnvironmentMax);
+                scoreMaxes.Add(rulesForScale.GetEnvironmentTheoreticalMax());
                 result.CriterionRasters["环境舒适度"] = env;
             }
 
@@ -161,7 +164,7 @@ namespace UrbanRenewal.Analysis
             {
                 criterionRasters.Add(facility);
                 weights.Add(job.FacilityWeight);
-                scoreMaxes.Add(MotivationScoreScale.FacilityMax);
+                scoreMaxes.Add(rulesForScale.GetFacilityTheoreticalMax());
                 result.CriterionRasters["设施完善度"] = facility;
             }
 
@@ -172,7 +175,7 @@ namespace UrbanRenewal.Analysis
             {
                 criterionRasters.Add(policy);
                 weights.Add(job.PolicyWeight);
-                scoreMaxes.Add(MotivationScoreScale.PolicyMax);
+                scoreMaxes.Add(rulesForScale.GetPolicyTheoreticalMax());
                 result.CriterionRasters["政策支持度"] = policy;
             }
 
@@ -205,12 +208,35 @@ namespace UrbanRenewal.Analysis
             }
 
             Report(progress, result, "准则层加权叠置...", 90);
-            string outRaster = OutputGdbHelper.DatasetPath(job.OutputGdbPath, "mot_score");
-            BufferScoreRasterBuilder.WeightedSum(_gp, normalized, weights, outRaster);
-            result.MotivationRasterPath = outRaster;
+            bool maskResult = ResultMaskHelper.IsMaskEnabled();
+            if (maskResult && string.IsNullOrEmpty(extentPath))
+            {
+                Note(result, "已启用成果掩膜，但未找到分析范围图层 StudyArea。");
+                Report(progress, result, "失败", 100);
+                return result;
+            }
+
+            string sumTarget = maskResult
+                ? OutputGdbHelper.DatasetPath(job.OutputGdbPath, "mot_score_raw")
+                : OutputGdbHelper.DatasetPath(job.OutputGdbPath, "mot_score");
+            BufferScoreRasterBuilder.WeightedSum(_gp, normalized, weights, sumTarget);
+            if (maskResult)
+            {
+                Report(progress, result, "按中心城区掩膜动力性成果...", 95);
+                string finalPath = OutputGdbHelper.DatasetPath(job.OutputGdbPath, "mot_score");
+                result.MotivationRasterPath = ResultMaskHelper.MaskAndReplace(
+                    _gp, sumTarget, extentPath, finalPath);
+                Note(result, "矩形动力性成果: " + sumTarget);
+                Note(result, "已按全局设置掩膜动力性成果: " + result.MotivationRasterPath);
+            }
+            else
+            {
+                result.MotivationRasterPath = sumTarget;
+            }
+
             result.OutputGdbPath = job.OutputGdbPath;
             result.Success = true;
-            Note(result, "动力性栅格已生成（0–100 标准化）: " + outRaster);
+            Note(result, "动力性栅格已生成（0–100 标准化）: " + result.MotivationRasterPath);
             Report(progress, result, "完成", 100);
             return result;
         }
@@ -605,6 +631,7 @@ namespace UrbanRenewal.Analysis
         {
             List<string> parts = new List<string>();
             double cell = job.CellSize;
+            BufferScoreRules rules = job.BufferScoreRules ?? BufferScoreRules.CreateOriginal();
 
             string belt = Resolve(job, names, "PolicyBelt", "战略圈层", "发展带", "发展圈", "圈带", "片区");
             string strategy = Resolve(job, names, "PolicyStrategy", "战略片区", "战略区");
@@ -612,24 +639,36 @@ namespace UrbanRenewal.Analysis
 
             if (!string.IsNullOrEmpty(belt))
             {
-                Report(_progress, result, "政策·发展圈带栅格化...", 76);
-                Note(result, "发展圈带: " + belt);
-                parts.Add(BufferScoreRasterBuilder.BuildPolygonScore(
-                    _gp, Prepared(belt, result), 1, OutGdb, "belt", cell));
+                PolygonScoreRule beltRule = rules.PolicyBelt ?? PolygonScoreRule.Create(1);
+                if (beltRule.IsActive)
+                {
+                    Report(_progress, result, "政策·发展圈带栅格化(" + beltRule.ToDisplay() + ")...", 76);
+                    Note(result, "发展圈带: " + belt);
+                    parts.Add(BufferScoreRasterBuilder.BuildPolygonScore(
+                        _gp, Prepared(belt, result), beltRule.Score, OutGdb, "belt", cell));
+                }
             }
             if (!string.IsNullOrEmpty(strategy))
             {
-                Report(_progress, result, "政策·战略片区栅格化...", 79);
-                Note(result, "战略片区: " + strategy);
-                parts.Add(BufferScoreRasterBuilder.BuildPolygonScore(
-                    _gp, Prepared(strategy, result), 1, OutGdb, "strategy", cell));
+                PolygonScoreRule strategyRule = rules.PolicyStrategy ?? PolygonScoreRule.Create(1);
+                if (strategyRule.IsActive)
+                {
+                    Report(_progress, result, "政策·战略片区栅格化(" + strategyRule.ToDisplay() + ")...", 79);
+                    Note(result, "战略片区: " + strategy);
+                    parts.Add(BufferScoreRasterBuilder.BuildPolygonScore(
+                        _gp, Prepared(strategy, result), strategyRule.Score, OutGdb, "strategy", cell));
+                }
             }
             if (!string.IsNullOrEmpty(key))
             {
-                Report(_progress, result, "政策·近期重点区栅格化...", 82);
-                Note(result, "近期重点区: " + key);
-                parts.Add(BufferScoreRasterBuilder.BuildPolygonScore(
-                    _gp, Prepared(key, result), 2, OutGdb, "keyzone", cell));
+                PolygonScoreRule keyRule = rules.PolicyKey ?? PolygonScoreRule.Create(2);
+                if (keyRule.IsActive)
+                {
+                    Report(_progress, result, "政策·近期重点区栅格化(" + keyRule.ToDisplay() + ")...", 82);
+                    Note(result, "近期重点区: " + key);
+                    parts.Add(BufferScoreRasterBuilder.BuildPolygonScore(
+                        _gp, Prepared(key, result), keyRule.Score, OutGdb, "keyzone", cell));
+                }
             }
 
             if (parts.Count == 0)

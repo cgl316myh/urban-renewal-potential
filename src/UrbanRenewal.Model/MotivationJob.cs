@@ -14,7 +14,7 @@ namespace UrbanRenewal.Model
             PolicyWeight = 0.25;
             LayerHints = new Dictionary<string, string>();
             BufferScoreRules = BufferScoreRules.CreateOriginal();
-            ExternalTrafficScoreMode = ExternalTrafficScoreMode.Raw;
+            ExternalTrafficScoreMode = UrbanRenewal.Model.ExternalTrafficScoreMode.Raw;
             ExternalTrafficRawMax = 5.0;
             ClipExternalTrafficToStudyArea = true;
             ExternalTrafficOutputName = "traf_ext";

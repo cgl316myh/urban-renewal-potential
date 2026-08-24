@@ -250,6 +250,20 @@ namespace UrbanRenewal.Analysis
                 result.FeasibilityRasterPath = normPath;
             }
 
+            if (ResultMaskHelper.IsMaskEnabled())
+            {
+                if (string.IsNullOrEmpty(extentPath))
+                {
+                    Note(result, "已启用成果掩膜，但未找到分析范围图层 StudyArea。");
+                    Report(progress, result, "失败", 100);
+                    return result;
+                }
+                Report(progress, result, "按中心城区掩膜可行度成果...", 96);
+                result.FeasibilityRasterPath = ResultMaskHelper.MaskAndReplace(
+                    _gp, result.FeasibilityRasterPath, extentPath, finalPath);
+                Note(result, "已按全局设置掩膜可行度成果: " + result.FeasibilityRasterPath);
+            }
+
             result.OutputGdbPath = outGdb;
             result.Success = true;
             Note(result, "可行度栅格已生成（0–100 标准化）: " + result.FeasibilityRasterPath);

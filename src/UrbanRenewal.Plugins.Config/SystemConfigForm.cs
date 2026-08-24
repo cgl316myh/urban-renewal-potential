@@ -104,21 +104,42 @@ namespace UrbanRenewal.Plugins.Config
                 this.txtSingleDist.Text = rules.MetroSingle != null ? (rules.MetroSingle.Distances ?? "") : "";
                 this.txtSingleScore.Text = rules.MetroSingle != null ? (rules.MetroSingle.Scores ?? "") : "";
 
-                if (rules.Cbd != null)
-                {
-                    this.nudCbdDist.Value = ClampDec((decimal)rules.Cbd.Distance, this.nudCbdDist.Minimum, this.nudCbdDist.Maximum);
-                    this.nudCbdScore.Value = ClampDec(rules.Cbd.Score, this.nudCbdScore.Minimum, this.nudCbdScore.Maximum);
-                }
-                if (rules.TrafficFacility != null)
-                {
-                    this.nudTrafDist.Value = ClampDec((decimal)rules.TrafficFacility.Distance, this.nudTrafDist.Minimum, this.nudTrafDist.Maximum);
-                    this.nudTrafScore.Value = ClampDec(rules.TrafficFacility.Score, this.nudTrafScore.Minimum, this.nudTrafScore.Maximum);
-                }
+                ApplySingleRing(rules.Cbd, this.nudCbdDist, this.nudCbdScore, 1000, 3);
+                ApplySingleRing(rules.TrafficFacility, this.nudTrafDist, this.nudTrafScore, 300, 1);
+                ApplySingleRing(rules.EcoCorridor, this.nudEcoDist, this.nudEcoScore, 500, 2);
+                ApplySingleRing(rules.OpenSpace, this.nudOpenDist, this.nudOpenScore, 500, 2);
+                ApplySingleRing(rules.Green, this.nudGreenDist, this.nudGreenScore, 300, 1);
+                ApplySingleRing(rules.PublicService, this.nudPubDist, this.nudPubScore, 1000, 2);
+                ApplySingleRing(rules.Convenience, this.nudConvDist, this.nudConvScore, 300, 1);
+                ApplySingleRing(rules.Commercial, this.nudShopDist, this.nudShopScore, 1000, 1);
+
+                this.nudPolBeltScore.Value = ClampDec(
+                    rules.PolicyBelt != null ? rules.PolicyBelt.Score : 1,
+                    this.nudPolBeltScore.Minimum, this.nudPolBeltScore.Maximum);
+                this.nudPolStrategyScore.Value = ClampDec(
+                    rules.PolicyStrategy != null ? rules.PolicyStrategy.Score : 1,
+                    this.nudPolStrategyScore.Minimum, this.nudPolStrategyScore.Maximum);
+                this.nudPolKeyScore.Value = ClampDec(
+                    rules.PolicyKey != null ? rules.PolicyKey.Score : 2,
+                    this.nudPolKeyScore.Minimum, this.nudPolKeyScore.Maximum);
             }
             finally
             {
                 _loadingRules = false;
             }
+        }
+
+        private void ApplySingleRing(
+            SingleRingRule rule,
+            NumericUpDown nudDist,
+            NumericUpDown nudScore,
+            double defaultDist,
+            int defaultScore)
+        {
+            double dist = rule != null ? rule.Distance : defaultDist;
+            int score = rule != null ? rule.Score : defaultScore;
+            nudDist.Value = ClampDec((decimal)dist, nudDist.Minimum, nudDist.Maximum);
+            nudScore.Value = ClampDec(score, nudScore.Minimum, nudScore.Maximum);
         }
 
         private static decimal ClampDec(decimal v, decimal min, decimal max)
@@ -153,20 +174,38 @@ namespace UrbanRenewal.Plugins.Config
             else if (idx == 3) preset = BufferScoreRules.CreatePresetC();
             else preset = BufferScoreRules.CreateOriginal();
 
-            // 保留当前 CBD / 交通设施（预设只改地铁）
-            if (_profile != null && _profile.BufferScoreRules != null)
-            {
-                if (_profile.BufferScoreRules.Cbd != null)
-                {
-                    preset.Cbd = _profile.BufferScoreRules.Cbd.Clone();
-                }
-                if (_profile.BufferScoreRules.TrafficFacility != null)
-                {
-                    preset.TrafficFacility = _profile.BufferScoreRules.TrafficFacility.Clone();
-                }
-            }
+            // 预设只改地铁，保留其余因子当前界面/配置值
+            BufferScoreRules keep = CollectNonMetroFromUiOrProfile();
+            preset.Cbd = keep.Cbd;
+            preset.TrafficFacility = keep.TrafficFacility;
+            preset.EcoCorridor = keep.EcoCorridor;
+            preset.OpenSpace = keep.OpenSpace;
+            preset.Green = keep.Green;
+            preset.PublicService = keep.PublicService;
+            preset.Convenience = keep.Convenience;
+            preset.Commercial = keep.Commercial;
+            preset.PolicyBelt = keep.PolicyBelt;
+            preset.PolicyStrategy = keep.PolicyStrategy;
+            preset.PolicyKey = keep.PolicyKey;
 
             LoadBufferRulesToUi(preset);
+        }
+
+        private BufferScoreRules CollectNonMetroFromUiOrProfile()
+        {
+            BufferScoreRules r = new BufferScoreRules();
+            r.Cbd = SingleRingRule.Create((double)this.nudCbdDist.Value, (int)this.nudCbdScore.Value);
+            r.TrafficFacility = SingleRingRule.Create((double)this.nudTrafDist.Value, (int)this.nudTrafScore.Value);
+            r.EcoCorridor = SingleRingRule.Create((double)this.nudEcoDist.Value, (int)this.nudEcoScore.Value);
+            r.OpenSpace = SingleRingRule.Create((double)this.nudOpenDist.Value, (int)this.nudOpenScore.Value);
+            r.Green = SingleRingRule.Create((double)this.nudGreenDist.Value, (int)this.nudGreenScore.Value);
+            r.PublicService = SingleRingRule.Create((double)this.nudPubDist.Value, (int)this.nudPubScore.Value);
+            r.Convenience = SingleRingRule.Create((double)this.nudConvDist.Value, (int)this.nudConvScore.Value);
+            r.Commercial = SingleRingRule.Create((double)this.nudShopDist.Value, (int)this.nudShopScore.Value);
+            r.PolicyBelt = PolygonScoreRule.Create((int)this.nudPolBeltScore.Value);
+            r.PolicyStrategy = PolygonScoreRule.Create((int)this.nudPolStrategyScore.Value);
+            r.PolicyKey = PolygonScoreRule.Create((int)this.nudPolKeyScore.Value);
+            return r;
         }
 
         private void BufferRule_TextChanged(object sender, EventArgs e)
@@ -191,9 +230,7 @@ namespace UrbanRenewal.Plugins.Config
 
         private BufferScoreRules CollectBufferRulesFromUi()
         {
-            BufferScoreRules baseRules = (_profile != null && _profile.BufferScoreRules != null)
-                ? _profile.BufferScoreRules.Clone()
-                : BufferScoreRules.CreateOriginal();
+            BufferScoreRules baseRules = BufferScoreRules.CreateOriginal();
 
             int idx = this.cboMetroPreset.SelectedIndex;
             if (idx == 0) baseRules.MetroPreset = "Original";
@@ -208,8 +245,18 @@ namespace UrbanRenewal.Plugins.Config
             baseRules.MetroSingle = new MultiRingRule();
             baseRules.MetroSingle.Distances = (this.txtSingleDist.Text ?? "").Trim();
             baseRules.MetroSingle.Scores = (this.txtSingleScore.Text ?? "").Trim();
+
             baseRules.Cbd = SingleRingRule.Create((double)this.nudCbdDist.Value, (int)this.nudCbdScore.Value);
             baseRules.TrafficFacility = SingleRingRule.Create((double)this.nudTrafDist.Value, (int)this.nudTrafScore.Value);
+            baseRules.EcoCorridor = SingleRingRule.Create((double)this.nudEcoDist.Value, (int)this.nudEcoScore.Value);
+            baseRules.OpenSpace = SingleRingRule.Create((double)this.nudOpenDist.Value, (int)this.nudOpenScore.Value);
+            baseRules.Green = SingleRingRule.Create((double)this.nudGreenDist.Value, (int)this.nudGreenScore.Value);
+            baseRules.PublicService = SingleRingRule.Create((double)this.nudPubDist.Value, (int)this.nudPubScore.Value);
+            baseRules.Convenience = SingleRingRule.Create((double)this.nudConvDist.Value, (int)this.nudConvScore.Value);
+            baseRules.Commercial = SingleRingRule.Create((double)this.nudShopDist.Value, (int)this.nudShopScore.Value);
+            baseRules.PolicyBelt = PolygonScoreRule.Create((int)this.nudPolBeltScore.Value);
+            baseRules.PolicyStrategy = PolygonScoreRule.Create((int)this.nudPolStrategyScore.Value);
+            baseRules.PolicyKey = PolygonScoreRule.Create((int)this.nudPolKeyScore.Value);
             return baseRules;
         }
 

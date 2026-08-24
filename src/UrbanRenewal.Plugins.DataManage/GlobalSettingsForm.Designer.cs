@@ -37,6 +37,7 @@ namespace UrbanRenewal.Plugins.DataManage
             this.lblSpatialRefSrc = new System.Windows.Forms.Label();
             this.lblCell = new System.Windows.Forms.Label();
             this.nudCellSize = new System.Windows.Forms.NumericUpDown();
+            this.chkMaskResultToStudyArea = new System.Windows.Forms.CheckBox();
             this.lblHint = new System.Windows.Forms.Label();
             this.btnSave = new System.Windows.Forms.Button();
             this.btnCancel = new System.Windows.Forms.Button();
@@ -229,20 +230,32 @@ namespace UrbanRenewal.Plugins.DataManage
             this.nudCellSize.TabIndex = 19;
             this.nudCellSize.Value = new decimal(new int[] { 30, 0, 0, 0 });
             // 
+            // chkMaskResultToStudyArea
+            // 
+            this.chkMaskResultToStudyArea.AutoSize = true;
+            this.chkMaskResultToStudyArea.Checked = true;
+            this.chkMaskResultToStudyArea.CheckState = System.Windows.Forms.CheckState.Checked;
+            this.chkMaskResultToStudyArea.Location = new System.Drawing.Point(125, 202);
+            this.chkMaskResultToStudyArea.Name = "chkMaskResultToStudyArea";
+            this.chkMaskResultToStudyArea.Size = new System.Drawing.Size(468, 16);
+            this.chkMaskResultToStudyArea.TabIndex = 20;
+            this.chkMaskResultToStudyArea.Text = "分析成果按中心城区掩膜（动力性/可行度/叠置最终栅格）";
+            this.chkMaskResultToStudyArea.UseVisualStyleBackColor = true;
+            // 
             // lblHint
             // 
-            this.lblHint.Location = new System.Drawing.Point(18, 210);
+            this.lblHint.Location = new System.Drawing.Point(18, 228);
             this.lblHint.Name = "lblHint";
-            this.lblHint.Size = new System.Drawing.Size(585, 48);
-            this.lblHint.TabIndex = 20;
-            this.lblHint.Text = "像元大小供动力性/可行度/叠置等潜力分析共用。基准坐标系可从 Shapefile 或输入 GDB 图层读取；未配置时仍自动推断。";
+            this.lblHint.Size = new System.Drawing.Size(585, 56);
+            this.lblHint.TabIndex = 21;
+            this.lblHint.Text = "像元大小供动力性/可行度/叠置等潜力分析共用。勾选成果掩膜时，mot_score、fea_score、pot_score、pot_level 写出前按 StudyArea 裁切；需 GDB 中存在分析范围图层。基准坐标系可从 Shapefile 或输入 GDB 图层读取。";
             // 
             // btnSave
             // 
-            this.btnSave.Location = new System.Drawing.Point(426, 270);
+            this.btnSave.Location = new System.Drawing.Point(426, 296);
             this.btnSave.Name = "btnSave";
             this.btnSave.Size = new System.Drawing.Size(90, 30);
-            this.btnSave.TabIndex = 21;
+            this.btnSave.TabIndex = 22;
             this.btnSave.Text = "保存";
             this.btnSave.UseVisualStyleBackColor = true;
             this.btnSave.Click += new System.EventHandler(this.btnSave_Click);
@@ -250,10 +263,10 @@ namespace UrbanRenewal.Plugins.DataManage
             // btnCancel
             // 
             this.btnCancel.DialogResult = System.Windows.Forms.DialogResult.Cancel;
-            this.btnCancel.Location = new System.Drawing.Point(522, 270);
+            this.btnCancel.Location = new System.Drawing.Point(522, 296);
             this.btnCancel.Name = "btnCancel";
             this.btnCancel.Size = new System.Drawing.Size(86, 30);
-            this.btnCancel.TabIndex = 22;
+            this.btnCancel.TabIndex = 23;
             this.btnCancel.Text = "取消";
             this.btnCancel.UseVisualStyleBackColor = true;
             // 
@@ -263,10 +276,11 @@ namespace UrbanRenewal.Plugins.DataManage
             this.AutoScaleDimensions = new System.Drawing.SizeF(6F, 12F);
             this.AutoScaleMode = System.Windows.Forms.AutoScaleMode.Font;
             this.CancelButton = this.btnCancel;
-            this.ClientSize = new System.Drawing.Size(624, 318);
+            this.ClientSize = new System.Drawing.Size(624, 344);
             this.Controls.Add(this.btnCancel);
             this.Controls.Add(this.btnSave);
             this.Controls.Add(this.lblHint);
+            this.Controls.Add(this.chkMaskResultToStudyArea);
             this.Controls.Add(this.nudCellSize);
             this.Controls.Add(this.lblCell);
             this.Controls.Add(this.btnOpenConfig);
@@ -320,6 +334,7 @@ namespace UrbanRenewal.Plugins.DataManage
         private System.Windows.Forms.Label lblSpatialRefSrc;
         private System.Windows.Forms.Label lblCell;
         private System.Windows.Forms.NumericUpDown nudCellSize;
+        private System.Windows.Forms.CheckBox chkMaskResultToStudyArea;
         private System.Windows.Forms.Label lblHint;
         private System.Windows.Forms.Button btnSave;
         private System.Windows.Forms.Button btnCancel;

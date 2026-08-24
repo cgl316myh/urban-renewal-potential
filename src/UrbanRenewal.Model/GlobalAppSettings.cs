@@ -16,6 +16,7 @@ namespace UrbanRenewal.Model
             MotivationWeight = 0.7;
             FeasibilityWeight = 0.3;
             CellSize = 30;
+            MaskResultToStudyArea = true;
         }
 
         public string SkinName { get; set; }
@@ -48,6 +49,9 @@ namespace UrbanRenewal.Model
 
         /// <summary>统一像元大小（米），动力性/可行度/叠置共用。</summary>
         public double CellSize { get; set; }
+
+        /// <summary>分析最终成果是否按 StudyArea 掩膜；动力性/可行度/叠置共用。</summary>
+        public bool MaskResultToStudyArea { get; set; }
 
         /// <summary>清空工作区设置（新建工程）；保留皮肤等界面偏好。</summary>
         public void ClearWorkspaceSettings()

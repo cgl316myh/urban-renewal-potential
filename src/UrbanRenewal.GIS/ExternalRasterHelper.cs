@@ -235,9 +235,17 @@ namespace UrbanRenewal.GIS
         {
           try
           {
-            double m = props.MeanCellSize();
-            cellSizeX = m;
-            cellSizeY = m;
+            IPnt meanSize = props.MeanCellSize();
+            if (meanSize != null)
+            {
+              cellSizeX = meanSize.X;
+              cellSizeY = meanSize.Y;
+            }
+            else
+            {
+              message = "无法读取栅格像元大小: " + rasterPath;
+              return false;
+            }
           }
           catch
           {
