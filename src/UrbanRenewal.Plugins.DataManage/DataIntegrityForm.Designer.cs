@@ -22,7 +22,6 @@ namespace UrbanRenewal.Plugins.DataManage
             this.lblSummary = new System.Windows.Forms.Label();
             this.lblLegend = new System.Windows.Forms.Label();
             this.grid = new System.Windows.Forms.DataGridView();
-            this.lblHint = new System.Windows.Forms.Label();
             this.btnRefresh = new System.Windows.Forms.Button();
             this.btnClose = new System.Windows.Forms.Button();
             ((System.ComponentModel.ISupportInitialize)(this.grid)).BeginInit();
@@ -76,30 +75,22 @@ namespace UrbanRenewal.Plugins.DataManage
             this.grid.Size = new System.Drawing.Size(760, 420);
             this.grid.TabIndex = 4;
             // 
-            // lblHint
-            // 
-            this.lblHint.Location = new System.Drawing.Point(16, 512);
-            this.lblHint.Name = "lblHint";
-            this.lblHint.Size = new System.Drawing.Size(560, 36);
-            this.lblHint.TabIndex = 5;
-            this.lblHint.Text = "按当前「数据配置 / 城市配置」检查输入 GDB 中各角色图层是否可解析；并检查输出库、坐标系与预建路网。";
-            // 
             // btnRefresh
             // 
-            this.btnRefresh.Location = new System.Drawing.Point(580, 516);
+            this.btnRefresh.Location = new System.Drawing.Point(580, 512);
             this.btnRefresh.Name = "btnRefresh";
             this.btnRefresh.Size = new System.Drawing.Size(90, 30);
-            this.btnRefresh.TabIndex = 6;
+            this.btnRefresh.TabIndex = 5;
             this.btnRefresh.Text = "重新检查";
             this.btnRefresh.UseVisualStyleBackColor = true;
             this.btnRefresh.Click += new System.EventHandler(this.btnRefresh_Click);
             // 
             // btnClose
             // 
-            this.btnClose.Location = new System.Drawing.Point(686, 516);
+            this.btnClose.Location = new System.Drawing.Point(686, 512);
             this.btnClose.Name = "btnClose";
             this.btnClose.Size = new System.Drawing.Size(90, 30);
-            this.btnClose.TabIndex = 7;
+            this.btnClose.TabIndex = 6;
             this.btnClose.Text = "关闭";
             this.btnClose.UseVisualStyleBackColor = true;
             this.btnClose.Click += new System.EventHandler(this.btnClose_Click);
@@ -108,10 +99,9 @@ namespace UrbanRenewal.Plugins.DataManage
             // 
             this.AutoScaleDimensions = new System.Drawing.SizeF(6F, 12F);
             this.AutoScaleMode = System.Windows.Forms.AutoScaleMode.Font;
-            this.ClientSize = new System.Drawing.Size(792, 562);
+            this.ClientSize = new System.Drawing.Size(792, 556);
             this.Controls.Add(this.btnClose);
             this.Controls.Add(this.btnRefresh);
-            this.Controls.Add(this.lblHint);
             this.Controls.Add(this.grid);
             this.Controls.Add(this.lblLegend);
             this.Controls.Add(this.lblSummary);
@@ -134,7 +124,6 @@ namespace UrbanRenewal.Plugins.DataManage
         private System.Windows.Forms.Label lblSummary;
         private System.Windows.Forms.Label lblLegend;
         private System.Windows.Forms.DataGridView grid;
-        private System.Windows.Forms.Label lblHint;
         private System.Windows.Forms.Button btnRefresh;
         private System.Windows.Forms.Button btnClose;
     }

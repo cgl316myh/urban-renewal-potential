@@ -78,8 +78,6 @@ namespace UrbanRenewal.Plugins.Config
             this.grpSkin = new System.Windows.Forms.GroupBox();
             this.cboSkin = new System.Windows.Forms.ComboBox();
             this.btnApplySkin = new System.Windows.Forms.Button();
-            this.lblPlugins = new System.Windows.Forms.Label();
-            this.txtPlugins = new System.Windows.Forms.TextBox();
             this.btnSave = new System.Windows.Forms.Button();
             this.btnClose = new System.Windows.Forms.Button();
             this.grpOverlay.SuspendLayout();
@@ -737,42 +735,22 @@ namespace UrbanRenewal.Plugins.Config
             this.btnApplySkin.UseVisualStyleBackColor = true;
             this.btnApplySkin.Click += new System.EventHandler(this.btnApplySkin_Click);
             // 
-            // lblPlugins
-            // 
-            this.lblPlugins.AutoSize = true;
-            this.lblPlugins.Location = new System.Drawing.Point(16, 580);
-            this.lblPlugins.Name = "lblPlugins";
-            this.lblPlugins.Size = new System.Drawing.Size(173, 12);
-            this.lblPlugins.TabIndex = 4;
-            this.lblPlugins.Text = "plugins.config（只读预览）：";
-            // 
-            // txtPlugins
-            // 
-            this.txtPlugins.Font = new System.Drawing.Font("Consolas", 9F);
-            this.txtPlugins.Location = new System.Drawing.Point(16, 598);
-            this.txtPlugins.Multiline = true;
-            this.txtPlugins.Name = "txtPlugins";
-            this.txtPlugins.ReadOnly = true;
-            this.txtPlugins.ScrollBars = System.Windows.Forms.ScrollBars.Vertical;
-            this.txtPlugins.Size = new System.Drawing.Size(590, 56);
-            this.txtPlugins.TabIndex = 5;
-            // 
             // btnSave
             // 
-            this.btnSave.Location = new System.Drawing.Point(420, 666);
+            this.btnSave.Location = new System.Drawing.Point(420, 580);
             this.btnSave.Name = "btnSave";
             this.btnSave.Size = new System.Drawing.Size(90, 30);
-            this.btnSave.TabIndex = 6;
+            this.btnSave.TabIndex = 4;
             this.btnSave.Text = "保存";
             this.btnSave.UseVisualStyleBackColor = true;
             this.btnSave.Click += new System.EventHandler(this.btnSave_Click);
             // 
             // btnClose
             // 
-            this.btnClose.Location = new System.Drawing.Point(516, 666);
+            this.btnClose.Location = new System.Drawing.Point(516, 580);
             this.btnClose.Name = "btnClose";
             this.btnClose.Size = new System.Drawing.Size(86, 30);
-            this.btnClose.TabIndex = 7;
+            this.btnClose.TabIndex = 5;
             this.btnClose.Text = "关闭";
             this.btnClose.UseVisualStyleBackColor = true;
             this.btnClose.Click += new System.EventHandler(this.btnClose_Click);
@@ -781,11 +759,9 @@ namespace UrbanRenewal.Plugins.Config
             // 
             this.AutoScaleDimensions = new System.Drawing.SizeF(6F, 12F);
             this.AutoScaleMode = System.Windows.Forms.AutoScaleMode.Font;
-            this.ClientSize = new System.Drawing.Size(624, 710);
+            this.ClientSize = new System.Drawing.Size(624, 626);
             this.Controls.Add(this.btnClose);
             this.Controls.Add(this.btnSave);
-            this.Controls.Add(this.txtPlugins);
-            this.Controls.Add(this.lblPlugins);
             this.Controls.Add(this.grpSkin);
             this.Controls.Add(this.grpBuffer);
             this.Controls.Add(this.grpCity);
@@ -895,8 +871,6 @@ namespace UrbanRenewal.Plugins.Config
         private System.Windows.Forms.GroupBox grpSkin;
         private System.Windows.Forms.ComboBox cboSkin;
         private System.Windows.Forms.Button btnApplySkin;
-        private System.Windows.Forms.Label lblPlugins;
-        private System.Windows.Forms.TextBox txtPlugins;
         private System.Windows.Forms.Button btnSave;
         private System.Windows.Forms.Button btnClose;
     }

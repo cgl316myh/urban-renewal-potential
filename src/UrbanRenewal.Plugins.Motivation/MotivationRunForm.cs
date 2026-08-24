@@ -44,7 +44,6 @@ namespace UrbanRenewal.Plugins.Motivation
                 return;
             }
             _context.ReloadGlobalSettings();
-            UpdateSpatialRequirementLabel();
 
             CityProfile profile = CityProfileStore.ResolveActive(_context.ActiveCityProfileId);
             if (profile != null)
@@ -58,26 +57,6 @@ namespace UrbanRenewal.Plugins.Motivation
                 this.cboTrafficScoreMode.SelectedIndex = 0;
             }
             ApplyExternalTrafficUiState();
-        }
-
-        private void UpdateSpatialRequirementLabel()
-        {
-            if (_context == null || this.lblSpatialRequirement == null)
-            {
-                return;
-            }
-            string sr = _context.SpatialRefName;
-            if (string.IsNullOrEmpty(sr))
-            {
-                sr = "（请先在全局设置指定坐标系，或以 StudyArea 图层为准）";
-            }
-            else if (_context.SpatialRefFactoryCode > 0)
-            {
-                sr = sr + " [WKID=" + _context.SpatialRefFactoryCode + "]";
-            }
-            this.lblSpatialRequirement.Text =
-                "系统要求：像元 " + _context.CellSize + " m；坐标系 " + sr
-                + "。不匹配时程序将警告并中止，请在外部 GIS 完成重投影/重采样。";
         }
 
         private void ApplyExternalTrafficUiState()

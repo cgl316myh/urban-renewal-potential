@@ -31,7 +31,6 @@ namespace UrbanRenewal.Plugins.DataManage
             this.btnAuto = new System.Windows.Forms.Button();
             this.btnSave = new System.Windows.Forms.Button();
             this.btnClose = new System.Windows.Forms.Button();
-            this.lblHint = new System.Windows.Forms.Label();
             this.lblLegend = new System.Windows.Forms.Label();
             ((System.ComponentModel.ISupportInitialize)(this.grid)).BeginInit();
             this.grpNet.SuspendLayout();
@@ -148,40 +147,32 @@ namespace UrbanRenewal.Plugins.DataManage
             this.txtNdImp.Size = new System.Drawing.Size(100, 21);
             this.txtNdImp.TabIndex = 5;
             // 
-            // lblHint
-            // 
-            this.lblHint.Location = new System.Drawing.Point(16, 518);
-            this.lblHint.Name = "lblHint";
-            this.lblHint.Size = new System.Drawing.Size(400, 36);
-            this.lblHint.TabIndex = 6;
-            this.lblHint.Text = "保存后写入 Config/Cities 下城市配置 XML，并设为当前活动配置。各分析模块启动时通过角色映射读取图层。";
-            // 
             // btnAuto
             // 
-            this.btnAuto.Location = new System.Drawing.Point(430, 522);
+            this.btnAuto.Location = new System.Drawing.Point(430, 518);
             this.btnAuto.Name = "btnAuto";
             this.btnAuto.Size = new System.Drawing.Size(110, 30);
-            this.btnAuto.TabIndex = 7;
+            this.btnAuto.TabIndex = 6;
             this.btnAuto.Text = "按关键词匹配";
             this.btnAuto.UseVisualStyleBackColor = true;
             this.btnAuto.Click += new System.EventHandler(this.btnAuto_Click);
             // 
             // btnSave
             // 
-            this.btnSave.Location = new System.Drawing.Point(560, 522);
+            this.btnSave.Location = new System.Drawing.Point(560, 518);
             this.btnSave.Name = "btnSave";
             this.btnSave.Size = new System.Drawing.Size(90, 30);
-            this.btnSave.TabIndex = 8;
+            this.btnSave.TabIndex = 7;
             this.btnSave.Text = "保存";
             this.btnSave.UseVisualStyleBackColor = true;
             this.btnSave.Click += new System.EventHandler(this.btnSave_Click);
             // 
             // btnClose
             // 
-            this.btnClose.Location = new System.Drawing.Point(666, 522);
+            this.btnClose.Location = new System.Drawing.Point(666, 518);
             this.btnClose.Name = "btnClose";
             this.btnClose.Size = new System.Drawing.Size(90, 30);
-            this.btnClose.TabIndex = 9;
+            this.btnClose.TabIndex = 8;
             this.btnClose.Text = "关闭";
             this.btnClose.UseVisualStyleBackColor = true;
             this.btnClose.Click += new System.EventHandler(this.btnClose_Click);
@@ -190,11 +181,10 @@ namespace UrbanRenewal.Plugins.DataManage
             // 
             this.AutoScaleDimensions = new System.Drawing.SizeF(6F, 12F);
             this.AutoScaleMode = System.Windows.Forms.AutoScaleMode.Font;
-            this.ClientSize = new System.Drawing.Size(792, 568);
+            this.ClientSize = new System.Drawing.Size(792, 562);
             this.Controls.Add(this.btnClose);
             this.Controls.Add(this.btnSave);
             this.Controls.Add(this.btnAuto);
-            this.Controls.Add(this.lblHint);
             this.Controls.Add(this.grpNet);
             this.Controls.Add(this.grid);
             this.Controls.Add(this.lblLegend);
@@ -227,7 +217,6 @@ namespace UrbanRenewal.Plugins.DataManage
         private System.Windows.Forms.TextBox txtNdName;
         private System.Windows.Forms.Label lblNdImp;
         private System.Windows.Forms.TextBox txtNdImp;
-        private System.Windows.Forms.Label lblHint;
         private System.Windows.Forms.Button btnAuto;
         private System.Windows.Forms.Button btnSave;
         private System.Windows.Forms.Button btnClose;

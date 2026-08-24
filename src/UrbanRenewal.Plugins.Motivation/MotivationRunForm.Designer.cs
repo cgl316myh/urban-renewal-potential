@@ -27,7 +27,6 @@ namespace UrbanRenewal.Plugins.Motivation
             this.lblPolicy = new System.Windows.Forms.Label();
             this.nudPolicy = new System.Windows.Forms.NumericUpDown();
             this.grpExternalTraffic = new System.Windows.Forms.GroupBox();
-            this.lblSpatialRequirement = new System.Windows.Forms.Label();
             this.chkClipToStudyArea = new System.Windows.Forms.CheckBox();
             this.cboTrafficScoreMode = new System.Windows.Forms.ComboBox();
             this.lblTrafficScoreMode = new System.Windows.Forms.Label();
@@ -132,7 +131,6 @@ namespace UrbanRenewal.Plugins.Motivation
             // 
             // grpExternalTraffic
             // 
-            this.grpExternalTraffic.Controls.Add(this.lblSpatialRequirement);
             this.grpExternalTraffic.Controls.Add(this.chkClipToStudyArea);
             this.grpExternalTraffic.Controls.Add(this.cboTrafficScoreMode);
             this.grpExternalTraffic.Controls.Add(this.lblTrafficScoreMode);
@@ -142,19 +140,10 @@ namespace UrbanRenewal.Plugins.Motivation
             this.grpExternalTraffic.Controls.Add(this.chkUseExternalTraffic);
             this.grpExternalTraffic.Location = new System.Drawing.Point(20, 118);
             this.grpExternalTraffic.Name = "grpExternalTraffic";
-            this.grpExternalTraffic.Size = new System.Drawing.Size(582, 148);
+            this.grpExternalTraffic.Size = new System.Drawing.Size(582, 112);
             this.grpExternalTraffic.TabIndex = 1;
             this.grpExternalTraffic.TabStop = false;
             this.grpExternalTraffic.Text = "外部交通栅格（可选，跳过内置交通计算）";
-            // 
-            // lblSpatialRequirement
-            // 
-            this.lblSpatialRequirement.ForeColor = System.Drawing.SystemColors.GrayText;
-            this.lblSpatialRequirement.Location = new System.Drawing.Point(20, 108);
-            this.lblSpatialRequirement.Name = "lblSpatialRequirement";
-            this.lblSpatialRequirement.Size = new System.Drawing.Size(550, 36);
-            this.lblSpatialRequirement.TabIndex = 7;
-            this.lblSpatialRequirement.Text = "系统要求：像元与坐标系见全局设置；不匹配时须在外部 GIS 重投影/重采样";
             // 
             // chkClipToStudyArea
             // 
@@ -228,7 +217,7 @@ namespace UrbanRenewal.Plugins.Motivation
             // 
             // btnRun
             // 
-            this.btnRun.Location = new System.Drawing.Point(420, 240);
+            this.btnRun.Location = new System.Drawing.Point(420, 246);
             this.btnRun.Name = "btnRun";
             this.btnRun.Size = new System.Drawing.Size(90, 30);
             this.btnRun.TabIndex = 2;
@@ -238,7 +227,7 @@ namespace UrbanRenewal.Plugins.Motivation
             // 
             // btnClose
             // 
-            this.btnClose.Location = new System.Drawing.Point(516, 240);
+            this.btnClose.Location = new System.Drawing.Point(516, 246);
             this.btnClose.Name = "btnClose";
             this.btnClose.Size = new System.Drawing.Size(86, 30);
             this.btnClose.TabIndex = 3;
@@ -250,7 +239,7 @@ namespace UrbanRenewal.Plugins.Motivation
             // 
             this.AutoScaleDimensions = new System.Drawing.SizeF(6F, 12F);
             this.AutoScaleMode = System.Windows.Forms.AutoScaleMode.Font;
-            this.ClientSize = new System.Drawing.Size(624, 290);
+            this.ClientSize = new System.Drawing.Size(624, 292);
             this.Controls.Add(this.btnClose);
             this.Controls.Add(this.btnRun);
             this.Controls.Add(this.grpExternalTraffic);
@@ -291,7 +280,6 @@ namespace UrbanRenewal.Plugins.Motivation
         private System.Windows.Forms.Label lblTrafficScoreMode;
         private System.Windows.Forms.ComboBox cboTrafficScoreMode;
         private System.Windows.Forms.CheckBox chkClipToStudyArea;
-        private System.Windows.Forms.Label lblSpatialRequirement;
         private System.Windows.Forms.Button btnRun;
         private System.Windows.Forms.Button btnClose;
     }

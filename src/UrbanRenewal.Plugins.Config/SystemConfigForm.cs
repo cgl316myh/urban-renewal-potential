@@ -1,7 +1,5 @@
 using System;
 using System.ComponentModel;
-using System.IO;
-using System.Text;
 using System.Windows.Forms;
 using UrbanRenewal.Contracts;
 using UrbanRenewal.Model;
@@ -72,11 +70,6 @@ namespace UrbanRenewal.Plugins.Config
                 this.lblCity.Text = "城市配置：（未设置）";
                 this.grpBuffer.Enabled = false;
             }
-
-            string pluginsCfg = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "plugins.config");
-            this.txtPlugins.Text = File.Exists(pluginsCfg)
-                ? File.ReadAllText(pluginsCfg, Encoding.UTF8)
-                : "（未找到 plugins.config）";
         }
 
         private void LoadBufferRulesToUi(BufferScoreRules rules)
