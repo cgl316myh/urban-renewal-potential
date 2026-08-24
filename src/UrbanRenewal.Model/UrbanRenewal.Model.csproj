@@ -41,6 +41,8 @@
     <Compile Include="FeasibilityJob.cs" />
     <Compile Include="GlobalAppSettings.cs" />
     <Compile Include="LayerRoleCatalog.cs" />
+    <Compile Include="ExternalRasterCheckResult.cs" />
+    <Compile Include="ExternalTrafficScoreMode.cs" />
     <Compile Include="MotivationJob.cs" />
     <Compile Include="OutputJob.cs" />
     <Compile Include="OverlayJob.cs" />

@@ -44,12 +44,79 @@ namespace UrbanRenewal.Plugins.Motivation
                 return;
             }
             _context.ReloadGlobalSettings();
+            UpdateSpatialRequirementLabel();
 
             CityProfile profile = CityProfileStore.ResolveActive(_context.ActiveCityProfileId);
             if (profile != null)
             {
                 CityProfileStore.NormalizeWeights(profile);
                 ApplyProfileToUi(profile);
+            }
+
+            if (this.cboTrafficScoreMode.Items.Count > 0 && this.cboTrafficScoreMode.SelectedIndex < 0)
+            {
+                this.cboTrafficScoreMode.SelectedIndex = 0;
+            }
+            ApplyExternalTrafficUiState();
+        }
+
+        private void UpdateSpatialRequirementLabel()
+        {
+            if (_context == null || this.lblSpatialRequirement == null)
+            {
+                return;
+            }
+            string sr = _context.SpatialRefName;
+            if (string.IsNullOrEmpty(sr))
+            {
+                sr = "（请先在全局设置指定坐标系，或以 StudyArea 图层为准）";
+            }
+            else if (_context.SpatialRefFactoryCode > 0)
+            {
+                sr = sr + " [WKID=" + _context.SpatialRefFactoryCode + "]";
+            }
+            this.lblSpatialRequirement.Text =
+                "系统要求：像元 " + _context.CellSize + " m；坐标系 " + sr
+                + "。不匹配时程序将警告并中止，请在外部 GIS 完成重投影/重采样。";
+        }
+
+        private void ApplyExternalTrafficUiState()
+        {
+            bool on = this.chkUseExternalTraffic != null && this.chkUseExternalTraffic.Checked;
+            if (this.txtTrafficRaster != null)
+            {
+                this.txtTrafficRaster.Enabled = on;
+            }
+            if (this.btnBrowseTraffic != null)
+            {
+                this.btnBrowseTraffic.Enabled = on;
+            }
+            if (this.cboTrafficScoreMode != null)
+            {
+                this.cboTrafficScoreMode.Enabled = on;
+            }
+            if (this.chkClipToStudyArea != null)
+            {
+                this.chkClipToStudyArea.Enabled = on;
+            }
+        }
+
+        private void chkUseExternalTraffic_CheckedChanged(object sender, EventArgs e)
+        {
+            ApplyExternalTrafficUiState();
+        }
+
+        private void btnBrowseTraffic_Click(object sender, EventArgs e)
+        {
+            using (OpenFileDialog dlg = new OpenFileDialog())
+            {
+                dlg.Title = "选择外部交通栅格";
+                dlg.Filter = "栅格文件 (*.tif;*.tiff;*.img)|*.tif;*.tiff;*.img|所有文件 (*.*)|*.*";
+                dlg.CheckFileExists = true;
+                if (dlg.ShowDialog(this) == DialogResult.OK)
+                {
+                    this.txtTrafficRaster.Text = dlg.FileName;
+                }
             }
         }
 
@@ -92,6 +159,18 @@ namespace UrbanRenewal.Plugins.Motivation
             this.nudEnvironment.Enabled = !busy;
             this.nudFacility.Enabled = !busy;
             this.nudPolicy.Enabled = !busy;
+            this.chkUseExternalTraffic.Enabled = !busy;
+            if (!busy)
+            {
+                ApplyExternalTrafficUiState();
+            }
+            else
+            {
+                this.txtTrafficRaster.Enabled = false;
+                this.btnBrowseTraffic.Enabled = false;
+                this.cboTrafficScoreMode.Enabled = false;
+                this.chkClipToStudyArea.Enabled = false;
+            }
         }
 
         private void btnRun_Click(object sender, EventArgs e)
@@ -141,6 +220,25 @@ namespace UrbanRenewal.Plugins.Motivation
             job.EnvironmentWeight = (double)this.nudEnvironment.Value / 100.0;
             job.FacilityWeight = (double)this.nudFacility.Value / 100.0;
             job.PolicyWeight = (double)this.nudPolicy.Value / 100.0;
+
+            if (this.chkUseExternalTraffic.Checked)
+            {
+                string path = this.txtTrafficRaster.Text != null ? this.txtTrafficRaster.Text.Trim() : null;
+                if (string.IsNullOrEmpty(path))
+                {
+                    MessageBox.Show(this, "已勾选外部交通栅格，请指定栅格路径。",
+                        "动力性分析", MessageBoxButtons.OK, MessageBoxIcon.Warning);
+                    return;
+                }
+                job.UseExternalTraffic = true;
+                job.ExternalTrafficRasterPath = path;
+                job.ClipExternalTrafficToStudyArea = this.chkClipToStudyArea.Checked;
+                job.ExternalTrafficScoreMode = this.cboTrafficScoreMode.SelectedIndex == 1
+                    ? ExternalTrafficScoreMode.Normalized
+                    : ExternalTrafficScoreMode.Raw;
+                _context.LogInfo("外部交通栅格: " + path);
+                _context.LogInfo("分值模式: " + job.ExternalTrafficScoreMode);
+            }
 
             string cityId = _context.ActiveCityProfileId;
             string srSource = _context.SpatialRefSourcePath;
@@ -257,8 +355,17 @@ namespace UrbanRenewal.Plugins.Motivation
 
                 if (!result.Success)
                 {
-                    MessageBox.Show(this, string.Join("\r\n", result.Messages.ToArray()),
-                        "动力性分析", MessageBoxButtons.OK, MessageBoxIcon.Warning);
+                    if (!string.IsNullOrEmpty(result.SpatialMismatchDialogText))
+                    {
+                        MessageBox.Show(this, result.SpatialMismatchDialogText,
+                            "外部交通栅格空间属性不匹配",
+                            MessageBoxButtons.OK, MessageBoxIcon.Warning);
+                    }
+                    else
+                    {
+                        MessageBox.Show(this, string.Join("\r\n", result.Messages.ToArray()),
+                            "动力性分析", MessageBoxButtons.OK, MessageBoxIcon.Warning);
+                    }
                 }
             }
             finally

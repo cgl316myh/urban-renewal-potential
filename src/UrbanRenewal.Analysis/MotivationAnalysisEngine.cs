@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using System.Globalization;
 using ESRI.ArcGIS.Geometry;
 using UrbanRenewal.GIS;
 using UrbanRenewal.Model;
@@ -116,14 +117,30 @@ namespace UrbanRenewal.Analysis
             List<double> scoreMaxes = new List<double>();
 
             // 交通 30%
-            Report(progress, result, "交通便捷度分析...", 20);
-            string traffic = BuildTraffic(job, names, result);
+            string traffic = null;
+            double trafficScoreMax = MotivationScoreScale.TrafficMax;
+            if (ShouldUseExternalTraffic(job))
+            {
+                Report(progress, result, "校验外部交通栅格空间属性...", 18);
+                traffic = BuildExternalTraffic(job, names, result, out trafficScoreMax);
+            }
+            else
+            {
+                Report(progress, result, "交通便捷度分析...", 20);
+                traffic = BuildTraffic(job, names, result);
+            }
             if (!string.IsNullOrEmpty(traffic))
             {
                 criterionRasters.Add(traffic);
                 weights.Add(job.TrafficWeight);
-                scoreMaxes.Add(MotivationScoreScale.TrafficMax);
+                scoreMaxes.Add(trafficScoreMax);
                 result.CriterionRasters["交通便捷度"] = traffic;
+            }
+            else if (ShouldUseExternalTraffic(job))
+            {
+                result.Success = false;
+                Report(progress, result, "外部交通栅格未就绪，已取消", 100);
+                return result;
             }
 
             // 环境 20%
@@ -218,6 +235,91 @@ namespace UrbanRenewal.Analysis
             string src = WorkspaceCatalog.ToFeatureClassPath(_job.GdbPath, layerName);
             _preparedPaths[layerName] = src;
             return src;
+        }
+
+        private static bool ShouldUseExternalTraffic(MotivationJob job)
+        {
+            return job != null
+                && job.UseExternalTraffic
+                && !string.IsNullOrWhiteSpace(job.ExternalTrafficRasterPath);
+        }
+
+        private string BuildExternalTraffic(
+            MotivationJob job,
+            List<string> names,
+            MotivationResult result,
+            out double trafficScoreMax)
+        {
+            trafficScoreMax = MotivationScoreScale.TrafficMax;
+            string sourcePath = ExternalRasterHelper.ResolveRasterPath(
+                job.ExternalTrafficRasterPath, job.OutputGdbPath, job.GdbPath);
+            Note(result, "交通准则：外部栅格（仅裁切）");
+            Note(result, "外部路径: " + sourcePath);
+
+            if (!ExternalRasterHelper.RasterExists(sourcePath))
+            {
+                Note(result, "外部交通栅格不存在或无法访问: " + sourcePath);
+                return null;
+            }
+
+            ExternalRasterCheckResult check = ExternalRasterHelper.ValidateCompatibility(
+                sourcePath, _targetSr, job.CellSize);
+            if (!check.IsCompatible)
+            {
+                Note(result, check.SummaryMessage ?? "外部栅格空间属性不匹配。");
+                result.SpatialMismatchDialogText = check.BuildDialogMessage();
+                return null;
+            }
+            Note(result, check.SummaryMessage ?? "外部栅格空间属性校验通过。");
+
+            string studyPath = null;
+            if (job.ClipExternalTrafficToStudyArea)
+            {
+                string studyLayer = Resolve(job, names, "StudyArea", "中心城区", "分析范围");
+                if (!string.IsNullOrEmpty(studyLayer))
+                {
+                    studyPath = WorkspaceCatalog.ToFeatureClassPath(job.GdbPath, studyLayer);
+                    Note(result, "裁切范围: " + studyLayer);
+                }
+                else
+                {
+                    Note(result, "未找到 StudyArea，无法按中心城区裁切外部交通栅格。");
+                    return null;
+                }
+            }
+
+            Report(_progress, result, "裁切/写入外部交通栅格...", 22);
+            string outName = string.IsNullOrEmpty(job.ExternalTrafficOutputName)
+                ? "traf_ext"
+                : job.ExternalTrafficOutputName;
+            string outRaster = ExternalRasterHelper.PrepareExternalTrafficRaster(
+                _gp,
+                sourcePath,
+                OutGdb,
+                outName,
+                studyPath,
+                job.ClipExternalTrafficToStudyArea);
+            if (string.IsNullOrEmpty(outRaster))
+            {
+                Note(result, "外部交通栅格写入失败。");
+                return null;
+            }
+            Note(result, "外部交通栅格已写入: " + outRaster);
+
+            if (ExternalTrafficScoreMode.IsNormalized(job.ExternalTrafficScoreMode))
+            {
+                trafficScoreMax = 100.0;
+                Note(result, "分值模式: 已标准化 0–100");
+            }
+            else
+            {
+                double rawMax = job.ExternalTrafficRawMax > 0
+                    ? job.ExternalTrafficRawMax
+                    : MotivationScoreScale.TrafficMax;
+                trafficScoreMax = rawMax;
+                Note(result, "分值模式: 原始分，理论满分=" + rawMax.ToString(CultureInfo.InvariantCulture));
+            }
+            return outRaster;
         }
 
         private string BuildTraffic(MotivationJob job, List<string> names, MotivationResult result)

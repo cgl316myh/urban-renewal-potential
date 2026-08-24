@@ -1,0 +1,887 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>外部交通栅格接入动力性叠加方案</title>
+  <style>
+    :root {
+      --primary: #1a5276;
+      --primary-light: #2e86c1;
+      --accent: #e67e22;
+      --bg: #f4f6f9;
+      --card: #ffffff;
+      --border: #d5dbdb;
+      --text: #2c3e50;
+      --muted: #7f8c8d;
+      --danger: #c0392b;
+      --success: #1e8449;
+    }
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body {
+      font-family: "Microsoft YaHei", "PingFang SC", "Segoe UI", sans-serif;
+      background: var(--bg);
+      color: var(--text);
+      line-height: 1.75;
+      font-size: 15px;
+    }
+    .header {
+      background: linear-gradient(135deg, var(--primary) 0%, var(--primary-light) 100%);
+      color: #fff;
+      padding: 44px 36px 32px;
+      text-align: center;
+    }
+    .header h1 { font-size: 24px; margin-bottom: 8px; }
+    .header .subtitle { opacity: 0.92; font-size: 14px; }
+    .header .tags { margin-top: 16px; display: flex; justify-content: center; gap: 8px; flex-wrap: wrap; }
+    .header .tag {
+      background: rgba(255,255,255,0.18);
+      border: 1px solid rgba(255,255,255,0.35);
+      padding: 3px 12px;
+      border-radius: 16px;
+      font-size: 12px;
+    }
+    .container { max-width: 1000px; margin: 0 auto; padding: 28px 20px 56px; }
+    .toc {
+      background: var(--card);
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      padding: 20px 24px;
+      margin-bottom: 24px;
+    }
+    .toc h2 { font-size: 16px; color: var(--primary); margin-bottom: 10px; }
+    .toc ol { padding-left: 22px; }
+    .toc li { margin: 5px 0; }
+    .toc a { color: var(--primary-light); text-decoration: none; }
+    section {
+      background: var(--card);
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      padding: 24px 28px;
+      margin-bottom: 22px;
+    }
+    section > h2 {
+      font-size: 18px;
+      color: var(--primary);
+      border-left: 4px solid var(--accent);
+      padding-left: 12px;
+      margin-bottom: 16px;
+    }
+    h3 { font-size: 15px; color: var(--primary-light); margin: 18px 0 10px; }
+    h4 { font-size: 14px; margin: 14px 0 8px; }
+    p { margin-bottom: 10px; }
+    ul, ol { padding-left: 22px; margin-bottom: 10px; }
+    li { margin: 4px 0; }
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      margin: 12px 0 16px;
+      font-size: 13.5px;
+    }
+    th, td {
+      border: 1px solid var(--border);
+      padding: 7px 10px;
+      text-align: left;
+      vertical-align: top;
+    }
+    th { background: #eaf2f8; color: var(--primary); font-weight: 600; }
+    tr:nth-child(even) { background: #f8fafc; }
+    .formula {
+      background: #eaf2f8;
+      border-left: 4px solid var(--primary-light);
+      padding: 12px 16px;
+      margin: 12px 0;
+      font-family: Consolas, "Courier New", monospace;
+      font-size: 13px;
+      line-height: 1.7;
+      overflow-x: auto;
+    }
+    .warn {
+      background: #fef5e7;
+      border-left: 4px solid var(--accent);
+      padding: 11px 14px;
+      margin: 12px 0;
+      font-size: 14px;
+    }
+    .ok {
+      background: #eafaf1;
+      border-left: 4px solid var(--success);
+      padding: 11px 14px;
+      margin: 12px 0;
+      font-size: 14px;
+    }
+    .bad {
+      background: #fdedec;
+      border-left: 4px solid var(--danger);
+      padding: 11px 14px;
+      margin: 12px 0;
+      font-size: 14px;
+    }
+    .rec {
+      background: #f4f6f9;
+      border: 1px dashed var(--primary-light);
+      border-radius: 8px;
+      padding: 14px 16px;
+      margin: 12px 0;
+    }
+    .rec strong { color: var(--primary); }
+    .muted { color: var(--muted); font-size: 13px; }
+    .badge {
+      display: inline-block;
+      padding: 1px 8px;
+      border-radius: 10px;
+      font-size: 12px;
+      background: #eaf2f8;
+      color: var(--primary);
+    }
+    .flow {
+      display: flex; flex-wrap: wrap; align-items: center; gap: 8px;
+      margin: 14px 0; font-size: 13px;
+    }
+    .flow .box {
+      background: #eaf2f8; border: 1px solid var(--border);
+      padding: 8px 12px; border-radius: 6px;
+    }
+    .flow .arrow { color: var(--muted); font-weight: bold; }
+    .iface {
+      background: #1e2a35;
+      color: #d4e8f7;
+      padding: 14px 16px;
+      border-radius: 8px;
+      font-family: Consolas, "Courier New", monospace;
+      font-size: 12.5px;
+      line-height: 1.65;
+      overflow-x: auto;
+      margin: 12px 0;
+    }
+    .iface .kw { color: #7ec8e3; }
+    .iface .cm { color: #7f8c8d; }
+    .iface .str { color: #a8d5a2; }
+    footer {
+      text-align: center;
+      color: var(--muted);
+      font-size: 12px;
+      padding-bottom: 32px;
+    }
+    code { background: #eef2f7; padding: 1px 5px; border-radius: 3px; font-size: 13px; }
+  </style>
+</head>
+<body>
+  <div class="header">
+    <h1>外部交通栅格接入动力性叠加</h1>
+    <p class="subtitle">输入中心城区范围交通分析结果栅格，跳过内置交通计算，直接参与动力性加权合成</p>
+    <div class="tags">
+      <span class="tag">仅方案 · 不改代码</span>
+      <span class="tag">待评审后落地</span>
+      <span class="tag">仅裁切 · 不重投影/重采样</span>
+    </div>
+  </div>
+
+  <div class="container">
+    <div class="toc">
+      <h2>目录</h2>
+      <ol>
+        <li><a href="#goal">需求与目标</a></li>
+        <li><a href="#current">现状与缺口</a></li>
+        <li><a href="#interface">接口设计（核心）</a></li>
+        <li><a href="#flow">处理流程</a></li>
+        <li><a href="#spatial">空间一致性校验（不重投影/重采样）</a></li>
+        <li><a href="#input">输入栅格规范</a></li>
+        <li><a href="#ui">界面与配置</a></li>
+        <li><a href="#code">代码改动清单</a></li>
+        <li><a href="#mode">两种接入模式对比</a></li>
+        <li><a href="#risk">风险与对策</a></li>
+        <li><a href="#plan">分档落地计划</a></li>
+        <li><a href="#verify">验收建议</a></li>
+      </ol>
+    </div>
+
+    <!-- Goal -->
+    <section id="goal">
+      <h2>1. 需求与目标</h2>
+
+      <h3>1.1 业务诉求</h3>
+      <p>部分城市已在 ArcGIS / 其他工具中完成<strong>中心城区交通便捷度</strong>分析（路网服务区、综合打分等），希望将该结果栅格<strong>直接作为动力性「交通便捷度」准则层</strong>，与内置计算的环境 / 设施 / 政策准则一起标准化、加权，输出 <code>mot_score</code>，无需重复跑地铁缓冲、路网求解等步骤。</p>
+
+      <h3>1.2 设计目标</h3>
+      <ul>
+        <li>提供<strong>稳定、可配置</strong>的接入接口（路径 + 分值语义 + 可选范围）</li>
+        <li>指定外部栅格时<strong>跳过</strong> <code>BuildTraffic()</code> 内置流程</li>
+        <li>软件内<strong>仅做裁切</strong>（按中心城区 StudyArea）；<strong>不做重投影、不做重采样</strong></li>
+        <li>运行前<strong>校验</strong>外部栅格坐标系、像元大小是否与系统分析环境一致；不一致则<strong>弹窗警告并中止</strong>，提示用户在外部 GIS 中自行处理</li>
+        <li>与现有四准则加权、<code>mot_score</code>、下游叠置 / 宗地关联<strong>完全兼容</strong></li>
+        <li>未指定外部栅格时，行为与现版<strong>零变化</strong></li>
+      </ul>
+
+      <div class="bad">
+        <strong>硬性约束：</strong>本功能<strong>不在程序内</strong>调用 Project Raster、Resample、Define Projection 等工具。空间参考与像元大小必须由用户在 ArcGIS 等外部环境中预先处理好，与本系统全局设置（<code>CellSize</code>、分析用坐标系）一致后再接入。
+      </div>
+
+      <div class="ok">
+        <strong>结论：可行。</strong>叠置模块已有「栅格名或完整路径」解析模式（<code>OverlayJob.MotivationRasterName</code>），交通准则层可复用同一思路，在动力性引擎入口增加「外部交通栅格」分支即可。
+      </div>
+    </section>
+
+    <!-- Current -->
+    <section id="current">
+      <h2>2. 现状与缺口</h2>
+
+      <h3>2.1 当前动力性交通分支</h3>
+      <div class="flow">
+        <span class="box">地铁多环缓冲</span>
+        <span class="arrow">+</span>
+        <span class="box">路网服务区 1–5</span>
+        <span class="arrow">+</span>
+        <span class="box">CBD / 交通设施</span>
+        <span class="arrow">→</span>
+        <span class="box">MAX 合并</span>
+        <span class="arrow">→</span>
+        <span class="box">traffic 原始分 0–5</span>
+        <span class="arrow">→</span>
+        <span class="box">÷5×100 → ntraf</span>
+        <span class="arrow">→</span>
+        <span class="box">四准则加权 → mot_score</span>
+      </div>
+      <p class="muted">入口：<code>MotivationAnalysisEngine.Run</code> → <code>BuildTraffic</code>；理论满分 <code>MotivationScoreScale.TrafficMax = 5</code>。</p>
+
+      <h3>2.2 缺口</h3>
+      <table>
+        <tr><th>能力</th><th>现状</th><th>缺口</th></tr>
+        <tr>
+          <td>外部栅格输入</td>
+          <td>无</td>
+          <td><code>MotivationJob</code> 无交通栅格路径字段</td>
+        </tr>
+        <tr>
+          <td>跳过内置交通</td>
+          <td>始终执行 BuildTraffic</td>
+          <td>需分支：有外部栅格则跳过</td>
+        </tr>
+        <tr>
+          <td>空间处理</td>
+          <td>内置流程自动 ConfigureAnalysis</td>
+          <td>外部栅格<strong>仅 Clip</strong>；投影/像元须预检，不匹配则警告中止</td>
+        </tr>
+        <tr>
+          <td>分值语义</td>
+          <td>假定原始分 0–5</td>
+          <td>外部可能为 0–100 或 1–5，需声明</td>
+        </tr>
+        <tr>
+          <td>UI / 配置持久化</td>
+          <td>动力性窗体仅权重</td>
+          <td>需浏览路径、模式选择、写入 CityProfile</td>
+        </tr>
+      </table>
+    </section>
+
+    <!-- Interface -->
+    <section id="interface">
+      <h2>3. 接口设计（核心）</h2>
+
+      <h3>3.1 作业参数扩展 — <code>MotivationJob</code></h3>
+      <div class="iface">
+<span class="cm">/// 外部交通栅格接入（可选）。指定后跳过 BuildTraffic。</span><br/>
+<span class="kw">public string</span> ExternalTrafficRasterPath { <span class="kw">get</span>; <span class="kw">set</span>; }<br/>
+<br/>
+<span class="cm">/// 外部栅格分值语义：Raw（原始分，默认）| Normalized（已 0–100）。</span><br/>
+<span class="kw">public string</span> ExternalTrafficScoreMode { <span class="kw">get</span>; <span class="kw">set</span>; } <span class="cm">// "Raw" | "Normalized"</span><br/>
+<br/>
+<span class="cm">/// Raw 模式下的理论满分，默认 5（与 TrafficMax 一致）。</span><br/>
+<span class="kw">public double</span> ExternalTrafficRawMax { <span class="kw">get</span>; <span class="kw">set</span>; } <span class="cm">// default 5.0</span><br/>
+<br/>
+<span class="cm">/// 是否按中心城区 StudyArea 裁剪外部栅格；默认 true。</span><br/>
+<span class="kw">public bool</span> ClipExternalTrafficToStudyArea { <span class="kw">get</span>; <span class="kw">set</span>; } <span class="cm">// default true</span><br/>
+<br/>
+<span class="cm">/// 输出库内落地名，默认 traf_ext。</span><br/>
+<span class="kw">public string</span> ExternalTrafficOutputName { <span class="kw">get</span>; <span class="kw">set</span>; } <span class="cm">// "traf_ext"</span>
+      </div>
+
+      <h3>3.2 城市配置扩展 — <code>CityProfile</code>（持久化）</h3>
+      <table>
+        <tr><th>字段</th><th>类型</th><th>说明</th></tr>
+        <tr>
+          <td><code>ExternalTrafficRasterPath</code></td>
+          <td>string</td>
+          <td>默认外部交通栅格路径（GDB 内数据集名、完整路径或 TIFF 均可）</td>
+        </tr>
+        <tr>
+          <td><code>ExternalTrafficScoreMode</code></td>
+          <td>string</td>
+          <td>Raw / Normalized，默认 Raw</td>
+        </tr>
+        <tr>
+          <td><code>UseExternalTraffic</code></td>
+          <td>bool</td>
+          <td>是否启用外部交通栅格；false 时走内置 BuildTraffic</td>
+        </tr>
+      </table>
+      <p class="muted">写入 <code>Config/Cities/*.xml</code>，由「系统配置」或「动力性分析」窗体保存。</p>
+
+      <h3>3.3 服务接口 — <code>IMotivationTrafficSource</code>（可选，便于插件化）</h3>
+      <div class="iface">
+<span class="kw">namespace</span> UrbanRenewal.Contracts<br/>
+{<br/>
+&nbsp;&nbsp;<span class="cm">/// &lt;summary&gt;动力性交通准则层数据源；内置计算与外部栅格二选一。&lt;/summary&gt;</span><br/>
+&nbsp;&nbsp;<span class="kw">public interface</span> IMotivationTrafficSource<br/>
+&nbsp;&nbsp;{<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;<span class="cm">/// &lt;summary&gt;是否使用此外部源（由 Job / Profile 决定）。&lt;/summary&gt;</span><br/>
+&nbsp;&nbsp;&nbsp;&nbsp;<span class="kw">bool</span> IsExternal { <span class="kw">get</span>; }<br/>
+<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;<span class="cm">/// &lt;summary&gt;</span><br/>
+&nbsp;&nbsp;&nbsp;&nbsp;<span class="cm">/// 解析并准备交通准则原始栅格（已通过空间校验，仅裁切）。</span><br/>
+&nbsp;&nbsp;&nbsp;&nbsp;<span class="cm">/// 返回输出 GDB 内栅格完整路径；失败返回 null 并写入 messages。</span><br/>
+&nbsp;&nbsp;&nbsp;&nbsp;<span class="cm">/// &lt;/summary&gt;</span><br/>
+&nbsp;&nbsp;&nbsp;&nbsp;<span class="kw">string</span> PrepareTrafficRaster(<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;GeoprocessorHelper gp,<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;MotivationJob job,<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;ISpatialReference targetSr,<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span class="kw">string</span> studyAreaPath,<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;IList&lt;<span class="kw">string</span>&gt; messages);<br/>
+<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;<span class="cm">/// &lt;summary&gt;标准化到 0–100 时使用的理论满分；Normalized 模式返回 100。</span><br/>
+&nbsp;&nbsp;&nbsp;&nbsp;<span class="kw">double</span> GetScoreMaxForNormalization();<br/>
+&nbsp;&nbsp; }<br/>
+}
+      </div>
+      <p>第一档可<strong>不单独建接口类</strong>，仅在 <code>MotivationAnalysisEngine</code> 内实现 <code>ResolveExternalTraffic()</code> 静态方法；第二档再抽接口供第三方插件实现自定义交通源。</p>
+
+      <h3>3.4 路径解析规则（与 Overlay 一致）</h3>
+      <table>
+        <tr><th>输入形式</th><th>解析顺序</th></tr>
+        <tr>
+          <td>完整路径<br/><code>D:\data\traffic.tif</code><br/><code>D:\xx.gdb\traf_score</code></td>
+          <td>直接使用（存在性校验）</td>
+        </tr>
+        <tr>
+          <td>数据集名 <code>traf_score</code></td>
+          <td>① 输出 GDB → ② 输入 GDB → ③ 报错</td>
+        </tr>
+        <tr>
+          <td>空 / 未启用</td>
+          <td>走内置 <code>BuildTraffic</code></td>
+        </tr>
+      </table>
+    </section>
+
+    <!-- Flow -->
+    <section id="flow">
+      <h2>4. 处理流程</h2>
+
+      <h3>4.1 总流程（外部栅格启用时）</h3>
+      <div class="flow">
+        <span class="box">读取 Job / Profile<br/>UseExternalTraffic=true</span>
+        <span class="arrow">→</span>
+        <span class="box">解析路径<br/>ExternalTrafficRasterPath</span>
+        <span class="arrow">→</span>
+        <span class="box" style="border-color:var(--accent)"><strong>空间一致性校验</strong><br/>投影 + 像元大小</span>
+        <span class="arrow">→</span>
+        <span class="box" style="background:#fdedec">不匹配？<br/><strong>弹窗警告 · 中止</strong></span>
+        <span class="arrow">→</span>
+        <span class="box">Extract by Mask<br/>（按 StudyArea 裁切）</span>
+        <span class="arrow">→</span>
+        <span class="box">写入输出 GDB<br/>traf_ext</span>
+        <span class="arrow">→</span>
+        <span class="box">标准化 ntraf<br/>（Raw÷5×100 或直通）</span>
+        <span class="arrow">→</span>
+        <span class="box">与环境/设施/政策<br/>WeightedSum → mot_score</span>
+      </div>
+      <div class="ok">
+        程序内<strong>唯一的空间运算</strong>：按中心城区（StudyArea）对已通过校验的外部栅格做<strong>裁切</strong>（Extract by Mask）。<strong>不执行</strong>重投影、重采样、对齐 Extent。
+      </div>
+
+      <h3>4.2 引擎内伪代码</h3>
+      <div class="formula">
+// MotivationAnalysisEngine.Run 内，原 BuildTraffic 处改为：
+
+string traffic = null;
+double trafficScoreMax = MotivationScoreScale.TrafficMax;
+
+if (ShouldUseExternalTraffic(job))
+{
+    Report(..., "校验外部交通栅格空间属性...", 18);
+    ExternalRasterCheckResult check = ValidateExternalTrafficRaster(
+        externalPath, _targetSr, job.CellSize);
+    if (!check.IsCompatible)
+    {
+        // UI 层（MotivationRunForm）或引擎回调弹出 MessageBox，中止本次分析
+        ShowSpatialMismatchWarning(check);   // 见 §4.5
+        return result;  // Success = false
+    }
+    Report(..., "使用外部交通栅格（仅裁切）...", 20);
+    traffic = ResolveExternalTraffic(_gp, job, _extentPath, result);
+    if (job.ExternalTrafficScoreMode == "Normalized")
+        trafficScoreMax = 100.0;
+}
+else
+{
+    Report(..., "交通便捷度分析（内置）...", 20);
+    traffic = BuildTraffic(job, names, result);
+}
+
+// 后续 criterionRasters / scoreMaxes 使用 trafficScoreMax
+      </div>
+
+      <h3>4.3 新增 GIS 辅助方法</h3>
+      <table>
+        <tr><th>方法</th><th>职责</th><th>是否执行 GP 变换</th></tr>
+        <tr>
+          <td><code>ExternalRasterHelper.ValidateCompatibility</code></td>
+          <td>读取外部栅格 SR、CellSize X/Y，与系统目标 SR、<code>job.CellSize</code> 比对</td>
+          <td><strong>否</strong>（只读元数据）</td>
+        </tr>
+        <tr>
+          <td><code>ExternalRasterHelper.ClipRasterByStudyArea</code></td>
+          <td>Extract by Mask（StudyArea 面）；范围外 NoData</td>
+          <td>是（仅裁切）</td>
+        </tr>
+        <tr>
+          <td><code>ExternalRasterHelper.CopyToOutputGdb</code></td>
+          <td>将裁切结果写入输出 GDB <code>traf_ext</code></td>
+          <td>是（Copy Raster）</td>
+        </tr>
+        <tr>
+          <td><code>ExternalRasterHelper.ValidateRasterValueRange</code></td>
+          <td>可选：检查 min/max，Raw 模式警告超出 0–5</td>
+          <td>否</td>
+        </tr>
+        <tr>
+          <td><del>AlignExternalRaster / ProjectRaster / Resample</del></td>
+          <td colspan="2"><strong>明确不做</strong></td>
+        </tr>
+      </table>
+
+      <h3>4.4 输出产物</h3>
+      <table>
+        <tr><th>数据集</th><th>含义</th></tr>
+        <tr><td><code>traf_ext</code></td><td>裁切后的外部交通原始栅格（写入输出 GDB）</td></tr>
+        <tr><td><code>ntraf</code> 或 <code>ntrafn</code></td><td>交通准则标准化 0–100（与现命名一致）</td></tr>
+        <tr><td><code>mot_score</code></td><td>四准则加权结果（不变）</td></tr>
+        <tr><td><code>MotivationResult.CriterionRasters["交通便捷度"]</code></td><td>指向 <code>traf_ext</code>，日志标注「外部接入」</td></tr>
+      </table>
+    </section>
+
+    <!-- Spatial validation -->
+    <section id="spatial">
+      <h2>5. 空间一致性校验（不重投影 / 重采样）</h2>
+
+      <h3>5.1 原则</h3>
+      <p>外部交通栅格接入时，程序<strong>只读取</strong>栅格的空间参考与像元大小，与当前动力性分析环境比对。<strong>不在本软件内</strong>做任何坐标转换或重采样；不一致时<strong>弹窗警告并中止</strong>本次分析，由用户到 ArcGIS 等外部工具中处理完毕后再重新运行。</p>
+
+      <h3>5.2 系统基准（比对目标）</h3>
+      <table>
+        <tr><th>基准项</th><th>来源</th><th>说明</th></tr>
+        <tr>
+          <td>目标坐标系</td>
+          <td><code>MotivationAnalysisEngine.Run</code> 中 <code>_targetSr</code></td>
+          <td>优先 StudyArea 图层 SR；否则回退 CBD 等（与现动力性分析一致）</td>
+        </tr>
+        <tr>
+          <td>目标像元大小</td>
+          <td><code>job.CellSize</code> / 全局 <code>GlobalAppSettings.CellSize</code></td>
+          <td>默认 30（米）；X、Y 方向均须一致</td>
+        </tr>
+      </table>
+
+      <h3>5.3 校验规则</h3>
+      <table>
+        <tr><th>检查项</th><th>判定方式</th><th>容差</th></tr>
+        <tr>
+          <td>坐标系</td>
+          <td><code>ISpatialReferenceFactory.CreateESRISpatialReferenceFromPRJFile</code> 或 <code>ISpatialReference.Name</code> / FactoryCode 比对；可用 <code>SpatialReferenceAudit</code> 同类逻辑</td>
+          <td>名称与 FactoryCode 均一致；或 PRJ 字符串等价（投影参数一致）</td>
+        </tr>
+        <tr>
+          <td>像元大小 X</td>
+          <td>读取 <code>IRasterProps.MeanCellSize()</code> 或 Geoprocessing <code>Get Raster Properties</code></td>
+          <td>|外部 − 系统| ≤ <strong>0.01 m</strong>（或相对误差 &lt; 0.1%）</td>
+        </tr>
+        <tr>
+          <td>像元大小 Y</td>
+          <td>同上</td>
+          <td>同上；且 X≈Y（正方形像元，与内置分析一致）</td>
+        </tr>
+        <tr>
+          <td>范围覆盖（建议）</td>
+          <td>外部栅格 Extent 应<strong>包含</strong> StudyArea 外包矩形</td>
+          <td>不满足时<strong>警告</strong>（裁切后可能缺边），可不硬中止；与投影/像元硬错误区分</td>
+        </tr>
+      </table>
+
+      <h3>5.4 校验结果类型</h3>
+      <div class="iface">
+<span class="kw">public sealed class</span> ExternalRasterCheckResult<br/>
+{<br/>
+&nbsp;&nbsp;<span class="kw">public bool</span> IsCompatible { <span class="kw">get</span>; <span class="kw">set</span>; }<br/>
+&nbsp;&nbsp;<span class="kw">public bool</span> SpatialReferenceMismatch { <span class="kw">get</span>; <span class="kw">set</span>; }<br/>
+&nbsp;&nbsp;<span class="kw">public bool</span> CellSizeMismatch { <span class="kw">get</span>; <span class="kw">set</span>; }<br/>
+&nbsp;&nbsp;<span class="kw">public string</span> ExpectedSpatialReference { <span class="kw">get</span>; <span class="kw">set</span>; }<br/>
+&nbsp;&nbsp;<span class="kw">public string</span> ActualSpatialReference { <span class="kw">get</span>; <span class="kw">set</span>; }<br/>
+&nbsp;&nbsp;<span class="kw">public double</span> ExpectedCellSize { <span class="kw">get</span>; <span class="kw">set</span>; }<br/>
+&nbsp;&nbsp;<span class="kw">public double</span> ActualCellSizeX { <span class="kw">get</span>; <span class="kw">set</span>; }<br/>
+&nbsp;&nbsp;<span class="kw">public double</span> ActualCellSizeY { <span class="kw">get</span>; <span class="kw">set</span>; }<br/>
+&nbsp;&nbsp;<span class="kw">public string</span> SummaryMessage { <span class="kw">get</span>; <span class="kw">set</span>; }<br/>
+}
+      </div>
+
+      <h3>5.5 警告框文案（投影 / 像元不匹配时）</h3>
+      <div class="formula">
+标题：外部交通栅格空间属性不匹配<br/>
+<br/>
+外部交通栅格与当前分析环境不一致，无法继续。<br/>
+本程序不会自动重投影或重采样，请在外部 GIS 中处理后再导入。<br/>
+<br/>
+【坐标系】<br/>
+　系统要求：{ExpectedSpatialReference}<br/>
+　当前栅格：{ActualSpatialReference}<br/>
+<br/>
+【像元大小】<br/>
+　系统要求：{ExpectedCellSize} m<br/>
+　当前栅格：X={ActualCellSizeX} m，Y={ActualCellSizeY} m<br/>
+<br/>
+建议操作（ArcGIS）：<br/>
+　1. 投影：数据管理工具 → 投影和变换 → 投影栅格<br/>
+　2. 重采样：数据管理工具 → 栅格 → 栅格处理 → 重采样<br/>
+　     像元大小设为 {ExpectedCellSize}，与全局设置一致<br/>
+　3. 处理完成后重新选择栅格并运行动力性分析<br/>
+<br/>
+[确定]
+      </div>
+      <p class="muted">图标：<code>MessageBoxIcon.Warning</code>；仅「确定」按钮，点击后 <code>MotivationResult.Success = false</code>，日志写入 <code>SummaryMessage</code>。</p>
+
+      <h3>5.6 校验时机</h3>
+      <table>
+        <tr><th>时机</th><th>行为</th></tr>
+        <tr>
+          <td>点击「运行」后、裁切前</td>
+          <td>后台线程执行校验；失败则 UI 线程弹窗，不进入 GP 裁切</td>
+        </tr>
+        <tr>
+          <td>浏览选择栅格后（可选增强）</td>
+          <td>即时轻量校验，文本框旁显示 ✓ / ✗ 状态，减少跑一半才失败</td>
+        </tr>
+      </table>
+
+      <div class="rec">
+        <strong>推荐：</strong>第一档在「运行」时做完整校验并弹窗；第二档增加选择路径后的即时预检（只读元数据，不裁切）。
+      </div>
+    </section>
+
+    <!-- Input spec -->
+    <section id="input">
+      <h2>6. 输入栅格规范</h2>
+
+      <h3>6.1 推荐格式</h3>
+      <table>
+        <tr><th>项目</th><th>要求</th></tr>
+        <tr>
+          <td>空间范围</td>
+          <td>至少覆盖<strong>中心城区 StudyArea</strong>；可更大，程序<strong>仅</strong>按 StudyArea 裁切</td>
+        </tr>
+        <tr>
+          <td>坐标系</td>
+          <td><strong>必须与</strong>系统分析坐标系完全一致；<strong>程序不自动投影</strong>，不一致则警告中止</td>
+        </tr>
+        <tr>
+          <td>像元大小</td>
+          <td><strong>必须与</strong>全局 <code>CellSize</code>（默认 30 m）一致；<strong>程序不自动重采样</strong>，不一致则警告中止</td>
+        </tr>
+        <tr>
+          <td>分值（Raw 模式）</td>
+          <td>整数或浮点 <strong>0～5</strong>（与内置交通一致）；NoData 表示无数据</td>
+        </tr>
+        <tr>
+          <td>分值（Normalized 模式）</td>
+          <td><strong>0～100</strong>，已标准化，跳过分母除法</td>
+        </tr>
+        <tr>
+          <td>文件格式</td>
+          <td>File GDB 栅格数据集、GeoTIFF、IMG 等 ArcGIS 可读格式</td>
+        </tr>
+      </table>
+
+      <h3>6.2 典型来源示例</h3>
+      <ul>
+        <li>本系统历史某次动力性输出的 <code>trafficmx</code> / 交通中间栅格</li>
+        <li>单独跑路网服务区后手工合并的 1–5 分栅格</li>
+        <li>其他 GIS 项目导出的中心城区交通便捷度 TIFF</li>
+        <li>输出 GDB 内预置数据集名 <code>traf_import</code></li>
+      </ul>
+
+      <div class="warn">
+        <strong>注意：</strong>外部栅格须在外部 GIS 中<strong>预先</strong>完成投影与重采样，再导入本系统。程序只负责按 StudyArea <strong>裁切</strong>；若投影或像元与系统不匹配，将弹窗提示并中止，不会代为转换。
+      </div>
+
+      <h3>6.3 外部预处理流程（用户须在 ArcGIS 等工具中完成）</h3>
+      <p>在将栅格导入本系统<strong>之前</strong>，用户应完成以下步骤（本软件不执行）：</p>
+      <ol>
+        <li>在「数据管理 → 全局设置」或动力性窗体查看<strong>系统要求的坐标系</strong>与<strong>像元大小</strong>（如 CGCS2000 3° 带 + 30 m）</li>
+        <li>若外部栅格坐标系不同 → <strong>投影栅格</strong>（Project Raster）到系统坐标系</li>
+        <li>若像元大小不同 → <strong>重采样</strong>（Resample）到 <code>CellSize</code>，建议双线性或最邻近（分值栅格可用最邻近保整数档）</li>
+        <li>确认栅格范围至少覆盖中心城区 StudyArea</li>
+        <li>在本系统勾选「使用外部交通栅格」，选择处理后的路径并运行；程序仅做裁切并参与叠加</li>
+      </ol>
+      <table>
+        <tr><th>ArcGIS 工具</th><th>用途</th><th>本系统是否调用</th></tr>
+        <tr><td>投影栅格（Project Raster）</td><td>统一坐标系</td><td><strong>否</strong> — 用户外部完成</td></tr>
+        <tr><td>重采样（Resample）</td><td>统一像元大小</td><td><strong>否</strong> — 用户外部完成</td></tr>
+        <tr><td>按掩膜提取（Extract by Mask）</td><td>按 StudyArea 裁切</td><td><strong>是</strong> — 程序内唯一空间变换</td></tr>
+      </table>
+    </section>
+
+    <!-- UI -->
+    <section id="ui">
+      <h2>7. 界面与配置</h2>
+
+      <h3>7.1 动力性分析窗体（<code>MotivationRunForm</code>）新增区域</h3>
+      <table>
+        <tr><th>控件</th><th>类型</th><th>说明</th></tr>
+        <tr>
+          <td>chkUseExternalTraffic</td>
+          <td>CheckBox</td>
+          <td>「使用外部交通栅格（跳过内置交通计算）」</td>
+        </tr>
+        <tr>
+          <td>txtTrafficRaster</td>
+          <td>TextBox + 浏览</td>
+          <td>栅格路径；浏览支持 GDB 数据集 / TIFF</td>
+        </tr>
+        <tr>
+          <td>cboTrafficScoreMode</td>
+          <td>ComboBox</td>
+          <td>原始分 0–5（默认）/ 已标准化 0–100</td>
+        </tr>
+        <tr>
+          <td>chkClipToStudyArea</td>
+          <td>CheckBox</td>
+          <td>「按中心城区裁剪」；默认勾选</td>
+        </tr>
+        <tr>
+          <td>lblSpatialRequirement</td>
+          <td>Label（只读）</td>
+          <td>展示当前系统要求：坐标系名称 + 像元大小（来自全局设置 / StudyArea），提示用户外部栅格须预先一致</td>
+        </tr>
+        <tr>
+          <td>lblRasterCheckStatus</td>
+          <td>Label</td>
+          <td>可选第二档：选择路径后显示「空间属性：通过 / 不匹配」</td>
+        </tr>
+      </table>
+      <p class="muted">须遵守 WinForms Designer 规范：控件放在 <code>MotivationRunForm.Designer.cs</code>，逻辑在 <code>MotivationRunForm.cs</code>。</p>
+
+      <h3>7.2 校验失败时的 UI 行为</h3>
+      <table>
+        <tr><th>场景</th><th>行为</th></tr>
+        <tr>
+          <td>坐标系不匹配</td>
+          <td><code>MessageBox.Show</code> 警告框（见 §5.5）；不进入裁切与后续准则计算</td>
+        </tr>
+        <tr>
+          <td>像元大小不匹配</td>
+          <td>同上；文案中分别列出系统要求与栅格实际 X/Y</td>
+        </tr>
+        <tr>
+          <td>两者均不匹配</td>
+          <td>同一弹窗合并展示；日志写入 <code>MotivationResult.Messages</code></td>
+        </tr>
+        <tr>
+          <td>用户点击确定后</td>
+          <td>恢复「运行」按钮可用；<code>mot_score</code> 不更新</td>
+        </tr>
+      </table>
+
+      <h3>7.3 系统配置 / 城市 XML（可选第二入口）</h3>
+      <p>在 <code>SystemConfigForm</code> 或城市配置中增加「默认外部交通栅格」字段，动力性窗体打开时自动填充；运行时可临时覆盖。</p>
+
+      <h3>7.4 配置 XML 示例</h3>
+      <div class="formula">
+&lt;CityProfile&gt;<br/>
+&nbsp;&nbsp;...<br/>
+&nbsp;&nbsp;&lt;UseExternalTraffic&gt;true&lt;/UseExternalTraffic&gt;<br/>
+&nbsp;&nbsp;&lt;ExternalTrafficRasterPath&gt;D:\data\city_traffic_2026.gdb\traf_score&lt;/ExternalTrafficRasterPath&gt;<br/>
+&nbsp;&nbsp;&lt;ExternalTrafficScoreMode&gt;Raw&lt;/ExternalTrafficScoreMode&gt;<br/>
+&lt;/CityProfile&gt;
+      </div>
+    </section>
+
+    <!-- Code -->
+    <section id="code">
+      <h2>8. 代码改动清单</h2>
+      <p class="muted">评审通过后按档实施；当前不执行。</p>
+
+      <table>
+        <tr><th>层级</th><th>文件</th><th>改动摘要</th></tr>
+        <tr>
+          <td>Model</td>
+          <td><code>MotivationJob.cs</code></td>
+          <td>新增 ExternalTraffic* 字段</td>
+        </tr>
+        <tr>
+          <td>Model</td>
+          <td><code>CityProfile.cs</code></td>
+          <td>持久化字段 + ApplyToJob 映射</td>
+        </tr>
+        <tr>
+          <td>Model</td>
+          <td><code>ExternalRasterCheckResult.cs</code>（新建）</td>
+          <td>空间校验结果：IsCompatible、SR/CellSize 期望值与实际值、SummaryMessage</td>
+        </tr>
+        <tr>
+          <td>Contracts</td>
+          <td><code>IMotivationTrafficSource.cs</code></td>
+          <td>可选：第二档新增接口</td>
+        </tr>
+        <tr>
+          <td>GIS</td>
+          <td><code>ExternalRasterHelper.cs</code>（新建）</td>
+          <td><code>ValidateCompatibility</code>（只读校验）、<code>ClipRasterByStudyArea</code>、<code>CopyToOutputGdb</code>；<strong>不含</strong> Project/Resample</td>
+        </tr>
+        <tr>
+          <td>Analysis</td>
+          <td><code>MotivationAnalysisEngine.cs</code></td>
+          <td>校验失败返回；<code>ResolveExternalTraffic</code> 仅裁切；Run 内分支</td>
+        </tr>
+        <tr>
+          <td>Plugin</td>
+          <td><code>MotivationRunForm.Designer.cs</code> / <code>.cs</code></td>
+          <td>外部栅格 UI + 校验失败 <code>MessageBox.Show</code> + BuildJob 赋值</td>
+        </tr>
+        <tr>
+          <td>Plugin</td>
+          <td><code>SystemConfigForm</code></td>
+          <td>可选：城市级默认路径</td>
+        </tr>
+      </table>
+
+      <h3>8.1 不需改动的模块</h3>
+      <ul>
+        <li><code>OverlayAnalysisEngine</code> — 仍读取 <code>mot_score</code></li>
+        <li><code>BuildEnvironment / BuildFacility / BuildPolicy</code> — 不变</li>
+        <li><code>WeightedSum</code> — 不变</li>
+      </ul>
+    </section>
+
+    <!-- Mode compare -->
+    <section id="mode">
+      <h2>9. 两种接入模式对比</h2>
+
+      <table>
+        <tr>
+          <th>维度</th>
+          <th><span class="badge">模式 A</span><br/>仅 Job 参数（第一档推荐）</th>
+          <th><span class="badge">模式 B</span><br/>IMotivationTrafficSource 插件</th>
+        </tr>
+        <tr>
+          <td>复杂度</td>
+          <td>低；引擎内一个方法</td>
+          <td>中；接口 + 内置实现 + 可扩展</td>
+        </tr>
+        <tr>
+          <td>适用场景</td>
+          <td>固定外部 TIFF/GDB 栅格</td>
+          <td>多源交通（API、实时路网、自定义算法 DLL）</td>
+        </tr>
+        <tr>
+          <td>配置</td>
+          <td>窗体 + CityProfile XML</td>
+          <td>插件注册 + Job 指定 ProviderId</td>
+        </tr>
+        <tr>
+          <td>落地优先级</td>
+          <td><strong>先做</strong></td>
+          <td>有扩展需求再做</td>
+        </tr>
+      </table>
+
+      <div class="rec">
+        <strong>推荐第一档采用模式 A：</strong>在 <code>MotivationJob.ExternalTrafficRasterPath</code> 非空且 <code>UseExternalTraffic=true</code> 时走外部分支；接口化留到第二档。
+      </div>
+    </section>
+
+    <!-- Risk -->
+    <section id="risk">
+      <h2>10. 风险与对策</h2>
+
+      <table>
+        <tr><th>风险</th><th>对策</th></tr>
+        <tr>
+          <td>坐标系 / 像元不一致</td>
+          <td>运行前 <code>ValidateCompatibility</code>；不匹配弹窗中止，提示用户外部 Project Raster / Resample</td>
+        </tr>
+        <tr>
+          <td>外部分值尺度错误（如 0–100 却选 Raw）</td>
+          <td>运行前 GetRasterProperties 检查 min/max 并警告；文档明确规范</td>
+        </tr>
+        <tr>
+          <td>无 StudyArea 无法裁剪</td>
+          <td>提示用户；或回退为外部栅格自身 Extent</td>
+        </tr>
+        <tr>
+          <td>与内置交通结果不可比</td>
+          <td>日志与元数据标注 <code>traffic_source=external</code>；报告说明口径</td>
+        </tr>
+        <tr>
+          <td>路径失效 / 文件被锁</td>
+          <td>启动前校验存在性；失败则中止或询问是否改走内置交通</td>
+        </tr>
+        <tr>
+          <td>范围外 NoData 污染加权</td>
+          <td>NormalizeTo100 已将 NoData→0；裁剪后研究区外不参与展示</td>
+        </tr>
+      </table>
+    </section>
+
+    <!-- Plan -->
+    <section id="plan">
+      <h2>11. 分档落地计划</h2>
+
+      <h3>第一档 · 最小可用（推荐先做）</h3>
+      <ol>
+        <li><code>MotivationJob</code> 增加 <code>ExternalTrafficRasterPath</code>、<code>ExternalTrafficScoreMode</code>、<code>UseExternalTraffic</code></li>
+        <li><code>ExternalRasterHelper.ValidateCompatibility</code>：投影 + 像元校验；失败弹窗中止</li>
+        <li><code>ResolveExternalTraffic</code>：<strong>仅</strong> StudyArea 裁切 + 写入 <code>traf_ext</code>（无 Project/Resample）</li>
+        <li>Run 内：启用时跳过 <code>BuildTraffic</code></li>
+        <li><code>MotivationRunForm</code>：勾选 + 路径浏览 + 分值模式 + 校验失败 MessageBox</li>
+        <li>日志明确打印「交通准则：外部栅格（仅裁切）」及路径</li>
+      </ol>
+
+      <h3>第二档 · 配置持久化</h3>
+      <ol>
+        <li><code>CityProfile</code> XML 字段 + 系统配置窗体</li>
+        <li>栅格统计校验（min/max 预警）</li>
+        <li>输出 <code>traffic_source.txt</code> 元数据到输出 GDB 旁</li>
+      </ol>
+
+      <h3>第三档 · 扩展</h3>
+      <ol>
+        <li><code>IMotivationTrafficSource</code> 插件接口</li>
+        <li>支持「外部交通 + 内置地铁加分」混合模式（高级，非必需）</li>
+        <li>批量城市模板预置外部栅格路径</li>
+      </ol>
+    </section>
+
+    <!-- Verify -->
+    <section id="verify">
+      <h2>12. 验收建议</h2>
+      <ol>
+        <li><strong>分支正确：</strong>勾选外部栅格后日志无「地铁缓冲」「路网服务区」字样，有「使用外部交通栅格（仅裁切）」</li>
+        <li><strong>投影不匹配：</strong>故意使用 WGS84 栅格 → 弹窗警告，列出系统要求 vs 实际坐标系；分析中止，无 <code>traf_ext</code> / <code>mot_score</code> 更新</li>
+        <li><strong>像元不匹配：</strong>故意使用 10 m 栅格（系统 30 m）→ 弹窗警告，列出像元 X/Y；分析中止</li>
+        <li><strong>匹配后裁切：</strong>投影与像元均正确 → 通过校验，生成 <code>traf_ext</code>，范围与 StudyArea 一致</li>
+        <li><strong>空间一致：</strong><code>traf_ext</code> 与内置准则栅格 SR、像元大小一致（因未做重投影/重采样，应与输入外部栅格一致）</li>
+        <li><strong>分值正确：</strong>Raw 模式：外部 3 分区域 → <code>ntraf</code> ≈ 60；Normalized 模式：外部 60 → <code>ntraf</code> = 60</li>
+        <li><strong>裁剪：</strong>StudyArea 外像元为 NoData 或 0，不参与加权</li>
+        <li><strong>回退：</strong>取消勾选后结果与改前内置交通一致</li>
+        <li><strong>下游：</strong>叠置、宗地关联、导出可正常读取 <code>mot_score</code></li>
+        <li><strong>无隐式变换：</strong>代码审查确认未调用 Project Raster、Resample、Define Projection</li>
+      </ol>
+      <p class="muted">本文为方案说明，<strong>不修改程序</strong>。请确认采用模式 A 第一档（仅裁切 + 空间预检弹窗）后，再下达开发指令。</p>
+    </section>
+  </div>
+
+  <footer>
+    城市更新潜力评价与验证系统 · 外部交通栅格接入动力性叠加方案（仅文档）· 2026-08-24<br/>
+    <span class="muted">空间策略：仅裁切 · 校验投影与像元 · 不匹配弹窗中止 · 用户外部重投影/重采样</span>
+  </footer>
+</body>
+</html>

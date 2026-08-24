@@ -140,6 +140,7 @@
   </ItemGroup>
   <ItemGroup>
     <Compile Include="ArcEngineBootstrap.cs" />
+    <Compile Include="ExternalRasterHelper.cs" />
     <Compile Include="BufferScoreRasterBuilder.cs" />
     <Compile Include="FeatureLayerHelper.cs" />
     <Compile Include="FeaturePreprocessBuilder.cs" />
